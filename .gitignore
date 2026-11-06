@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+backups/*
+!backups/.gitkeep
+배포용/
+build/
+dist/
+dist_tmp/
+*.spec

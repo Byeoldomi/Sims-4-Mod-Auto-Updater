@@ -1,0 +1,6 @@
+{
+    "mods_folder": "",
+    "backup_folder": "backups",
+    "auto_backup": true,
+    "manifest_path": "mods_manifest.json"
+}

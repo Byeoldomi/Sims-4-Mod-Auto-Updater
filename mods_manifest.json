@@ -1,0 +1,43 @@
+{
+    "mods": [
+        {
+            "name": "MC Command Center",
+            "source_type": "mccc",
+            "install_folder": "MOD MC Command Center",
+            "folder_keywords": [
+                "MOD MC Command Center",
+                "MOD MCCC"
+            ],
+            "current_version": ""
+        },
+        {
+            "name": "WickedWhims",
+            "source_type": "wickedwhims",
+            "install_folder": "MOD WickedWhims",
+            "folder_keywords": [
+                "MOD WickedWhims",
+                "MOD WW"
+            ],
+            "current_version": "",
+            "homepage": "https://wicked.cc/mods/TURBODRIVER/wickedwhims"
+        },
+        {
+            "name": "바람별 한글화 모드",
+            "source_type": "barambyul",
+            "install_folder": "PRIO",
+            "folder_keywords": [
+                "PRIO"
+            ],
+            "file_keywords": [
+                "!WAMTIK",
+                "_WAMTIK"
+            ],
+            "channel": "Patreon 선배포 (Early Access)",
+            "require_script": false,
+            "current_version": "",
+            "homepage": "https://www.patreon.com/cw/wwindystarZIMS",
+            "postype_url": "https://www.postype.com/@wwwindystar",
+            "naver_blog_url": "https://blog.naver.com/wwwindystar"
+        }
+    ]
+}
