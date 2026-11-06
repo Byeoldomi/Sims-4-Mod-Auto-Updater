@@ -59,6 +59,3 @@ Sims 4 Mod Auto Updater/
 
 ### 2. 프로그램 실행하기
 main.exe를 실행합니다.
-    ]
-}
-```
