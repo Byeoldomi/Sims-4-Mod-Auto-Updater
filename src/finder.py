@@ -395,6 +395,10 @@ def extract_version_from_filename(filename: str) -> str:
     if m_v:
         raw_v = m_v.group(1).lstrip("vV")
         return f"v{raw_v}"
+    # 1-b) 바람별 통합한글화모음 스타일 버전 (예: V98G8, V97G5 등)
+    m_vg = re.search(r"(?:^|[\s_\-\[\(])(V[0-9]+G[0-9]+)(?=$|[^a-zA-Z0-9.])", stem, flags=re.IGNORECASE)
+    if m_vg:
+        return m_vg.group(1).upper()
     # 2) 점이 포함된 버전 숫자 (예: 0.1, 0.1.0, 1.8 - 단 배수 표기 1.75x 및 날짜 표기 26.11.01 등은 제외)
     m_dot = re.search(r"(?:^|[\s_\-\[\(])([0-9]+\.[0-9]+(?:\.[0-9]+)*[a-wyz]?)(?=$|[^a-zA-Z0-9.xX가-힣])", stem)
     if m_dot:
@@ -544,6 +548,33 @@ def _extract_from_single_ts4script(path: Path) -> Dict[str, Any]:
                         u_val = _clean_pyc_url(data, m)
                         if _is_valid_internal_url(u_val, path.name) and u_val not in info["urls"]:
                             info["urls"].append(u_val)
+
+                    # 3. ModFileManifest가 없는 핵심 스크립트(.pyc) 내부 버전 상수 보조 추출
+                    if not info["version"]:
+                        e_low = entry_name.lower()
+                        if e_low.endswith(("mc_cmd_version.pyc", "mc_utils.pyc", "mc_cmd_center.pyc", "mc_woohoo.pyc")):
+                            m_mc = re.search(rb"(?<![0-9.])(202[0-9]\.[0-9]+\.[0-9]+)(?![0-9.])", data)
+                            if m_mc:
+                                info["version"] = m_mc.group(1).decode("ascii", "ignore")
+                        elif "wickedwhims" in e_low and ("version" in e_low or "main" in e_low or "init" in e_low):
+                            m_ww = re.search(rb"(?<![a-zA-Z0-9.])(v1[789][0-9][a-z]?)(?![a-zA-Z0-9.])", data, flags=re.IGNORECASE)
+                            if m_ww:
+                                info["version"] = m_ww.group(1).decode("ascii", "ignore")
+                        elif e_low.endswith("sims4_ai_chat/config.pyc"):
+                            m_ai = re.search(rb"(?<![0-9.])([0-9]+\.[0-9]+\.[0-9]+)(?![0-9.])", data)
+                            if m_ai:
+                                info["version"] = m_ai.group(1).decode("ascii", "ignore")
+                        elif e_low.endswith("ui_cheats/cheat_commands.pyc"):
+                            m_ui = re.search(rb"(?<![0-9.])(1\.[3-9][0-9](?:\.[0-9]+)?)(?![0-9.])", data)
+                            if m_ui:
+                                ui_ver = m_ui.group(1).decode("ascii", "ignore")
+                                # Weerbesu의 UI Cheats Extension은 핫픽스(예: 1.59.1)에서도 .ts4script 내부 버전 상수를 '1.59'로 유지하고
+                                # 동봉된 UI_Cheats_Extension.package만 재빌드하므로, 패키지 파일이 1.59.1 빌드(15,388,976 bytes)이면 1.59.1로 보정
+                                if ui_ver == "1.59":
+                                    pkg_sibling = path.parent / "UI_Cheats_Extension.package"
+                                    if pkg_sibling.exists() and pkg_sibling.stat().st_size == 15388976:
+                                        ui_ver = "1.59.1"
+                                info["version"] = ui_ver
     except Exception:
         pass
 

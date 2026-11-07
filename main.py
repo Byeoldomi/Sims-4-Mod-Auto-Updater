@@ -1,7 +1,8 @@
 import os
+import re
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Tuple
 
 # Windows 콘솔 UTF-8 인코딩 설정 (이모지 및 한글 깨짐/cp949 오류 방지)
 if sys.platform == "win32":
@@ -42,7 +43,7 @@ from src.backup import BackupManager
 from src.updater import ModUpdater
 
 def print_banner():
-    title = "🎮 심즈 4 모드 자동 업데이터 (Sims 4 Mod Auto Updater) v0.1.1"
+    title = "🎮 심즈 4 모드 자동 업데이터 (Sims 4 Mod Auto Updater) v0.1.2"
     if USE_RICH:
         console.print(Panel(f"[bold cyan]{title}[/bold cyan]\n[dim]EA The Sims 4 Mod Management Tool[/dim]"))
     else:
@@ -1180,6 +1181,415 @@ def prepare_update_all(updater: ModUpdater, scanner: ModScanner) -> bool:
         else:
             print("\n[!] 1, 2, 3, 4, 5 번호 중 하나를 입력해 주세요.")
 
+def _extract_local_version_token(
+    detected_file_name: str,
+    detected_file_path: Optional[str],
+    manifest_entries: List[dict],
+) -> str:
+    """로컬 모드 파일명, 파일 내부 메타데이터(.ts4script/.package), 또는 매니페스트 기록에서
+    현재 설치된 로컬 버전 문자열을 추출합니다.
+    """
+    from src.finder import extract_version_from_filename, extract_mod_file_metadata
+
+    # 1) 파일명에 명시된 버전 추출
+    ver = extract_version_from_filename(detected_file_name)
+    if ver:
+        return ver
+
+    # 2) 파일 내부 메타데이터(ModFileManifest / .pyc 상수 등)에서 버전 추출
+    if detected_file_path:
+        try:
+            meta = extract_mod_file_metadata(detected_file_path)
+            m_ver = (meta.get("version") or "").strip()
+            if m_ver:
+                if m_ver.upper().startswith("V") and re.match(r"^V\d+G\d+$", m_ver.upper()):
+                    return m_ver.upper()
+                return m_ver if m_ver.lower().startswith("v") else f"v{m_ver}"
+        except Exception:
+            pass
+
+    # 3) mods_manifest.json에 기록된 로컬 버전 확인
+    t_low = (detected_file_name or "").strip().lower()
+    if t_low:
+        for entry in manifest_entries:
+            e_name = (entry.get("name") or "").strip().lower()
+            e_local = (entry.get("local_file") or "").strip().lower()
+            if t_low in (e_name, e_local):
+                c_ver = extract_version_from_filename(str(entry.get("current_version") or ""))
+                if c_ver:
+                    return c_ver
+    return ""
+
+
+def _compare_local_and_remote_version(local_ver: str, remote_ver_label: str, res: dict) -> Tuple[str, str, str]:
+    """로컬 버전과 웹 최신 버전을 비교하여 (상태코드, Rich 표시문구, 일반 텍스트 표시문구)를 반환합니다."""
+    from packaging import version
+    from src.finder import extract_version_from_filename
+
+    remote_tok = (
+        extract_version_from_filename(str(remote_ver_label or ""))
+        or extract_version_from_filename(str(res.get("detected_filename") or ""))
+        or extract_version_from_filename(str(res.get("asset_name") or ""))
+    )
+
+    if local_ver and remote_tok:
+        l_clean = local_ver.strip()
+        r_clean = remote_tok.strip()
+
+        # 1) 바람별 통합한글화모음 스타일 (예: V98G8)
+        m_l_vg = re.match(r"^V(\d+)G(\d+)$", l_clean, flags=re.IGNORECASE)
+        m_r_vg = re.match(r"^V(\d+)G(\d+)$", r_clean, flags=re.IGNORECASE)
+        if m_l_vg and m_r_vg:
+            l_tuple = (int(m_l_vg.group(1)), int(m_l_vg.group(2)))
+            r_tuple = (int(m_r_vg.group(1)), int(m_r_vg.group(2)))
+            if r_tuple > l_tuple:
+                return ("update_needed", "[bold yellow]🔄 업데이트 필요[/bold yellow]", "업데이트 필요")
+            return ("up_to_date", "[bold green]✅ 최신 상태[/bold green]", "최신 상태")
+
+        # 2) 알파벳 접미사 포함 버전 (예: v185k vs v185l) 또는 일반 숫자 버전
+        l_norm = l_clean.lstrip("vV")
+        r_norm = r_clean.lstrip("vV")
+        if l_norm.lower() == r_norm.lower() or l_norm.replace(".", "").lower() == r_norm.replace(".", "").lower():
+            return ("up_to_date", "[bold green]✅ 최신 상태[/bold green]", "최신 상태")
+
+        # 숫자+알파벳 분리 비교 (예: 185k -> (185, 'k'))
+        m_la = re.match(r"^(\d+(?:\.\d+)*)([a-zA-Z]?)$", l_norm)
+        m_ra = re.match(r"^(\d+(?:\.\d+)*)([a-zA-Z]?)$", r_norm)
+        if m_la and m_ra:
+            try:
+                lv_num = version.parse(m_la.group(1))
+                rv_num = version.parse(m_ra.group(1))
+                if rv_num > lv_num:
+                    return ("update_needed", "[bold yellow]🔄 업데이트 필요[/bold yellow]", "업데이트 필요")
+                if rv_num < lv_num:
+                    return ("up_to_date", "[bold green]✅ 최신 상태[/bold green]", "최신 상태")
+                # 숫자 부분이 같으면 알파벳 접미사 비교
+                if m_ra.group(2).lower() > m_la.group(2).lower():
+                    return ("update_needed", "[bold yellow]🔄 업데이트 필요[/bold yellow]", "업데이트 필요")
+                return ("up_to_date", "[bold green]✅ 최신 상태[/bold green]", "최신 상태")
+            except Exception:
+                pass
+
+        try:
+            if version.parse(r_norm) > version.parse(l_norm):
+                return ("update_needed", "[bold yellow]🔄 업데이트 필요[/bold yellow]", "업데이트 필요")
+            return ("up_to_date", "[bold green]✅ 최신 상태[/bold green]", "최신 상태")
+        except Exception:
+            if r_norm != l_norm:
+                return ("update_needed", "[bold yellow]🔄 업데이트 필요[/bold yellow]", "업데이트 필요")
+            return ("up_to_date", "[bold green]✅ 최신 상태[/bold green]", "최신 상태")
+
+    # 로컬 또는 원격에 버전 숫자가 명시되어 있지 않은 경우
+    return ("manual_check", "[cyan]🔍 배포처 확인 권장[/cyan]", "배포처 확인 권장 (버전 미표기)")
+
+
+def _verify_local_matches_remote_zip_tail(folder_path: Optional[Path], res: dict) -> bool:
+    """핫픽스(예: 1.59 -> 1.59.1)などで 모드 제작자가 스크립트 내부 버전 문자열만 이전 버전으로 남겨둔 경우,
+    원격 .zip 파일의 끝부분(Central Directory, 16KB)만 메모리에서 조회(파일 다운로드 없음)하여
+    로컬 폴더의 .package / .ts4script 파일 크기 및 CRC32가 원격 최신본과 100% 동일한지 검증합니다.
+    """
+    if not folder_path or not folder_path.exists():
+        return False
+    dl_url = (res.get("download_url") or "").strip()
+    if not dl_url or not dl_url.startswith(("http://", "https://")):
+        return False
+    if "mediafire.com/file/" in dl_url.lower() or "drive.google.com" in dl_url.lower():
+        return False
+
+    try:
+        import struct
+        import zlib
+        import requests
+
+        r = requests.get(
+            dl_url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.2",
+                "Range": "bytes=-16384",
+            },
+            timeout=8,
+        )
+        if r.status_code not in (200, 206):
+            return False
+        buf = r.content
+        if b"PK\x01\x02" not in buf:
+            return False
+
+        remote_entries = []
+        pos = 0
+        while True:
+            idx = buf.find(b"PK\x01\x02", pos)
+            if idx < 0 or idx + 46 > len(buf):
+                break
+            crc, _, uncomp_sz, fn_len, ex_len, cm_len = struct.unpack_from("<IIIHHH", buf, idx + 16)
+            fn = buf[idx + 46 : idx + 46 + fn_len].decode("utf-8", "ignore")
+            base_fn = Path(fn).name
+            if base_fn.lower().endswith((".package", ".ts4script")):
+                remote_entries.append((base_fn, uncomp_sz, crc))
+            pos = idx + 46 + fn_len + ex_len + cm_len
+
+        if not remote_entries:
+            return False
+
+        local_files = {
+            p.name.lower(): p
+            for p in folder_path.rglob("*")
+            if p.is_file() and p.suffix.lower() in (".package", ".ts4script")
+        }
+        matched_count = 0
+        for base_fn, uncomp_sz, crc in remote_entries:
+            loc_p = local_files.get(base_fn.lower())
+            if not loc_p or loc_p.stat().st_size != uncomp_sz:
+                return False
+            loc_crc = zlib.crc32(loc_p.read_bytes()) & 0xFFFFFFFF
+            if loc_crc != crc:
+                return False
+            matched_count += 1
+
+        return matched_count > 0
+    except Exception:
+        return False
+
+
+def check_update_needed_only(updater: ModUpdater, scanner: ModScanner) -> bool:
+    """4번 메뉴(모드 업데이트 필요 여부 확인):
+    어떠한 파일 다운로드나 덮어쓰기도 수행하지 않고(100% 읽기 전용),
+    현재 보유 중인 모드들의 로컬 버전과 웹 최신 버전을 대조하여 업데이트 필요 유무만 빠르게 점검합니다.
+    반환값:
+        True: 메인 메뉴 유지 (다른 메뉴로 전환)
+        False: 프로그램 종료
+    """
+    user_mods_res = scanner.scan_user_mods()
+    folder_mods = user_mods_res.get("folder_mods", [])
+
+    script_mods = [
+        m for m in folder_mods
+        if m.get("script_count", 0) > 0 or "스크립트" in m.get("mod_type", "") or "한글" in m.get("mod_type", "")
+    ]
+
+    if not script_mods:
+        print("\n[!] Mods 폴더에서 점검 대상(스크립트/한글화) 모드가 감지되지 않았습니다. 1번 메뉴에서 Mods 폴더 상태를 확인하세요.")
+        return True
+
+    if USE_RICH:
+        console.print(Panel(
+            f"[bold green]🔒 안심 읽기 전용 점검 모드 (파일 다운로드 및 수정 없음)[/bold green]\n"
+            f"내 컴퓨터의 모드 파일을 일절 건드리지 않고, 보유 중인 모드 [bold cyan]{len(script_mods)}개[/bold cyan]의\n"
+            f"[bold]내 로컬 버전[/bold]과 [bold]웹 최신 버전[/bold]만 비교하여 업데이트 필요 여부를 알려드립니다.",
+            title="[bold cyan]🔎 4. 모드 업데이트 필요 여부 확인[/bold cyan]",
+            border_style="green",
+        ))
+    else:
+        print("\n" + "=" * 70)
+        print("🔎 [4. 모드 업데이트 필요 여부 확인 - 읽기 전용 안심 점검]")
+        print("※ 내 컴퓨터의 파일을 일절 다운로드하거나 덮어쓰지 않고 버전만 비교합니다.")
+        print("=" * 70)
+
+    manifest_entries = updater.load_manifest()
+    check_rows: List[dict] = []
+
+    for idx, entry in enumerate(script_mods, 1):
+        folder_name = entry["name"]
+        mod = updater.infer_mod_config(folder_name)
+        mod["folder_name"] = folder_name
+
+        info = scanner.detect_mod_installed(mod)
+        detected_file_name = None
+        detected_file_path = None
+        if info.get("scripts"):
+            chosen_scr = next(
+                (p for p in info["scripts"] if "cmd_center" in p.name.lower() or "scripts" in p.name.lower() or "main" in p.name.lower()),
+                info["scripts"][0],
+            )
+            detected_file_name = chosen_scr.name
+            detected_file_path = str(chosen_scr)
+        elif info.get("packages"):
+            chosen_pkg = next(
+                (p for p in info["packages"] if "!wamtik" in p.name.lower() or "_wamtik" in p.name.lower()),
+                info["packages"][0],
+            )
+            detected_file_name = chosen_pkg.name
+            detected_file_path = str(chosen_pkg)
+
+        if detected_file_name:
+            mod["name"] = detected_file_name
+            f_lower = detected_file_name.lower()
+            is_core_special_file = (
+                (mod.get("source_type") == "mccc" and "mc_" in f_lower)
+                or (mod.get("source_type") == "wickedwhims" and "turbodriver_wickedwhims" in f_lower)
+                or (mod.get("source_type") == "barambyul" and "wamtik" in f_lower)
+            )
+            if not is_core_special_file:
+                mod["source_type"] = "generic_web"
+                mod["download_url"] = ""
+                mod["homepage"] = ""
+                mod["creator"] = "파일 내부 메타데이터 자동 감지"
+        if detected_file_path:
+            mod["file_path"] = detected_file_path
+
+        local_ver = _extract_local_version_token(
+            detected_file_name or folder_name,
+            detected_file_path,
+            manifest_entries,
+        )
+        if local_ver:
+            mod["current_version"] = local_ver
+
+        display_label = f"{folder_name} ({mod['name']})" if mod.get("name") and mod["name"] != folder_name else folder_name
+        print(f"  [{idx:2d}/{len(script_mods)}] 🔎 {display_label} 버전 대조 중...")
+
+        res = updater.check_mod_update(mod)
+        if "error" in res:
+            err_msg = res["error"]
+            check_rows.append({
+                "idx": idx,
+                "folder_name": folder_name,
+                "file_name": mod.get("name") or folder_name,
+                "local_ver": local_ver or "버전 미표기",
+                "remote_ver": "-",
+                "status_code": "error",
+                "status_rich": f"[red]❌ 조회 실패 ({escape(err_msg)})[/red]",
+                "status_plain": f"조회 실패 ({err_msg})",
+                "page_url": "",
+            })
+            continue
+
+        remote_ver_label = res.get("latest_version", "-")
+        status_code, status_rich, status_plain = _compare_local_and_remote_version(local_ver, remote_ver_label, res)
+        if status_code == "update_needed" and _verify_local_matches_remote_zip_tail(scanner.mods_folder / folder_name, res):
+            from src.finder import extract_version_from_filename
+            rem_tok = (
+                extract_version_from_filename(str(remote_ver_label or ""))
+                or extract_version_from_filename(str(res.get("detected_filename") or ""))
+                or extract_version_from_filename(str(res.get("asset_name") or ""))
+            )
+            if rem_tok:
+                local_ver = rem_tok
+            status_code = "up_to_date"
+            status_rich = "[bold green]✅ 최신 상태[/bold green]"
+            status_plain = "최신 상태"
+        page_link = (
+            res.get("page_url")
+            or res.get("post_link")
+            or res.get("patreon_url")
+            or res.get("postype_url")
+            or res.get("download_url")
+            or ""
+        )
+
+        check_rows.append({
+            "idx": idx,
+            "folder_name": folder_name,
+            "file_name": mod.get("name") or folder_name,
+            "local_ver": local_ver or "버전 미표기",
+            "remote_ver": remote_ver_label,
+            "status_code": status_code,
+            "status_rich": status_rich,
+            "status_plain": status_plain,
+            "page_url": page_link,
+        })
+
+    cnt_update = sum(1 for r in check_rows if r["status_code"] == "update_needed")
+    cnt_latest = sum(1 for r in check_rows if r["status_code"] == "up_to_date")
+    cnt_manual = sum(1 for r in check_rows if r["status_code"] == "manual_check")
+    cnt_error = sum(1 for r in check_rows if r["status_code"] == "error")
+
+    if USE_RICH:
+        cmp_table = Table(title="\n📊 보유 모드 업데이트 필요 여부 비교표 (읽기 전용 점검)")
+        cmp_table.add_column("번호", justify="right", style="cyan", width=4)
+        cmp_table.add_column("모드 폴더명", style="bold white")
+        cmp_table.add_column("기준 파일명", style="dim")
+        cmp_table.add_column("내 로컬 버전", justify="center", style="magenta")
+        cmp_table.add_column("웹 최신 버전", justify="center", style="green")
+        cmp_table.add_column("업데이트 필요 여부", justify="center")
+
+        for r in check_rows:
+            cmp_table.add_row(
+                str(r["idx"]),
+                escape(r["folder_name"]),
+                escape(r["file_name"]),
+                escape(r["local_ver"]),
+                escape(str(r["remote_ver"])),
+                r["status_rich"],
+            )
+        console.print(cmp_table)
+
+        console.print(Panel(
+            f"• [bold yellow]🔄 업데이트 필요:[/bold yellow] {cnt_update}개 모드 폴더\n"
+            f"• [bold green]✅ 최신 상태 (업데이트 불필요):[/bold green] {cnt_latest}개 모드 폴더\n"
+            f"• [bold cyan]🔍 배포처 직접 확인 권장 (버전 미표기):[/bold cyan] {cnt_manual}개 모드 폴더"
+            + (f"\n• [bold red]❌ 조회 실패:[/bold red] {cnt_error}개 모드 폴더" if cnt_error else "")
+            + "\n\n[dim]※ 이 점검은 읽기 전용으로 수행되었으며, 어떠한 파일도 다운로드하거나 변경하지 않았습니다.[/dim]",
+            title="[bold green]✅ 업데이트 필요 여부 점검 요약[/bold green]",
+            border_style="green",
+        ))
+    else:
+        print("\n" + "=" * 78)
+        print("📊 [보유 모드 업데이트 필요 여부 비교표 (읽기 전용 점검)]")
+        for r in check_rows:
+            print(
+                f"  {r['idx']:2d}. {r['folder_name']} ({r['file_name']}) | "
+                f"로컬: {r['local_ver']} | 웹 최신: {r['remote_ver']} -> {r['status_plain']}"
+            )
+        print("-" * 78)
+        print(f"- 🔄 업데이트 필요: {cnt_update}개")
+        print(f"- ✅ 최신 상태 (업데이트 불필요): {cnt_latest}개")
+        print(f"- 🔍 배포처 직접 확인 권장 (버전 미표기): {cnt_manual}개")
+        if cnt_error:
+            print(f"- ❌ 조회 실패: {cnt_error}개")
+        print("※ 이 점검은 읽기 전용으로 수행되었으며, 어떠한 파일도 다운로드하거나 변경하지 않았습니다.")
+        print("=" * 78)
+
+    while True:
+        print("\n[원하시는 작업을 선택하세요]")
+        print("1. 다른 메뉴로 전환")
+        print("2. 공식 배포 페이지 웹 브라우저로 열기 (직접 눈으로 확인/수동 다운로드)")
+        print("3. 프로그램 종료")
+
+        act = input("\n선택 (1/2/3) > ").strip().lower()
+        if act in ["1", "b", "back"]:
+            print("\n➡️ 다른 메뉴(메인 메뉴)로 전환합니다.")
+            return True
+        elif act == "2":
+            import webbrowser
+            while True:
+                open_ch = input(
+                    f"\n🌐 열어볼 모드 번호를 입력하세요 (1~{len(check_rows)} / u: 업데이트 필요 항목만 열기 / a: 전체 열기 / b: 이전으로) > "
+                ).strip().lower()
+                if open_ch in ["", "b", "back", "n", "no"]:
+                    break
+                if open_ch == "u":
+                    targets_u = [r for r in check_rows if r["status_code"] == "update_needed" and r.get("page_url")]
+                    if not targets_u:
+                        print("[*] 현재 '업데이트 필요'로 판정된 항목이 없습니다. 개별 번호나 a(전체 열기)를 이용해 주세요.")
+                        continue
+                    for r in targets_u:
+                        webbrowser.open(r["page_url"])
+                    print(f"✅ 업데이트가 필요한 {len(targets_u)}개 모드의 공식 배포 페이지를 웹 브라우저에서 열었습니다.")
+                    break
+                if open_ch in ["a", "all"]:
+                    opened = 0
+                    for r in check_rows:
+                        if r.get("page_url"):
+                            webbrowser.open(r["page_url"])
+                            opened += 1
+                    print(f"✅ 총 {opened}개 모드의 공식 배포 페이지를 웹 브라우저에서 열었습니다.")
+                    break
+                if open_ch.isdigit() and (1 <= int(open_ch) <= len(check_rows)):
+                    chosen_r = check_rows[int(open_ch) - 1]
+                    if chosen_r.get("page_url"):
+                        webbrowser.open(chosen_r["page_url"])
+                        print(f"✅ [{chosen_r['folder_name']}] 공식 배포 페이지를 웹 브라우저에서 열었습니다: {chosen_r['page_url']}")
+                    else:
+                        print("[!] 해당 모드의 공식 배포 페이지 링크를 찾지 못했습니다.")
+                else:
+                    print(f"[!] 1~{len(check_rows)} 번호, u, a 또는 b(이전으로)를 입력해 주세요.")
+        elif act in ["3", "q", "exit"]:
+            return False
+        else:
+            print("\n[!] 1, 2, 3 번호 중 하나를 입력해 주세요.")
+
+
 def run_update_all(updater: ModUpdater, results):
     targets = [(mod, res) for mod, res in results if not res.get("error") and res.get("has_update")]
     if not targets:
@@ -1227,8 +1637,9 @@ def main():
         print("1. Mods 폴더 상태 확인 및 스캔")
         print("2. 모드 업데이트 확인")
         print("3. 모드 업데이트 전체 실행")
-        print("4. 백업 목록 확인")
-        print("5. Mods 폴더 경로 수동 변경")
+        print("4. 모드 업데이트 필요 여부 확인")
+        print("5. 백업 목록 확인")
+        print("6. Mods 폴더 경로 수동 변경")
         print("q. 종료")
 
         choice = input("\n입력 > ").strip().lower()
@@ -1246,8 +1657,13 @@ def main():
                 break
             continue
         elif choice == "4":
-            list_backups(backup_mgr)
+            if not check_update_needed_only(updater, scanner):
+                print("\n프로그램을 종료합니다. 즐거운 심즈 플레이 되세요!")
+                break
+            continue
         elif choice == "5":
+            list_backups(backup_mgr)
+        elif choice == "6":
             new_path = input("새 Mods 폴더 경로를 입력하세요: ").strip()
             if new_path:
                 p = Path(new_path)

@@ -94,7 +94,7 @@ class ModUpdater:
         """GitHub Releases API를 통해 최신 버전을 조회합니다."""
         api_url = f"https://api.github.com/repos/{repo}/releases/latest"
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.0",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.2",
             "Accept": "application/vnd.github.v3+json"
         }
         try:
@@ -144,7 +144,7 @@ class ModUpdater:
 
         url = "https://deaderpool-mccc.com/downloads.html"
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.0"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.2"
         }
 
         try:
@@ -545,6 +545,9 @@ class ModUpdater:
                     or extract_version_from_filename(str(rem_info.get("title") or ""))
                 )
                 if rem_ver and loc_ver:
+                    # 예: XmlInjector_Script_v42.zip(v42) vs XmlInjector_Script_v4.2.ts4script(v4.2)처럼 점(.)만 생략된 동일 버전인 경우 점(.) 표기 보존
+                    if rem_ver.lstrip("vV").replace(".", "") == loc_ver.lstrip("vV").replace(".", "") and "." in loc_ver and "." not in rem_ver:
+                        return loc_ver
                     return rem_ver if _is_remote_newer_or_equal(loc_ver, rem_ver) else loc_ver
                 return rem_ver or loc_ver
 
