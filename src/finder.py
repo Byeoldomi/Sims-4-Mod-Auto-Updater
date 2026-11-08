@@ -126,7 +126,7 @@ KNOWN_CATALOG = [
         "creator": "VirtualConsciousnessLabs",
         "mod_title": "Sims 4 AI Chat",
         "links": [
-            ("Patreon (공식)", "Sims 4 AI Chat v2.3.2 | Virtual Consciousness Labs", "https://www.patreon.com/VirtualConsciousnessLabs/posts/sims-4-ai-chat-3-173975769"),
+            ("Patreon (공식)", "Sims 4 AI Chat v2.3.4 | Virtual Consciousness Labs", "https://www.patreon.com/VirtualConsciousnessLabs/posts/sims-4-ai-chat-4-174642480"),
             ("Patreon 채널", "Virtual Consciousness Labs Official Patreon", "https://www.patreon.com/VirtualConsciousnessLabs")
         ]
     },
