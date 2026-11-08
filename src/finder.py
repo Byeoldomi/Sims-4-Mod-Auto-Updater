@@ -305,6 +305,15 @@ KNOWN_CATALOG = [
         ]
     },
     {
+        "keywords": ["sims4me_lessfacialoveraction", "lessfacialoveraction", "less facial overaction"],
+        "name": "Less Facial Overaction",
+        "creator": "Bienchen (sims4me)",
+        "mod_title": "Less Facial Overaction",
+        "links": [
+            ("CurseForge (공식)", "Less Facial Overaction | Bienchen (sims4me)", "https://www.curseforge.com/sims4/mods/less-facial-overaction")
+        ]
+    },
+    {
         "keywords": ["friedgil", "friedgil_random_name", "random_name_korean_translation"],
         "name": "FriedGil_Random_Name_Korean_Translation_Compilation",
         "creator": "FriedGil",
@@ -2756,7 +2765,17 @@ def is_safe_remote_file_match(
             best_score = sc
 
     # 제작자명이 원격 URL이나 파일명/제목에 명시적으로 포함되어 있으면 가산점 부여
+    # 단, 제작자 접두사(예: sims4me_, littlemssam_)만 같고 실제 모드명(inferred_mod)이 전혀 일치하지 않는 다른 모드 오탐 방지
     creator = (meta.get("inferred_creator") or "").strip().lower()
+    mod_only = (meta.get("manifest_name") or meta.get("inferred_mod") or "").strip()
+    if mod_only and creator and mod_only.lower() != creator:
+        mod_only_score = max(
+            _match_score_mod_name(mod_only, rem_fn),
+            _match_score_mod_name(mod_only, f"{rem_fn} {rem_title}"),
+        )
+        if mod_only_score <= 0:
+            return False, 0, f"제작자만 동일하고 모드명 불일치 ({rem_fn})"
+
     if creator and len(creator) >= 3 and creator in remote_combined.lower():
         best_score += 20
 
