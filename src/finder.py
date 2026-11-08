@@ -296,6 +296,15 @@ KNOWN_CATALOG = [
         ]
     },
     {
+        "keywords": ["nv_sm_ui_mood", "nv_sm_ui_mood_01_adult_all", "nv_sm_ui_mood_01_children_all"],
+        "name": "NV_SM_UI_Mood",
+        "creator": "NV Games",
+        "mod_title": "",
+        "links": [
+            ("Patreon (공식)", "SMALL MODS | NV . Games", "https://www.patreon.com/nv_games/posts/small-mods-69121597")
+        ]
+    },
+    {
         "keywords": ["friedgil", "friedgil_random_name", "random_name_korean_translation"],
         "name": "FriedGil_Random_Name_Korean_Translation_Compilation",
         "creator": "FriedGil",
@@ -966,7 +975,7 @@ def extract_mod_file_metadata(file_path: Optional[str]) -> Dict[str, Any]:
     if not fn_creator and "_" in p.stem:
         u_parts = [pt.strip() for pt in p.stem.split("_") if pt.strip()]
         if len(u_parts) >= 2 and u_parts[0].lower() not in non_creator_prefixes:
-            fn_creator = u_parts[0]
+            fn_creator = "NV Games" if u_parts[0].upper() == "NV" else u_parts[0]
             fn_title_raw = " ".join(u_parts[1:])
 
     m_rpo = re.match(
