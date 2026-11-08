@@ -195,6 +195,16 @@ KNOWN_CATALOG = [
         ]
     },
     {
+        "keywords": ["lumpinou_moodpackmod", "moodpackmod", "mood pack mod"],
+        "name": "Lumpinou_MoodPackMod",
+        "creator": "Lumpinou",
+        "mod_title": "Mood Pack Mod",
+        "links": [
+            ("Patreon (공식)", "[Mod] Lumpinou's Mood Pack Mod | Lumpinou", "https://www.patreon.com/lumpinou/posts/mod-lumpinous-43759541"),
+            ("CurseForge", "Mood Pack : New Moods for your Sims - The Sims 4 Mods", "https://www.curseforge.com/sims4/mods/mood-pack")
+        ]
+    },
+    {
         "keywords": ["restrictedromance_bypolarbearsims", "restrictedromance"],
         "name": "RestrictedRomance By Polarbearsims",
         "creator": "Polarbearsims",
@@ -785,7 +795,9 @@ def _parse_tuning_and_module_clues(root_tunings: List[str], modules: List[str]) 
                     inferred_creator = first
                 if len(parts) >= 2 and not inferred_mod:
                     second = parts[1].strip()
-                    if second.lower() not in (
+                    if first.lower() == "lumpinou" and second.upper() == "MP":
+                        inferred_mod = "Mood Pack Mod"
+                    elif second.lower() not in (
                         "buff", "loot", "trait", "shared", "testset", "simpicker",
                         "piemenu", "manageworkoutfit", "chatting",
                     ):
