@@ -102,12 +102,13 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["passionate gifts", "passionate_gifts", "passionategifts"],
+        "keywords": ["passionate gifts", "passionate_gifts", "passionategifts", "passionate gift"],
         "name": "[UTOPYA] Passionate Gifts MOD",
         "creator": "UTOPYA",
         "mod_title": "Passionate Gifts MOD",
+        "version": "0.8",
         "links": [
-            ("Patreon (공식)", "Valentine Mods Updates | Mod Download | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/valentine-mods-122321183"),
+            ("Patreon (공식)", "Passionate Gift 0.8 | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/passionate-gift-151330104"),
             ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
         ]
     },
