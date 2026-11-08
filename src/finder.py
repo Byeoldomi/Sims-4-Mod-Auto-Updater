@@ -106,7 +106,6 @@ KNOWN_CATALOG = [
         "name": "[UTOPYA] Passionate Gifts MOD",
         "creator": "UTOPYA",
         "mod_title": "Passionate Gifts MOD",
-        "version": "0.8",
         "links": [
             ("Patreon (공식)", "Passionate Gift 0.8 | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/passionate-gift-151330104"),
             ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
@@ -1005,7 +1004,7 @@ def extract_mod_file_metadata(file_path: Optional[str]) -> Dict[str, Any]:
             result["creators"] = [cat_match["creator"]]
         if cat_match.get("mod_title") and not result["manifest_name"]:
             result["manifest_name"] = cat_match["mod_title"]
-        if cat_match.get("version"):
+        if cat_match.get("version") and not result["version"]:
             result["version"] = cat_match["version"]
         if cat_match.get("candidate_links"):
             result["urls"] = [link[2] for link in cat_match["candidate_links"]]
