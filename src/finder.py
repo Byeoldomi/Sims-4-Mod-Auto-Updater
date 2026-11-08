@@ -2345,13 +2345,19 @@ def inspect_remote_mod_page(
                         + " "
                         + str(attrs.get("teaser_text") or "")
                     )
-                    m_hf = re.search(
-                        r"\b(?:hotfix|version|update)\s+(v?[0-9]+\.[0-9]+(?:\.[0-9]+)*[a-z0-9]*)",
-                        body_combined,
-                        flags=re.IGNORECASE,
-                    )
-                    if m_hf:
-                        ver_str = m_hf.group(1).lstrip("vV")
+                    if not ver_str:
+                        m_hf = re.search(
+                            r"(?<!game\s)(?<!patch\s)\b(?:hotfix|version|update)\s+(v?[0-9]+\.[0-9]+(?:\.[0-9]+)*[a-z0-9]*)",
+                            body_combined,
+                            flags=re.IGNORECASE,
+                        )
+                        if m_hf:
+                            cand_hf = m_hf.group(1).lstrip("vV")
+                            # 심즈 4 게임 패치 버전(예: 1.126.58, 1.110.311 등)은 모드 버전에서 제외
+                            if not re.match(r"^1\.1\d{2}\.\d+", cand_hf):
+                                ver_str = cand_hf
+
+                    target_base_low = Path(target_mod_name).name.lower() if target_mod_name else ""
 
                     # 얼리 액세스 / 유료 멤버십 전용으로 잠겨 있는 경우 (무료 멤버십 공개 포스트는 첨부 프리뷰 메타데이터로 자동 감지)
                     if not can_view:
@@ -2364,7 +2370,8 @@ def inspect_remote_mod_page(
                                 p_sz = pm.get("size_bytes") or 0
                                 if p_fn.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
                                     p_dl = f"{post_url}#free_member_file={urllib.parse.quote(p_fn)}&size={p_sz}"
-                                    preview_files.append((_match_score_mod_name(target_mod_name, p_fn) + 20, p_fn, p_dl))
+                                    exact_bonus = 300 if (target_base_low and p_fn.lower() == target_base_low) else 0
+                                    preview_files.append((_match_score_mod_name(target_mod_name, p_fn) + 20 + exact_bonus, p_fn, p_dl))
                             if preview_files:
                                 preview_files.sort(key=lambda x: x[0], reverse=True)
                                 best_p_fn, best_p_dl = preview_files[0][1], preview_files[0][2]
@@ -2395,7 +2402,8 @@ def inspect_remote_mod_page(
                             fn = ia.get("file_name") or ""
                             dl = ia.get("download_url") or ia.get("url") or ""
                             if fn.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")) and dl:
-                                files.append((_match_score_mod_name(target_mod_name, fn) + 20, fn, dl))
+                                exact_bonus = 300 if (target_base_low and fn.lower() == target_base_low) else 0
+                                files.append((_match_score_mod_name(target_mod_name, fn) + 20 + exact_bonus, fn, dl))
 
                     if files:
                         files.sort(key=lambda x: x[0], reverse=True)
