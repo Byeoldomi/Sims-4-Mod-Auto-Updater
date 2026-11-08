@@ -2067,6 +2067,99 @@ def _inspect_dcinside_page(
     return None
 
 
+def _inspect_naver_blog_page(
+    url: str,
+    target_mod_name: str,
+    headers: Dict[str, str],
+    timeout: int = 10,
+) -> Optional[Dict[str, Any]]:
+    """네이버 블로그(blog.naver.com) 포스트에서 PostView 본문 내 첨부된 모드/압축 파일(download.blog.naver.com) 또는 외부 배포 링크를 추출합니다."""
+    try:
+        fetch_url = url
+        m_nb = re.search(r"blog\.naver\.com/([a-zA-Z0-9_-]+)/(\d+)", url)
+        if m_nb:
+            blog_id, log_no = m_nb.group(1), m_nb.group(2)
+            fetch_url = f"https://blog.naver.com/PostView.naver?blogId={blog_id}&logNo={log_no}"
+
+        r = requests.get(fetch_url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+        if r.status_code != 200:
+            return None
+
+        soup = BeautifulSoup(r.text, "html.parser")
+        meta_title = soup.find("meta", attrs={"property": "og:title"})
+        post_title = (
+            meta_title["content"].strip()
+            if (meta_title and meta_title.get("content"))
+            else (soup.title.get_text(" ", strip=True) if soup.title else "")
+        )
+        title_ver = extract_version_from_filename(post_title)
+        target_base_low = Path(target_mod_name).name.lower() if target_mod_name else ""
+
+        candidates: List[Tuple[int, str, str, str]] = []
+        seen_filenames: set[str] = set()
+
+        # 1) SmartEditor ONE (data-linkdata='{"link": "https://download.blog.naver.com/open/..."}') 및 본문 내 첨부파일 링크 추출
+        raw_dl_urls: List[str] = []
+        for m_ld in re.finditer(r'data-linkdata=[\'"]([^\'"]+)[\'"]', r.text):
+            ld_txt = html.unescape(m_ld.group(1))
+            for m_u in re.finditer(r"https://download\.blog\.naver\.com/open/[^\s\"'\\<>]+", ld_txt):
+                raw_dl_urls.append(m_u.group(0))
+
+        for m_u in re.finditer(r"https://download\.blog\.naver\.com/open/[^\s\"'\\<>]+", r.text):
+            u_val = m_u.group(0)
+            if u_val not in raw_dl_urls:
+                raw_dl_urls.append(u_val)
+
+        for dl_u in raw_dl_urls:
+            fn = urllib.parse.unquote(dl_u.split("/")[-1].split("?")[0]).strip()
+            fn_low = fn.lower()
+            if not fn_low.endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
+                continue
+            if fn_low in seen_filenames:
+                continue
+            seen_filenames.add(fn_low)
+
+            score = _match_score_mod_name(target_mod_name, fn) + 30
+            if target_base_low and fn_low == target_base_low:
+                score += 300
+            fn_ver = extract_version_from_filename(fn) or title_ver
+            ver_str = fn_ver.lstrip("vV") if fn_ver else ""
+            candidates.append((score, fn, dl_u, ver_str))
+
+        if candidates:
+            candidates.sort(key=lambda x: x[0], reverse=True)
+            _, best_fn, best_dl, best_ver = candidates[0]
+            return {
+                "status": "free_direct",
+                "title": post_title or best_fn,
+                "version": best_ver,
+                "file_name": best_fn,
+                "download_url": best_dl,
+                "page_url": url,
+                "all_files": [(fn, dl) for _, fn, dl, _ in candidates],
+            }
+
+        # 2) 본문 내 외부 배포 링크(Google Drive, SimFileShare, MediaFire, Dropbox 등) 보조 탐색
+        ext_links: List[str] = []
+        for m_ext in re.finditer(
+            r'https?://(?:drive\.google\.com/file/d/[^\s"\'<>\\]+|simfileshare\.net/(?:download|folder)/\d+/?|(?:www\.)?mediafire\.com/file/[^\s"\'<>\\]+|(?:www\.)?dropbox\.com/[^\s"\'<>\\]+)',
+            r.text,
+            flags=re.IGNORECASE,
+        ):
+            ext_u = html.unescape(m_ext.group(0)).rstrip(".,;'\")>]")
+            if ext_u not in ext_links:
+                ext_links.append(ext_u)
+
+        for ext_u in ext_links[:4]:
+            sub_res = inspect_remote_mod_page(ext_u, target_mod_name=target_mod_name, timeout=timeout, _depth=1)
+            if sub_res.get("status") == "free_direct" and sub_res.get("download_url"):
+                sub_res["page_url"] = url
+                return sub_res
+    except Exception:
+        pass
+    return None
+
+
 def inspect_remote_mod_page(
     url: str,
     target_mod_name: str = "",
@@ -2194,6 +2287,12 @@ def inspect_remote_mod_page(
         dc_res = _inspect_dcinside_page(url, target_mod_name, headers, timeout=timeout)
         if dc_res:
             return dc_res
+        return {"status": "browser_required", "page_url": url}
+
+    if "blog.naver.com/" in u_lower:
+        nb_res = _inspect_naver_blog_page(url, target_mod_name, headers, timeout=timeout)
+        if nb_res:
+            return nb_res
         return {"status": "browser_required", "page_url": url}
 
     # ==========================================================================

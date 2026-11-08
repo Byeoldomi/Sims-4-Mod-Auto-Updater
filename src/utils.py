@@ -43,6 +43,8 @@ def download_file(
         headers["Referer"] = "https://gall.dcinside.com/"
     elif "wicked.cc" in url.lower():
         headers["Referer"] = "https://wicked.cc/"
+    elif "blog.naver.com" in url.lower():
+        headers["Referer"] = "https://blog.naver.com/"
 
     response = requests.get(url, headers=headers, stream=True, timeout=30)
     response.raise_for_status()
