@@ -205,6 +205,15 @@ KNOWN_CATALOG = [
         ]
     },
     {
+        "keywords": ["lumpinou_roadtoromance", "roadtoromance", "road to romance"],
+        "name": "Lumpinou_RoadToRomance",
+        "creator": "Lumpinou",
+        "mod_title": "Road To Romance",
+        "links": [
+            ("Patreon (공식)", "[Mod] Road to Romance - Lovestruck Edition - OR - BG Ver | Lumpinou", "https://www.patreon.com/lumpinou/posts/mod-road-to-or-4-39785932")
+        ]
+    },
+    {
         "keywords": ["restrictedromance_bypolarbearsims", "restrictedromance"],
         "name": "RestrictedRomance By Polarbearsims",
         "creator": "Polarbearsims",
@@ -797,6 +806,8 @@ def _parse_tuning_and_module_clues(root_tunings: List[str], modules: List[str]) 
                     second = parts[1].strip()
                     if first.lower() == "lumpinou" and second.upper() == "MP":
                         inferred_mod = "Mood Pack Mod"
+                    elif first.lower() == "lumpinou" and second.upper() == "RTR":
+                        inferred_mod = "Road To Romance"
                     elif second.lower() not in (
                         "buff", "loot", "trait", "shared", "testset", "simpicker",
                         "piemenu", "manageworkoutfit", "chatting",
