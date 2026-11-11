@@ -43,7 +43,7 @@ from src.backup import BackupManager
 from src.updater import ModUpdater
 
 def print_banner():
-    title = "🎮 심즈 4 모드 자동 업데이터 (Sims 4 Mod Auto Updater) v0.1.2"
+    title = "🎮 심즈 4 모드 자동 업데이터 (Sims 4 Mod Auto Updater) v0.1.3"
     if USE_RICH:
         console.print(Panel(f"[bold cyan]{title}[/bold cyan]\n[dim]EA The Sims 4 Mod Management Tool[/dim]"))
     else:
@@ -147,8 +147,10 @@ def handle_subfolder_search(scanner: ModScanner, target_dirs: List[Path], select
             meta_rich_lines.append(f"[bold]📌 내부 식별 모드명:[/bold] {escape(mod_label)}")
             meta_plain_lines.append(f"- 내부 식별 모드명: {mod_label}")
         if file_meta.get("version"):
-            meta_rich_lines.append(f"[bold]🔖 내장 버전:[/bold] [green]v{escape(file_meta['version'])}[/green]")
-            meta_plain_lines.append(f"- 내장 버전: v{file_meta['version']}")
+            ver_val = str(file_meta["version"]).strip()
+            ver_disp = ver_val if ver_val.lower().startswith("v") else f"v{ver_val}"
+            meta_rich_lines.append(f"[bold]🔖 내장 버전:[/bold] [green]{escape(ver_disp)}[/green]")
+            meta_plain_lines.append(f"- 내장 버전: {ver_disp}")
 
         meta_rich_block = ("\n" + "\n".join(meta_rich_lines)) if meta_rich_lines else ""
 
@@ -660,50 +662,62 @@ def select_and_check_mod_update(updater: ModUpdater, scanner: ModScanner) -> boo
                 # 2) 무료 공개 배포본 (프로그램이 배포 페이지에서 직접 다운로드 가능한 모드 파일을 감지한 경우)
                 elif res.get("direct_file_detected") or (res.get("download_url") and not res.get("requires_browser")):
                     detected_fname = res.get("detected_filename") or selected_mod["name"]
+                    variants = res.get("variant_choices") or []
+                    if len(variants) > 1:
+                        detected_fname_disp = (
+                            f"선택형 에디션 {len(variants)}종 감지 (동시 설치 불가 · 택1):\n"
+                            + "\n".join(f"  {vi}. {v['file_name']}" for vi, v in enumerate(variants, 1))
+                        )
+                    else:
+                        detected_fname_disp = detected_fname
                     source_page = res.get("page_url") or res.get("download_url") or "-"
                     verif_note = res.get("verification_note") or "공식 배포처 및 키워드 일치 확인됨"
                     if USE_RICH:
                         console.print(Panel(
                             f"[bold green]✅ 배포 페이지에서 다운로드 가능한 무료 모드 파일을 감지했습니다![/bold green]\n\n"
                             f"[bold]📄 로컬 기준 파일:[/bold] [white]{escape(selected_mod['name'])}[/white]\n"
-                            f"[bold]📦 감지된 원격 파일:[/bold] [cyan]{escape(detected_fname)}[/cyan]\n"
+                            f"[bold]📦 감지된 원격 파일:[/bold] [cyan]{escape(detected_fname_disp)}[/cyan]\n"
                             f"[bold]🔗 감지된 배포 출처:[/bold] [underline green]{escape(source_page)}[/underline green]\n"
                             f"[bold]🛡️ 안전 일치 검증:[/bold] [green]{escape(verif_note)}[/green]",
                             title="[bold green]다운로드 사전 검증 정보[/bold green]",
                             border_style="green"
                         ))
                     else:
-                        print(f"\n✅ 배포 페이지에서 다운로드 가능한 무료 모드 파일({detected_fname})을 감지했습니다!")
+                        print(f"\n✅ 배포 페이지에서 다운로드 가능한 무료 모드 파일({detected_fname_disp})을 감지했습니다!")
                         print(f"  - 로컬 기준 파일: {selected_mod['name']}")
-                        print(f"  - 감지된 원격 파일: {detected_fname}")
+                        print(f"  - 감지된 원격 파일: {detected_fname_disp}")
                         print(f"  - 감지된 배포 출처: {source_page}")
                         print(f"  - 안전 일치 검증: {verif_note}")
 
                     do_update = input("모드 파일을 감지했습니다. 지금 다운로드 하시겠습니까? (y/n) > ").strip().lower()
                     if do_update == "y":
-                        target_single_name = selected_mod.get("name", detected_fname)
-                        print("\n[설치 및 덮어쓰기 방식을 선택하세요]")
-                        print(f"1. 지정한 파일만 덮어쓰기 ({target_single_name})")
-                        print("2. 관련 파일 다 같이 덮어쓰기 (동일 배포처/압축파일 내 모든 모드 파일 일괄 덮어쓰기)")
-                        print("c. 취소")
-                        ow_choice = input("\n선택 (1/2/c, 기본 1) > ").strip().lower()
-                        if ow_choice in ("c", "cancel", "n"):
+                        if not _prompt_variant_choice(selected_mod.get("name", detected_fname), res):
                             print("\n[*] 다운로드를 취소했습니다.")
                         else:
-                            overwrite_mode = "all" if ow_choice == "2" else "single"
-                            mode_desc = "관련 파일 전체 일괄 덮어쓰기" if overwrite_mode == "all" else f"지정 파일({target_single_name}) 단독 덮어쓰기"
-                            try:
-                                print(f"\n🚀 [{detected_fname}] 다운로드 및 설치 중 ({mode_desc})...")
-                                updated_files = updater.update_mod(selected_mod, res, overwrite_mode=overwrite_mode)
-                                if isinstance(updated_files, list) and updated_files:
-                                    print(f"\n🎉 총 {len(updated_files)}개 파일 자동 다운로드 및 덮어쓰기가 완료되었습니다!")
-                                    for uf in updated_files:
-                                        print(f"  • {uf}")
-                                else:
-                                    installed_label = res.get("detected_filename") or selected_mod["name"]
-                                    print(f"\n🎉 [{installed_label}] 자동 다운로드 및 설치가 완료되었습니다!")
-                            except Exception as e:
-                                print(f"\n❌ 다운로드/설치 실패: {e}")
+                            detected_fname = res.get("detected_filename") or selected_mod["name"]
+                            target_single_name = selected_mod.get("name", detected_fname)
+                            print("\n[설치 및 덮어쓰기 방식을 선택하세요]")
+                            print(f"1. 지정한 파일만 덮어쓰기 ({target_single_name})")
+                            print("2. 관련 파일 다 같이 덮어쓰기 (동일 배포처/압축파일 내 모든 모드 파일 일괄 덮어쓰기)")
+                            print("c. 취소")
+                            ow_choice = input("\n선택 (1/2/c, 기본 1) > ").strip().lower()
+                            if ow_choice in ("c", "cancel", "n"):
+                                print("\n[*] 다운로드를 취소했습니다.")
+                            else:
+                                overwrite_mode = "all" if ow_choice == "2" else "single"
+                                mode_desc = "관련 파일 전체 일괄 덮어쓰기" if overwrite_mode == "all" else f"지정 파일({target_single_name}) 단독 덮어쓰기"
+                                try:
+                                    print(f"\n🚀 [{detected_fname}] 다운로드 및 설치 중 ({mode_desc})...")
+                                    updated_files = updater.update_mod(selected_mod, res, overwrite_mode=overwrite_mode)
+                                    if isinstance(updated_files, list) and updated_files:
+                                        print(f"\n🎉 총 {len(updated_files)}개 파일 자동 다운로드 및 덮어쓰기가 완료되었습니다!")
+                                        for uf in updated_files:
+                                            print(f"  • {uf}")
+                                    else:
+                                        installed_label = res.get("detected_filename") or selected_mod["name"]
+                                        print(f"\n🎉 [{installed_label}] 자동 다운로드 및 설치가 완료되었습니다!")
+                                except Exception as e:
+                                    print(f"\n❌ 다운로드/설치 실패: {e}")
 
                 elif res.get("requires_browser"):
                     print(f"\n💡 [{selected_mod['name']}] 페이지 내 직접 다운로드 파일을 감지하지 못했습니다. 아래 제작자 배포 페이지에서 직접 다운로드해 주세요.")
@@ -1304,7 +1318,7 @@ def _verify_local_matches_remote_zip_tail(folder_path: Optional[Path], res: dict
         r = requests.get(
             dl_url,
             headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.2",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.3",
                 "Range": "bytes=-16384",
             },
             timeout=8,
@@ -1621,6 +1635,437 @@ def list_backups(backup_mgr: BackupManager):
     for idx, b in enumerate(backups, 1):
         print(f"  {idx}. {b.name}")
 
+
+def _format_size_bytes(num_bytes: int) -> str:
+    if num_bytes >= 1024 * 1024:
+        return f"{num_bytes / (1024 * 1024):.2f} MB ({num_bytes:,} bytes)"
+    if num_bytes >= 1024:
+        return f"{num_bytes / 1024:.1f} KB ({num_bytes:,} bytes)"
+    return f"{num_bytes:,} bytes"
+
+
+def _prompt_variant_choice(mod_display_name: str, res: dict) -> bool:
+    """동시 설치가 불가능한 선택형 에디션(예: Political World의 Fictional Gurus vs Real-Life Gurus)이
+    존재하는 경우, 사용자에게 하나를 선택하도록 안내하고 res의 다운로드 대상 정보를 갱신합니다.
+    반환값: 선택 완료 시 True, 취소 시 False
+    """
+    variants = res.get("variant_choices") or []
+    if len(variants) <= 1:
+        return True
+
+    if USE_RICH:
+        lines = [
+            f"[bold yellow]⚖️ [{escape(mod_display_name)}] 모드는 두 에디션을 동시에 설치할 수 없으므로 둘 중 하나를 선택해야 합니다:[/bold yellow]\n"
+        ]
+        for idx_v, v in enumerate(variants, 1):
+            lines.append(
+                f"  [bold cyan]{idx_v}.[/bold cyan] [bold white]{escape(v['file_name'])}[/bold white]\n"
+                f"     ↳ [green]{escape(v.get('label', ''))}[/green]"
+            )
+        lines.append("\n  [bold yellow]c.[/bold yellow] 다운로드 취소")
+        console.print(Panel(
+            "\n".join(lines),
+            title="[bold cyan]🎯 에디션 선택 (택1)[/bold cyan]",
+            border_style="cyan",
+        ))
+    else:
+        print(f"\n⚖️ [{mod_display_name}] 에디션 선택 안내 (동시 설치 불가 · 택1):")
+        for idx_v, v in enumerate(variants, 1):
+            print(f"  {idx_v}. {v['file_name']}")
+            if v.get("label"):
+                print(f"     ↳ {v['label']}")
+        print("  c. 다운로드 취소")
+
+    while True:
+        v_ch = input(f"\n다운로드할 에디션 번호를 선택하세요 (1~{len(variants)}, 기본 1 / c: 취소) > ").strip().lower()
+        if v_ch in ("c", "cancel", "n", "q"):
+            return False
+        if v_ch == "":
+            chosen = variants[0]
+            break
+        if v_ch.isdigit() and (1 <= int(v_ch) <= len(variants)):
+            chosen = variants[int(v_ch) - 1]
+            break
+        print(f"[!] 1~{len(variants)} 번호 또는 c(취소)를 입력해 주세요.")
+
+    res["download_url"] = chosen["download_url"]
+    res["asset_name"] = chosen["file_name"]
+    res["detected_filename"] = chosen["file_name"]
+    print(f"\n✅ 선택된 에디션: {chosen['file_name']}")
+    return True
+
+
+def _run_dev_sandbox_download_test(mod_display_name: str, virtual_fn: str, res: dict) -> bool:
+    """실제 Mods 폴더를 건드리지 않고 임시 샌드박스 폴더에 파일을 다운로드하여
+    무결성 검증(verify_downloaded_mod_file) 및 압축 해제(extract_zip)까지 테스트합니다.
+    반환값: 자동 다운로드 및 검증 성공 여부 (True/False)
+    """
+    import re
+    import shutil
+    import tempfile
+    from src.utils import calculate_sha256, download_file, extract_zip, verify_downloaded_mod_file
+
+    dl_url = str(res.get("download_url") or "")
+    is_free_member_gate = "#free_member_file=" in dl_url
+    can_auto_download = bool(
+        res.get("direct_file_detected")
+        and not res.get("requires_browser")
+        and dl_url
+        and not is_free_member_gate
+    )
+
+    if not can_auto_download:
+        if is_free_member_gate:
+            reason = "Patreon 무료 멤버십 로그인 후 다운로드 가능한 포스트입니다. (비로그인 상태에서는 첨부파일 이름/용량만 감지)"
+        elif res.get("is_early_access") or res.get("is_paid"):
+            reason = "선배포(얼리 액세스) 또는 유료 후원자 전용 포스트여서 직접 다운로드가 제한됩니다."
+        else:
+            reason = "외부 배포처(CurseForge Cloudflare 보안, LoversLab 로그인 필수 등) 정책상 브라우저 수동 다운로드가 필요한 모드입니다."
+
+        if USE_RICH:
+            console.print(Panel(
+                f"[bold yellow]⚠️ [{escape(mod_display_name)}] 모드는 자동 다운로드 대상이 아닙니다.[/bold yellow]\n"
+                f"[bold]사유:[/bold] {escape(reason)}",
+                title="[bold yellow]🧪 자동 다운로드 테스트 안내[/bold yellow]",
+                border_style="yellow",
+            ))
+        else:
+            print(f"\n⚠️ [{mod_display_name}] 자동 다운로드 불가: {reason}")
+        return False
+
+    if not _prompt_variant_choice(mod_display_name, res):
+        print("\n[*] 에디션 선택을 취소했습니다.")
+        return False
+
+    dl_url = str(res.get("download_url") or "")
+    raw_asset_name = res.get("asset_name") or res.get("detected_filename") or f"{virtual_fn}.zip"
+    asset_name = re.sub(r'[<>:"/\\|?*]+', "_", str(raw_asset_name)).strip()
+    if not asset_name.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
+        asset_name += ".zip"
+
+    is_multi_bundle = bool(res.get("is_multi_file_bundle"))
+    all_remote_files = res.get("all_remote_files") or []
+    display_dl_label = (
+        res.get("detected_filename")
+        if is_multi_bundle and res.get("detected_filename")
+        else asset_name
+    )
+
+    print(f"\n📥 [임시 테스트 폴더] '{display_dl_label}' 실제 다운로드 및 무결성 검증 중...")
+    try:
+        with tempfile.TemporaryDirectory(prefix="s4mod_dev_test_") as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            extract_dir = tmp_path / "extracted_mods"
+            extract_dir.mkdir(parents=True, exist_ok=True)
+
+            if is_multi_bundle and all_remote_files:
+                file_size = 0
+                sha_short = ""
+                extracted_files: list[Path] = []
+                for rem_fn, rem_dl in all_remote_files:
+                    if not rem_fn or not rem_dl:
+                        continue
+                    clean_fn = re.sub(r'[<>:"/\\|?*]+', "_", str(rem_fn)).strip()
+                    if not clean_fn.lower().endswith((".package", ".ts4script")):
+                        continue
+                    sub_dest = tmp_path / clean_fn
+                    download_file(
+                        rem_dl,
+                        sub_dest,
+                        page_url=res.get("page_url") or "",
+                        target_mod_name=clean_fn,
+                    )
+                    verify_downloaded_mod_file(
+                        sub_dest,
+                        expected_target_name=clean_fn,
+                        target_dir=extract_dir,
+                    )
+                    if sub_dest.exists():
+                        file_size += sub_dest.stat().st_size
+                        if not sha_short:
+                            sha_short = calculate_sha256(sub_dest)[:12]
+                        copied = extract_dir / sub_dest.name
+                        shutil.copy2(sub_dest, copied)
+                        extracted_files.append(copied)
+            else:
+                dl_dest = tmp_path / asset_name
+                download_file(
+                    dl_url,
+                    dl_dest,
+                    page_url=res.get("page_url") or "",
+                    target_mod_name=virtual_fn,
+                )
+
+                file_size = dl_dest.stat().st_size if dl_dest.exists() else 0
+                sha_short = calculate_sha256(dl_dest)[:12] if dl_dest.exists() else "-"
+
+                verify_downloaded_mod_file(
+                    dl_dest,
+                    expected_target_name=virtual_fn,
+                    target_dir=extract_dir,
+                )
+
+                extracted_files = []
+                if dl_dest.suffix.lower() in (".zip", ".rar", ".7z"):
+                    extracted_files = extract_zip(dl_dest, extract_dir, overwrite_mode="all")
+                else:
+                    copied = extract_dir / dl_dest.name
+                    shutil.copy2(dl_dest, copied)
+                    extracted_files = [copied]
+
+            file_rows = [
+                (ef.name, _format_size_bytes(ef.stat().st_size))
+                for ef in extracted_files
+                if ef.exists()
+            ]
+
+        if USE_RICH:
+            console.print(Panel(
+                f"[bold green]✅ [{escape(mod_display_name)}] 실제 자동 다운로드 및 무결성 검증 성공![/bold green]\n\n"
+                f"[bold]📦 다운로드된 파일명:[/bold] [cyan]{escape(str(display_dl_label))}[/cyan]\n"
+                f"[bold]📊 다운로드 파일 총 용량:[/bold] [green]{escape(_format_size_bytes(file_size))}[/green]\n"
+                f"[bold]🔑 대표 파일 SHA-256 (앞 12자리):[/bold] {escape(sha_short)}\n"
+                f"[bold]🛡️ 무결성/포맷 검증:[/bold] [bold green]통과 (HTML 오탐 아님, 유효한 심즈 4 모드/압축파일 확인)[/bold green]\n"
+                f"[bold]📂 확보된 모드 파일 수:[/bold] 총 {len(file_rows)}개\n"
+                f"[dim]🧹 검증 완료 후 임시 테스트 폴더는 자동 삭제되었습니다. (실제 Mods 폴더 영향 없음)[/dim]",
+                title="[bold green]🧪 자동 다운로드 & 압축해제 테스트 결과[/bold green]",
+                border_style="green",
+            ))
+            if file_rows:
+                ext_table = Table(title="📂 다운로드/추출된 내부 모드 파일 목록")
+                ext_table.add_column("번호", justify="right", style="cyan", width=5)
+                ext_table.add_column("모드 파일명 (.package / .ts4script)", style="bold white")
+                ext_table.add_column("파일 크기", justify="right", style="green")
+                for idx_f, (fn_str, sz_str) in enumerate(file_rows, 1):
+                    ext_table.add_row(str(idx_f), escape(fn_str), escape(sz_str))
+                console.print(ext_table)
+        else:
+            print(f"\n✅ [{mod_display_name}] 자동 다운로드 및 압축해제 검증 성공!")
+            print(f"- 다운로드된 파일: {display_dl_label} ({_format_size_bytes(file_size)})")
+            print(f"- 확보된 모드 파일 수: {len(file_rows)}개")
+            for idx_f, (fn_str, sz_str) in enumerate(file_rows, 1):
+                print(f"  {idx_f}. {fn_str} ({sz_str})")
+            print("🧹 임시 테스트 폴더가 자동 삭제되었습니다. (실제 Mods 폴더 영향 없음)")
+        return True
+    except Exception as e:
+        if USE_RICH:
+            console.print(Panel(
+                f"[bold red]❌ 자동 다운로드/검증 중 오류가 발생했습니다:[/bold red]\n{escape(str(e))}",
+                title="[bold red]🧪 자동 다운로드 테스트 실패[/bold red]",
+                border_style="red",
+            ))
+        else:
+            print(f"\n❌ 자동 다운로드 테스트 실패: {e}")
+        return False
+
+
+def run_developer_catalog_test(updater: ModUpdater) -> bool:
+    """개발자 전용 숨김 모드 (메인 메뉴에서 'dev' 또는 'test' 입력 시 진입):
+    실제 모드 파일을 설치하지 않고도 KNOWN_CATALOG에 등록된 전체 모드의
+    내장 제작자, 내부 식별 모드명, 내장 버전, 웹 최신 버전, 원격 감지 파일, 배포 링크를 테스트합니다.
+    반환값:
+        True: 메인 메뉴 유지
+        False: 프로그램 종료
+    """
+    from src.finder import KNOWN_CATALOG, check_known_catalog
+
+    while True:
+        if USE_RICH:
+            console.print(Panel(
+                "[bold magenta]🧪 개발자 전용 카탈로그 시뮬레이션 모드 (일반 사용자 비노출)[/bold magenta]\n"
+                "Mods 폴더에 파일을 설치하지 않고도 카탈로그에 등록된 모드의 메타데이터 및 웹 최신 배포 정보를 바로 점검합니다.",
+                title="[bold magenta]🛠️ Developer Test Mode[/bold magenta]",
+                border_style="magenta",
+            ))
+            cat_table = Table(title=f"📋 카탈로그 등록 모드 목록 (총 {len(KNOWN_CATALOG)}개)")
+            cat_table.add_column("번호", justify="right", style="cyan", width=5)
+            cat_table.add_column("식별 모드명", style="bold white")
+            cat_table.add_column("내장 제작자", style="cyan")
+            cat_table.add_column("기준 버전", justify="center", style="green")
+            cat_table.add_column("대표 배포처", style="dim")
+
+            for idx, item in enumerate(KNOWN_CATALOG, 1):
+                mod_label = item.get("mod_title") or item.get("name") or "-"
+                creator = item.get("creator") or "-"
+                raw_v = str(item.get("version") or "").strip()
+                if raw_v:
+                    ver = raw_v if raw_v.lower().startswith("v") else f"v{raw_v}"
+                else:
+                    ver = "수동 확인 필요"
+                first_link = item["links"][0][2] if item.get("links") else "-"
+                cat_table.add_row(str(idx), escape(mod_label), escape(creator), escape(ver), escape(first_link))
+            console.print(cat_table)
+            console.print("  [bold yellow] b.[/bold yellow] 메인 메뉴로 돌아가기")
+        else:
+            print("\n" + "=" * 70)
+            print("🧪 [개발자 전용 카탈로그 시뮬레이션 모드]")
+            for idx, item in enumerate(KNOWN_CATALOG, 1):
+                mod_label = item.get("mod_title") or item.get("name") or "-"
+                creator = item.get("creator") or "-"
+                raw_v = str(item.get("version") or "").strip()
+                ver = (raw_v if raw_v.lower().startswith("v") else f"v{raw_v}") if raw_v else "수동 확인 필요"
+                print(f"  {idx:2d}. {mod_label} | 제작자: {creator} | 버전: {ver}")
+            print("   b. 메인 메뉴로 돌아가기")
+            print("=" * 70)
+
+        ch = input("\n점검할 모드 번호 선택 (1~{} / b: 메인 메뉴) > ".format(len(KNOWN_CATALOG))).strip().lower()
+        if ch in ["b", "back"]:
+            return True
+        if ch in ["q", "exit"]:
+            return False
+        if not ch.isdigit() or not (1 <= int(ch) <= len(KNOWN_CATALOG)):
+            print("\n[!] 올바른 번호를 입력해 주세요.")
+            continue
+
+        item = KNOWN_CATALOG[int(ch) - 1]
+        sample_kw = item["keywords"][0] if item.get("keywords") else item["name"]
+        virtual_fn = sample_kw if sample_kw.lower().endswith((".package", ".ts4script")) else f"{sample_kw}.package"
+        cat_info = check_known_catalog(virtual_fn) or check_known_catalog(item["name"]) or {}
+
+        creator_disp = cat_info.get("creator") or item.get("creator") or "자동 감지"
+        mod_title_disp = cat_info.get("mod_title") or item.get("mod_title") or item.get("name") or virtual_fn
+        ver_raw = cat_info.get("version") or item.get("version") or ""
+        ver_disp = (ver_raw if ver_raw.lower().startswith("v") else f"v{ver_raw}") if ver_raw else "(버전 미표기 / 수동 확인)"
+
+        if USE_RICH:
+            console.print(Panel(
+                f"[bold green]선택된 테스트 항목은 [{escape(item['name'])}]입니다. (미설치 가상 점검)[/bold green]\n\n"
+                f"[bold]🧪 가상 파일명:[/bold] {escape(virtual_fn)}\n"
+                f"[bold]👤 내장 제작자(Creator):[/bold] [cyan]{escape(creator_disp)}[/cyan]\n"
+                f"[bold]📌 내부 식별 모드명:[/bold] {escape(mod_title_disp)}\n"
+                f"[bold]🔖 내장 버전:[/bold] [green]{escape(ver_disp)}[/green]",
+                title=f"[bold magenta]{escape(item['name'])} 내부 메타데이터 시뮬레이션[/bold magenta]",
+                border_style="magenta",
+            ))
+        else:
+            print("\n" + "=" * 60)
+            print(f"선택된 테스트 항목: [{item['name']}]")
+            print(f"- 가상 파일명: {virtual_fn}")
+            print(f"- 내장 제작자(Creator): {creator_disp}")
+            print(f"- 내부 식별 모드명: {mod_title_disp}")
+            print(f"- 내장 버전: {ver_disp}")
+            print("=" * 60)
+
+        while True:
+            print("\n[원하시는 작업을 선택하세요]")
+            print("1. 웹에서 최신 버전/배포 페이지 검색 (자동 다운로드 지원 여부 확인)")
+            print("2. 실제 파일 자동 다운로드 및 압축해제 테스트 (임시 폴더 안전 검증)")
+            print("3. 카탈로그 목록으로 돌아가기")
+            print("4. 메인 메뉴로 전환")
+            print("5. 프로그램 종료")
+
+            sub_act = input("\n선택 (1/2/3/4/5) > ").strip().lower()
+            if sub_act == "3":
+                break
+            elif sub_act == "4":
+                return True
+            elif sub_act in ["5", "q", "exit"]:
+                return False
+            elif sub_act in ("1", "2"):
+                selected_mod = updater.infer_mod_config(item["name"])
+                selected_mod["name"] = virtual_fn
+                if selected_mod.get("source_type") not in ("mccc", "wickedwhims", "barambyul"):
+                    selected_mod["source_type"] = "generic_web"
+
+                print(f"\n🌐 [{item['name']}] 원격 배포 페이지 점검 중입니다...")
+                res = updater.check_mod_update(selected_mod)
+                if "error" in res:
+                    print(f"\n❌ 웹 검색 실패: {res['error']}")
+                else:
+                    up_text = res.get("status_label") or ("🚀 최신 버전 배포 중" if res.get("has_update") else "수동 등록 필요")
+                    page_link = (
+                        res.get("page_url")
+                        or res.get("post_link")
+                        or res.get("patreon_url")
+                        or res.get("postype_url")
+                        or res.get("download_url")
+                        or ""
+                    )
+                    dl_url = str(res.get("download_url") or "")
+                    is_free_member_gate = "#free_member_file=" in dl_url
+                    can_auto_download = bool(
+                        res.get("direct_file_detected")
+                        and not res.get("requires_browser")
+                        and dl_url
+                        and not is_free_member_gate
+                    )
+                    if can_auto_download:
+                        auto_dl_label = "✅ 자동 다운로드 가능 (직접 링크 확보됨)"
+                    elif is_free_member_gate:
+                        auto_dl_label = "🔑 조건부 (Patreon 무료 회원 로그인 필요 - 첨부파일명 감지됨)"
+                    elif res.get("is_early_access") or res.get("is_paid"):
+                        auto_dl_label = "🔒 불가 - 선배포/유료 멤버십 제한 (수동 다운로드 안내)"
+                    else:
+                        auto_dl_label = "⚠️ 불가 - 외부 사이트 보안/로그인 필요 (수동 다운로드 안내)"
+
+                    bundle_fns = res.get("bundle_filenames") or []
+                    variants = res.get("variant_choices") or []
+                    if len(variants) > 1:
+                        detected_files_disp = (
+                            f"선택형 에디션 {len(variants)}종 감지 (동시 설치 불가 · 택1):\n"
+                            + "\n".join(f"• {idx_v}번: {v['file_name']}" for idx_v, v in enumerate(variants, 1))
+                        )
+                    elif len(bundle_fns) > 1:
+                        detected_files_disp = f"총 {len(bundle_fns)}개 구성 파일 일괄 인식:\n" + "\n".join(f"• {fn}" for fn in bundle_fns)
+                    else:
+                        detected_files_disp = res.get("detected_filename") or ""
+
+                    if USE_RICH:
+                        table = Table(title=f"[{escape(item['name'])}] 웹 최신 릴리스 정보 (개발자 테스트)")
+                        table.add_column("항목", style="cyan")
+                        table.add_column("내용", style="green")
+                        table.add_row("모드 이름", item["name"])
+                        table.add_row("내장 제작자", creator_disp)
+                        table.add_row("내부 식별 모드명", mod_title_disp)
+                        table.add_row("웹 최신 버전", res.get("latest_version", "-"))
+                        table.add_row("상태", up_text)
+                        table.add_row("자동 다운로드 지원", auto_dl_label)
+                        if detected_files_disp:
+                            table.add_row("감지된 원격 파일", detected_files_disp)
+                        if page_link:
+                            table.add_row("배포 페이지 링크", page_link)
+                        console.print(table)
+                    else:
+                        print(f"- 모드 이름: {item['name']}")
+                        print(f"- 내장 제작자: {creator_disp}")
+                        print(f"- 내부 식별 모드명: {mod_title_disp}")
+                        print(f"- 웹 최신 버전: {res.get('latest_version', '-')}")
+                        print(f"- 상태: {up_text}")
+                        print(f"- 자동 다운로드 지원: {auto_dl_label}")
+                        if detected_files_disp:
+                            print(f"- 감지된 원격 파일: {detected_files_disp}")
+                        if page_link:
+                            print(f"- 배포 페이지 링크: {page_link}")
+
+                    if res.get("is_early_access") or res.get("is_paid"):
+                        if USE_RICH:
+                            console.print(Panel(
+                                "[bold yellow]🔒 선배포(얼리 액세스) / 멤버십 전용 배포 상태로 정상 감지되었습니다.[/bold yellow]\n"
+                                f"[bold cyan]🔗 제작자 배포 페이지:[/bold cyan] [underline green]{escape(page_link)}[/underline green]",
+                                title="[bold yellow]선배포 / 수동 다운로드 안내 확인[/bold yellow]",
+                                border_style="yellow",
+                            ))
+                        else:
+                            print("🔒 선배포(얼리 액세스) / 수동 다운로드 안내 상태로 정상 감지되었습니다.")
+
+                    tested_ok = False
+                    if sub_act == "2":
+                        tested_ok = _run_dev_sandbox_download_test(item["name"], virtual_fn, res)
+                    elif can_auto_download:
+                        dl_q = input("\n🧪 임시 테스트 폴더에 실제 파일을 다운로드하여 압축해제까지 검증해보시겠습니까? (y/n) > ").strip().lower()
+                        if dl_q == "y":
+                            tested_ok = _run_dev_sandbox_download_test(item["name"], virtual_fn, res)
+
+                    if page_link and not tested_ok:
+                        open_q = input(f"\n🌐 배포 페이지({page_link})를 웹 브라우저로 열어보시겠습니까? (y/n) > ").strip().lower()
+                        if open_q == "y":
+                            import webbrowser
+                            webbrowser.open(page_link)
+                            print("✅ 웹 브라우저에서 배포 페이지가 열렸습니다.")
+                break
+            else:
+                print("\n[!] 1, 2, 3, 4, 5 중 하나를 입력해 주세요.")
+
 def main():
     if getattr(sys, "frozen", False):
         base_dir = Path(sys.executable).parent.resolve()
@@ -1675,6 +2120,11 @@ def main():
                     print("✅ 경로가 성공적으로 저장되었습니다.")
                 else:
                     print("❌ 해당 경로가 존재하지 않습니다.")
+        elif choice in ["dev", "test"]:
+            if not run_developer_catalog_test(updater):
+                print("\n프로그램을 종료합니다. 즐거운 심즈 플레이 되세요!")
+                break
+            continue
         elif choice in ["q", "exit"]:
             print("\n프로그램을 종료합니다. 즐거운 심즈 플레이 되세요!")
             break

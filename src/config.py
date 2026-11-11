@@ -41,7 +41,7 @@ class ConfigManager:
     def load(self) -> Dict[str, Any]:
         if self.config_path.exists():
             try:
-                with open(self.config_path, "r", encoding="utf-8") as f:
+                with open(self.config_path, "r", encoding="utf-8-sig") as f:
                     data = json.load(f)
                     defaults = self.get_default_config()
                     defaults.update(data)

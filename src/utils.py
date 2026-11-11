@@ -19,6 +19,8 @@ def download_file(
     dest_path: Path,
     progress_callback: Optional[Callable[[int, int], None]] = None,
     fallback_source_dir: Optional[Path] = None,
+    page_url: Optional[str] = None,
+    target_mod_name: Optional[str] = None,
 ) -> Path:
     """URL에서 파일을 다운로드합니다."""
     import urllib.parse
@@ -36,6 +38,23 @@ def download_file(
                 shutil.copy2(cand_local, dest_path)
                 return dest_path
 
+    # Itch.io 지연 업로드 다운로드 링크(#itchio_upload_id=...) 처리
+    if "#itchio_upload_id=" in url:
+        base_u, frag = url.split("#", 1)
+        qs = urllib.parse.parse_qs(frag)
+        target_fn = (qs.get("file_name") or [dest_path.name])[0]
+        from src.finder import inspect_remote_mod_page
+        refreshed = inspect_remote_mod_page(base_u, target_mod_name=target_fn, timeout=15)
+        if refreshed.get("download_url"):
+            url = refreshed["download_url"]
+
+    # MediaFire 파일 공유 페이지(mediafire.com/file/...)인 경우 실제 직접 다운로드 링크(download*.mediafire.com)로 변환
+    if "mediafire.com/file/" in url.lower():
+        from src.finder import inspect_remote_mod_page
+        mf_res = inspect_remote_mod_page(url, target_mod_name=target_mod_name or dest_path.name, timeout=15)
+        if mf_res.get("download_url"):
+            url = mf_res["download_url"]
+
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     }
@@ -45,8 +64,19 @@ def download_file(
         headers["Referer"] = "https://wicked.cc/"
     elif "blog.naver.com" in url.lower():
         headers["Referer"] = "https://blog.naver.com/"
+    elif "kemzimamods.com" in url.lower():
+        headers["User-Agent"] = "Mozilla/5.0"
 
     response = requests.get(url, headers=headers, stream=True, timeout=30)
+    # Itch.io R2 서명 URL(유효기간 60초)이 만료되어 400/403이 발생한 경우 즉시 새 서명 URL을 발급받아 재시도
+    if response.status_code in (400, 403) and page_url and ".itch.io" in page_url.lower():
+        response.close()
+        from src.finder import inspect_remote_mod_page
+        refreshed = inspect_remote_mod_page(page_url, target_mod_name=target_mod_name or dest_path.name, timeout=15)
+        if refreshed.get("download_url"):
+            url = refreshed["download_url"]
+            response = requests.get(url, headers=headers, stream=True, timeout=30)
+
     response.raise_for_status()
 
     total_size = int(response.headers.get("content-length", 0))

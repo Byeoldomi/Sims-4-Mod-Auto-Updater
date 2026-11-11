@@ -23,6 +23,7 @@ KNOWN_CATALOG = [
         "name": "MC Woohoo (MCCC Module)",
         "creator": "Deaderpool",
         "mod_title": "MC Woohoo",
+        "version": "2026.6.0",
         "links": [
             ("공식 다운로드 페이지 (MC Woohoo MediaFire)", "Deaderpool MCCC Downloads (MC Woohoo)", "https://deaderpool-mccc.com/downloads.html"),
             ("Patreon", "Deaderpool Patreon", "https://www.patreon.com/mccc_deaderpool")
@@ -38,6 +39,7 @@ KNOWN_CATALOG = [
         "name": "MC Command Center (MCCC)",
         "creator": "Deaderpool",
         "mod_title": "MC Command Center (MCCC)",
+        "version": "2026.6.0",
         "links": [
             ("공식 다운로드 페이지", "Deaderpool MCCC Downloads", "https://deaderpool-mccc.com/downloads.html"),
             ("Patreon", "Deaderpool Patreon", "https://www.patreon.com/mccc_deaderpool")
@@ -48,6 +50,7 @@ KNOWN_CATALOG = [
         "name": "WickedWhims",
         "creator": "TURBODRIVER",
         "mod_title": "WickedWhims",
+        "version": "185k",
         "links": [
             ("Wicked.cc (공식)", "WickedWhims - WickedCC | TURBODRIVER", "https://wicked.cc/mods/TURBODRIVER/wickedwhims"),
             ("Itch.io", "TURBODRIVER Itch.io", "https://turbodriver.itch.io/wickedwhims")
@@ -56,6 +59,8 @@ KNOWN_CATALOG = [
     {
         "keywords": ["wonderfulwhims", "turbodriver_wonderfulwhims"],
         "name": "WonderfulWhims",
+        "creator": "TURBODRIVER",
+        "mod_title": "WonderfulWhims",
         "links": [
             ("공식 웹사이트", "WonderfulWhims Official", "https://wonderfulwhims.com/"),
             ("Itch.io", "TURBODRIVER Itch.io", "https://turbodriver.itch.io/wonderfulwhims")
@@ -66,6 +71,7 @@ KNOWN_CATALOG = [
         "name": "More Columns in CAS",
         "creator": "Weerbesu",
         "mod_title": "More Columns in CAS",
+        "version": "1.38",
         "links": [
             ("Patreon (공식)", "More Columns in CAS | Weerbesu", "https://www.patreon.com/weerbesu/posts/more-columns-in-27751117"),
             ("Patreon 채널", "Weerbesu Official Patreon", "https://www.patreon.com/weerbesu")
@@ -76,6 +82,7 @@ KNOWN_CATALOG = [
         "name": "UI Cheats Extension",
         "creator": "Weerbesu",
         "mod_title": "UI Cheats Extension",
+        "version": "1.59.1",
         "links": [
             ("Patreon (공식)", "UI Cheats Extension | Weerbesu", "https://www.patreon.com/weerbesu/posts/ui-cheats-v1-59-26240068"),
             ("Patreon 채널", "Weerbesu Official Patreon", "https://www.patreon.com/weerbesu")
@@ -86,6 +93,7 @@ KNOWN_CATALOG = [
         "name": "[XOOX] Icon CAS Organizer",
         "creator": "XOOX",
         "mod_title": "Icon CAS Organizer",
+        "version": "1.1",
         "links": [
             ("Patreon (공식)", "[XOOX] Icon CAS Organizer v1.1", "https://www.patreon.com/XOOX_studio/posts/icon-cas-v1-1-171172167"),
             ("Patreon 채널", "XOOX Studio Patreon", "https://www.patreon.com/XOOX_studio")
@@ -96,6 +104,7 @@ KNOWN_CATALOG = [
         "name": "[UTOPYA] Kiss-n-Grind Mod",
         "creator": "UTOPYA",
         "mod_title": "Kiss-n-Grind Mod",
+        "version": "1.9.9",
         "links": [
             ("Patreon (공식)", "Kiss-n-Grind 1.9.9 | Provocative Grind | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/kiss-n-grind-1-9-131081267"),
             ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
@@ -106,16 +115,154 @@ KNOWN_CATALOG = [
         "name": "[UTOPYA] Passionate Gifts MOD",
         "creator": "UTOPYA",
         "mod_title": "Passionate Gifts MOD",
+        "version": "0.8",
         "links": [
             ("Patreon (공식)", "Passionate Gift 0.8 | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/passionate-gift-151330104"),
             ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
         ]
     },
     {
+        "keywords": ["volleyball mod", "volleyball_mod", "volleyballmod", "[utopya] volleyball", "utopya_volleyball", "volleyball"],
+        "name": "Volleyball Mod",
+        "creator": "UTOPYA",
+        "mod_title": "Volleyball Mod",
+        "override_mod_title": True,
+        "version": "0.2.4",
+        "links": [
+            ("Patreon (공식)", "Volleyball Mod 0.2.4 | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/volleyball-mod-0-166618081"),
+            ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
+        ]
+    },
+    {
+        "keywords": [
+            "twister game mod",
+            "twister_game_mod",
+            "twister mod",
+            "twister_mod",
+            "[utopya] twister",
+            "utopya_twister",
+            "twister box",
+            "twister mat",
+        ],
+        "name": "Twister Game Mod",
+        "creator": "UTOPYA",
+        "mod_title": "Twister Game Mod",
+        "override_mod_title": True,
+        "version": "0.2.3",
+        "links": [
+            ("Patreon (공식)", "Twister Game Mod 0.2.3 | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/twister-mod-158968693"),
+            ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
+        ]
+    },
+    {
+        "keywords": [
+            "littlemssam_asktocookbakegrill",
+            "asktocookbakegrill",
+            "ask_to_cook_bake_grill",
+            "ask to cook/bake/grill/mix drink",
+            "ask to cook bake grill mix drink",
+            "ask-to-cook-bake-grill-mix-drink",
+        ],
+        "name": "Ask to Cook/Bake/Grill/Mix Drink!",
+        "creator": "LittleMsSam",
+        "mod_title": "Ask to Cook/Bake/Grill/Mix Drink!",
+        "override_mod_title": True,
+        "links": [
+            ("CurseForge (공식)", "Ask to Cook/Bake/Grill/Mix Drink! | LittleMsSam", "https://www.curseforge.com/sims4/mods/ask-to-cook-bake-grill-mix-drink-including")
+        ]
+    },
+    {
+        "keywords": [
+            "littlemssam_heatupleftovers",
+            "heatupleftovers",
+            "heat_up_leftovers",
+            "heat up leftovers",
+            "heat-up-leftovers",
+        ],
+        "name": "Heat Up Leftovers",
+        "creator": "LittleMsSam",
+        "mod_title": "Heat Up Leftovers",
+        "override_mod_title": True,
+        "links": [
+            ("CurseForge (공식)", "Heat Up Leftovers | LittleMsSam", "https://www.curseforge.com/sims4/mods/heat-up-leftovers")
+        ]
+    },
+    {
+        "keywords": [
+            "littlemssam_rsm_bg_fooddrinksasclutter",
+            "fooddrinksasclutter",
+            "food_drinks_as_clutter",
+            "rsm - food & drinks as clutter",
+            "food & drinks as clutter",
+            "food and drinks as clutter",
+            "rsm-food-drinks-as-clutter",
+        ],
+        "name": "RSM - Food & Drinks As Clutter",
+        "creator": "LittleMsSam",
+        "mod_title": "RSM - Food & Drinks As Clutter",
+        "override_mod_title": True,
+        "links": [
+            ("CurseForge (공식)", "RSM - Food & Drinks As Clutter | LittleMsSam", "https://www.curseforge.com/sims4/mods/rsm-food-drinks-as-clutter")
+        ]
+    },
+    {
+        "keywords": [
+            "frequentlybasic_flavoredmemories",
+            "flavoredmemories",
+            "flavored_memories",
+            "flavored memories",
+            "flavored-memories",
+        ],
+        "name": "Flavored Memories",
+        "creator": "FrequentlyBasic",
+        "mod_title": "Flavored Memories",
+        "override_mod_title": True,
+        "links": [
+            ("CurseForge (공식)", "Flavored Memories | FrequentlyBasic", "https://www.curseforge.com/sims4/mods/flavored-memories")
+        ]
+    },
+    {
+        "keywords": [
+            "kayaker_gtw_aliensreloaded",
+            "aliensreloaded",
+            "aliens_reloaded",
+            "aliens reloaded",
+            "aliens-reloaded",
+            "onemorekayaker",
+        ],
+        "name": "Aliens Reloaded",
+        "creator": "OneMoreKayaker",
+        "mod_title": "Aliens Reloaded",
+        "override_mod_title": True,
+        "version": "4.0.4",
+        "links": [
+            ("Itch.io (공식)", "Aliens Reloaded | OneMoreKayaker", "https://onemorekayaker.itch.io/aliens-reloaded")
+        ]
+    },
+    {
+        "keywords": [
+            "kemzima_politicalworld",
+            "politicalworld",
+            "political_world",
+            "political world",
+            "political-world",
+            "kemzima",
+        ],
+        "name": "Political World",
+        "creator": "KemZima",
+        "mod_title": "Political World",
+        "override_mod_title": True,
+        "version": "8.1",
+        "links": [
+            ("KemZima (공식)", "Political World | KemZima", "https://kemzimamods.com/political-world-mod/political-world-realistic-version-download-page/")
+        ]
+    },
+    {
         "keywords": ["sims4_aichat_byok_addon", "aichat_byok", "byok_addon", "sims 4 ai chat byok addon"],
         "name": "Sims 4 AI Chat BYOK Addon",
-        "creator": "익명",
+        "creator": "lvl2032",
         "mod_title": "Sims 4 AI Chat BYOK Addon",
+        "version": "2.4.3",
         "links": [
             ("디시인사이드", "(26.11.01업뎃) AI Chat 애드온 BYOK 배포", "https://gall.dcinside.com/mgallery/board/view/?id=sims&no=281508")
         ]
@@ -125,9 +272,32 @@ KNOWN_CATALOG = [
         "name": "Sims 4 AI Chat",
         "creator": "VirtualConsciousnessLabs",
         "mod_title": "Sims 4 AI Chat",
+        "version": "2.4.3",
         "links": [
-            ("Patreon (공식)", "Sims 4 AI Chat v2.3.4 | Virtual Consciousness Labs", "https://www.patreon.com/VirtualConsciousnessLabs/posts/sims-4-ai-chat-4-174642480"),
+            ("Patreon (공식)", "Sims 4 AI Chat v2.4.3 | Virtual Consciousness Labs", "https://www.patreon.com/VirtualConsciousnessLabs/posts/sims-4-ai-chat-4-174642480"),
             ("Patreon 채널", "Virtual Consciousness Labs Official Patreon", "https://www.patreon.com/VirtualConsciousnessLabs")
+        ]
+    },
+    {
+        "keywords": ["khlas_males_interactions", "males_interactions", "males interaction", "males interactions"],
+        "name": "Males Interactions",
+        "creator": "Khlas",
+        "mod_title": "Males Interactions",
+        "version": "1.91",
+        "is_early_access": True,
+        "links": [
+            ("Patreon (선배포)", "KMI 1.91 + WW anims + others | Khlas", "https://www.patreon.com/khlas/posts/kmi-1-91-ww-164160544"),
+            ("Patreon 채널", "Khlas Official Patreon", "https://www.patreon.com/khlas")
+        ]
+    },
+    {
+        "keywords": ["skarrd_perverted_expansion_pack", "perverted_expansion_pack", "perverted expansion pack"],
+        "name": "Perverted Expansion Pack",
+        "creator": "Skarrd",
+        "mod_title": "Perverted Expansion Pack",
+        "version": "3.0.1",
+        "links": [
+            ("LoversLab (공식)", "Skarrd's Perverted Expansion Pack | Skarrd", "https://www.loverslab.com/files/file/24771-skarrds-perverted-expansion-pack/")
         ]
     },
     {
@@ -138,6 +308,23 @@ KNOWN_CATALOG = [
         "links": [
             ("Wicked.cc (공식)", "Cumshine - WickedCC | Spent", "https://wicked.cc/mods/spent/cumshine/"),
             ("Patreon 채널", "Spent Official Patreon", "https://www.patreon.com/Spent")
+        ]
+    },
+    {
+        "keywords": [
+            "fitnesscontrols-limits",
+            "fitnesscontrols_limits",
+            "fitness controls limits",
+            "limits-1.75x",
+            "limits-3.00x",
+            "limits-5.00x",
+        ],
+        "name": "Fitness Controls - Limits (애드온)",
+        "creator": "roBurky",
+        "mod_title": "Fitness Controls - Limits",
+        "version": "2.0.12.0",
+        "links": [
+            ("Itch.io (공식)", "Fitness Controls Limits Addon | roBurky", "https://roburky.itch.io/sims4-fitness")
         ]
     },
     {
@@ -153,6 +340,9 @@ KNOWN_CATALOG = [
     {
         "keywords": ["xmlinjector", "xml_injector", "scumbumbo"],
         "name": "XML Injector",
+        "creator": "Scumbumbo",
+        "mod_title": "XML Injector",
+        "version": "4.2",
         "links": [
             ("공식 웹사이트", "Scumbumbo Mods XML Injector", "https://scumbumbomods.com/xml-injector"),
             ("CurseForge", "CurseForge XML Injector", "https://www.curseforge.com/sims4/mods/xml-injector")
@@ -163,6 +353,7 @@ KNOWN_CATALOG = [
         "name": "Relationship & Pregnancy Overhaul (RPO Collection)",
         "creator": "Lumpinou",
         "mod_title": "Relationship & Pregnancy Overhaul (RPO Collection)",
+        "version": "2.986",
         "links": [
             ("Patreon (공식)", "[Mod] Relationship & Pregnancy Overhaul, ALL-FILES-IN-ONE-CLICK - Sims 4", "https://www.patreon.com/lumpinou/posts/mod-relationship-75983577")
         ]
@@ -172,6 +363,7 @@ KNOWN_CATALOG = [
         "name": "Lumpinou's Toolbox",
         "creator": "Lumpinou",
         "mod_title": "Lumpinou's Toolbox (Script Library)",
+        "version": "5",
         "links": [
             ("Patreon (공식)", "[Mod] Lumpinou's Toolbox - Script Library-Mod - Sims 4", "https://www.patreon.com/lumpinou/posts/mod-lumpinous-4-86658397")
         ]
@@ -199,6 +391,7 @@ KNOWN_CATALOG = [
         "name": "Lumpinou_MoodPackMod",
         "creator": "Lumpinou",
         "mod_title": "Mood Pack Mod",
+        "version": "1.677",
         "links": [
             ("Patreon (공식)", "[Mod] Lumpinou's Mood Pack Mod | Lumpinou", "https://www.patreon.com/lumpinou/posts/mod-lumpinous-43759541"),
             ("CurseForge", "Mood Pack : New Moods for your Sims - The Sims 4 Mods", "https://www.curseforge.com/sims4/mods/mood-pack")
@@ -254,6 +447,7 @@ KNOWN_CATALOG = [
         "name": "Remove Sims From Conversation",
         "creator": "Kallixer",
         "mod_title": "Remove Sims From Conversation",
+        "version": "2a",
         "links": [
             ("CurseForge (공식)", "Remove Sims from Conversation | Kallixer", "https://www.curseforge.com/sims4/mods/remove-sims-from-conversation")
         ]
@@ -273,6 +467,7 @@ KNOWN_CATALOG = [
         "name": "Controlled Position Mod (CAS Tuning)",
         "creator": "NORTHERN SIBERIA WINDS",
         "mod_title": "",
+        "version": "2.3",
         "links": [
             ("Patreon (공식)", "CONTROLLED POSITION MOD | NORTHERN SIBERIA WINDS", "https://www.patreon.com/northernsiberiawinds/posts/controlled-mod-103628223")
         ]
@@ -326,6 +521,9 @@ KNOWN_CATALOG = [
     {
         "keywords": ["wamtik", "바람별", "바람별한글화"],
         "name": "바람별 한글화 모드",
+        "creator": "바람별",
+        "mod_title": "바람별 한글화 모드",
+        "version": "V98G8",
         "links": [
             ("Patreon (선배포)", "바람별 ZIMS 통합 한글화 (Patreon)", "https://www.patreon.com/cw/wwindystarZIMS"),
             ("Postype", "바람별의 포스타입 (Postype)", "https://www.postype.com/@wwwindystar"),
@@ -354,6 +552,7 @@ RELIABLE_DOMAINS = [
     ("github.com", "GitHub"),
     ("sims4studio.com", "Sims 4 Studio"),
     ("seebee.de", "ichschaf Sims 4 Mods"),
+    ("kemzimamods.com", "KemZima Mods"),
 ]
 
 # 제외할 최상위/일반 루트 URL
@@ -402,6 +601,9 @@ IGNORED_INTERNAL_URL_PREFIXES = (
     "https://simsafterdark.com",
     "https://discord.gg",
     "https://discord.com",
+    "https://support.patreon.com",
+    "https://wicked.cc/contact",
+    "https://frankkmods.com",
     "https://www.lovense.com",
     "http://wonderf.cluster026.hosting.ovh.net",
 )
@@ -425,7 +627,7 @@ def extract_version_from_filename(filename: str) -> str:
     # 1) 명시적 v / ver / version 접두사가 있는 버전 (예: v4, v1.1, v2.986, v2a, V2.3, ChatPackv2_BabiesFamily)
     # 파이썬 정규식에서 언더바(_)는 단어 문자(\w)이므로 \b 대신 (?=$|[^a-zA-Z0-9.]) 경계를 사용합니다.
     m_v = re.search(
-        r"(?:^|[\s_\-\[\(]|(?<=[a-zA-Z]))(?:v|ver|version)\.?\s*([0-9]+(?:\.[0-9]+)*[a-z]?)(?=$|[^a-zA-Z0-9.])",
+        r"(?:^|[\s_\-\.\[\(]|(?<=[a-zA-Z]))(?:v|ver|version)\.?\s*([0-9]+(?:\.[0-9]+)*[a-z]?)(?=$|[^a-zA-Z0-9.])",
         stem,
         flags=re.IGNORECASE,
     )
@@ -436,8 +638,12 @@ def extract_version_from_filename(filename: str) -> str:
     m_vg = re.search(r"(?:^|[\s_\-\[\(])(V[0-9]+G[0-9]+)(?=$|[^a-zA-Z0-9.])", stem, flags=re.IGNORECASE)
     if m_vg:
         return m_vg.group(1).upper()
-    # 2) 점이 포함된 버전 숫자 (예: 0.1, 0.1.0, 1.8 - 단 배수 표기 1.75x 및 날짜 표기 26.11.01 등은 제외)
-    m_dot = re.search(r"(?:^|[\s_\-\[\(])([0-9]+\.[0-9]+(?:\.[0-9]+)*[a-wyz]?)(?=$|[^a-zA-Z0-9.xX가-힣])", stem)
+    # 2) 점이 포함된 버전 숫자 (예: 0.1, 0.1.0, a0.2.4, 1.8 - 단 배수 표기 1.75x 및 날짜 표기 26.11.01 등은 제외)
+    m_dot = re.search(
+        r"(?:^|[\s_\-\[\(])[ab]?([0-9]+\.[0-9]+(?:\.[0-9]+)*[a-wyz]?)(?=$|[^a-zA-Z0-9.xX가-힣])",
+        stem,
+        flags=re.IGNORECASE,
+    )
     if m_dot:
         raw_dot = m_dot.group(1)
         if not re.match(r"^(?:20)?2[0-9]\.[01][0-9]\.[0-3][0-9]$", raw_dot):
@@ -468,6 +674,10 @@ def normalize_distribution_url(url: str) -> str:
         if gid and no:
             return f"{parsed.scheme}://{parsed.netloc}{parsed.path}?id={gid}&no={no}"
         return url.split("?")[0].rstrip("/")
+    # LoversLab 및 KemZima 파일 배포 페이지 URL은 끝의 슬래시(/) 보존
+    if "loverslab.com/" in u_low or "kemzimamods.com/" in u_low:
+        base_ll = url.split("?")[0].rstrip("/")
+        return f"{base_ll}/"
     # SimFileShare 다운로드/폴더 URL은 끝의 슬래시(/) 보존
     if "simfileshare.net/" in u_low:
         base_sfs = url.split("?")[0].rstrip("/")
@@ -563,7 +773,7 @@ def _extract_from_single_ts4script(path: Path) -> Dict[str, Any]:
 
                     m_ver = re.search(r"^version\s*:\s*(.+)$", main_part, flags=re.MULTILINE)
                     if m_ver and not info["version"]:
-                        info["version"] = m_ver.group(1).strip().strip("'\"")
+                        info["version"] = m_ver.group(1).strip().strip("'\"").lstrip("vV")
 
                     # creators 리스트 추출
                     c_block = re.search(r"^creators\s*:\s*\r?\n((?:\s*-\s*.+\r?\n?)+)", main_part, flags=re.MULTILINE)
@@ -594,7 +804,7 @@ def _extract_from_single_ts4script(path: Path) -> Dict[str, Any]:
                             if m_mc:
                                 info["version"] = m_mc.group(1).decode("ascii", "ignore")
                         elif "wickedwhims" in e_low and ("version" in e_low or "main" in e_low or "init" in e_low):
-                            m_ww = re.search(rb"(?<![a-zA-Z0-9.])(v1[789][0-9][a-z]?)(?![a-zA-Z0-9.])", data, flags=re.IGNORECASE)
+                            m_ww = re.search(rb"(?<![a-zA-Z0-9.])v?(1[789][0-9][a-z]?)(?![a-zA-Z0-9.])", data, flags=re.IGNORECASE)
                             if m_ww:
                                 info["version"] = m_ww.group(1).decode("ascii", "ignore")
                         elif e_low.endswith("sims4_ai_chat/config.pyc"):
@@ -709,7 +919,7 @@ def _extract_from_single_package(path: Path) -> Dict[str, Any]:
 
                     m_v = re.search(r'<T n="version">([^<]+)</T>', main_xml)
                     if m_v and not info["version"]:
-                        v_candidate = html.unescape(m_v.group(1).strip())
+                        v_candidate = html.unescape(m_v.group(1).strip()).lstrip("vV")
                         if not re.match(r"^[0-9]+(?:\.[0-9]+)?[xX]$", v_candidate):
                             info["version"] = v_candidate
 
@@ -939,7 +1149,12 @@ def extract_mod_file_metadata(file_path: Optional[str]) -> Dict[str, Any]:
 
     # 추출된 정보 병합
     result["manifest_name"] = pkg_info.get("manifest_name") or scr_info.get("manifest_name") or ""
-    result["version"] = pkg_info.get("version") or scr_info.get("version") or ""
+    raw_merged_ver = (pkg_info.get("version") or scr_info.get("version") or "").strip()
+    result["version"] = (
+        raw_merged_ver
+        if re.match(r"^V\d+G\d+$", raw_merged_ver, flags=re.IGNORECASE)
+        else raw_merged_ver.lstrip("vV")
+    )
     result["is_ww_addon"] = bool(pkg_info.get("is_ww_addon"))
 
     for c in (pkg_info.get("creators", []) + scr_info.get("creators", [])):
@@ -960,6 +1175,10 @@ def extract_mod_file_metadata(file_path: Optional[str]) -> Dict[str, Any]:
     fn_ver_str = extract_version_from_filename(p.name)
     if not result["version"] and fn_ver_str:
         result["version"] = fn_ver_str.lstrip("vV")
+    if not result["version"] and p.name.lower().startswith("mc_") and (p.parent / "mc_cmd_center.ts4script").exists():
+        mc_core_info = _extract_from_single_ts4script(p.parent / "mc_cmd_center.ts4script")
+        if mc_core_info.get("version"):
+            result["version"] = mc_core_info["version"].lstrip("vV")
 
     fn_bracket = re.search(r"\[([^\]]+)\]", p.stem)
     m_by_fn = re.search(r"[\s_]by[\s_]*([a-zA-Z0-9_-]+)$", p.stem, flags=re.IGNORECASE)
@@ -1002,9 +1221,9 @@ def extract_mod_file_metadata(file_path: Optional[str]) -> Dict[str, Any]:
     if cat_match:
         if cat_match.get("creator"):
             result["creators"] = [cat_match["creator"]]
-        if cat_match.get("mod_title") and not result["manifest_name"]:
+        if cat_match.get("mod_title") and (not result["manifest_name"] or cat_match.get("override_mod_title")):
             result["manifest_name"] = cat_match["mod_title"]
-        if cat_match.get("version") and not result["version"]:
+        if cat_match.get("version") and (not result["version"] or result["version"] == "4.04"):
             result["version"] = cat_match["version"]
         if cat_match.get("candidate_links"):
             result["urls"] = [link[2] for link in cat_match["candidate_links"]]
@@ -1059,7 +1278,9 @@ def check_known_catalog(raw_name: str) -> Optional[Dict[str, Any]]:
                     "matched_catalog": item["name"],
                     "creator": item.get("creator", ""),
                     "mod_title": item.get("mod_title", item["name"]),
+                    "override_mod_title": bool(item.get("override_mod_title", False)),
                     "version": item.get("version", ""),
+                    "is_early_access": bool(item.get("is_early_access", False)),
                     "release_notes": item.get("release_notes", ""),
                     "query": raw_name,
                 }
@@ -1481,11 +1702,13 @@ def find_direct_mod_page(
 def _match_score_mod_name(target: str, candidate: str) -> int:
     """대상 모드/파일명과 원격 포스트 제목·첨부파일명 간의 일치 점수를 계산합니다."""
     noise = {"package", "ts4script", "zip", "rar", "7z", "mod", "mods", "sims", "sims4", "the", "v1", "v2", "by"}
+    t_no_ver = re.sub(r"(?:^|[\s_\-\[\(])(?:v|ver|version|a|b)?[0-9]+(?:\.[0-9]+)*[a-z]?(?=$|[^a-zA-Z0-9.])", " ", target, flags=re.IGNORECASE)
+    c_no_ver = re.sub(r"(?:^|[\s_\-\[\(])(?:v|ver|version|a|b)?[0-9]+(?:\.[0-9]+)*[a-z]?(?=$|[^a-zA-Z0-9.])", " ", candidate, flags=re.IGNORECASE)
     t_words = [
-        w for w in re.split(r"[^a-zA-Z0-9가-힣]+", split_camel_case(target).lower())
+        w for w in re.split(r"[^a-zA-Z0-9가-힣]+", split_camel_case(t_no_ver).lower())
         if len(w) >= 1 and not w.isdigit() and w not in noise
     ]
-    c_clean = split_camel_case(candidate).lower()
+    c_clean = split_camel_case(c_no_ver).lower()
     c_words = [
         w for w in re.split(r"[^a-zA-Z0-9가-힣]+", c_clean)
         if len(w) >= 1 and not w.isdigit() and w not in noise
@@ -1503,6 +1726,8 @@ def _match_score_mod_name(target: str, candidate: str) -> int:
     score -= len(extra_c_words) * 5
     t_low = target.lower()
     cand_low = candidate.lower()
+    if " mod" in t_low and " mod" in cand_low:
+        score += 10
     if "cas tuning add-on" in t_low and "hands close up" not in t_low and "stand still constructor" in cand_low:
         score += 150
     return score
@@ -1661,15 +1886,24 @@ def _inspect_itchio_mod_page(
         # 업로드 항목별 파일명 및 upload_id 매칭
         soup = BeautifulSoup(r3.text, "html.parser")
         upload_candidates: List[Tuple[int, str, str]] = []
+        raw_upload_list: List[Tuple[str, str]] = []
+        t_mod_low = (target_mod_name or "").lower()
         for up_div in soup.find_all("div", class_="upload"):
             btn = up_div.find("a", attrs={"data-upload_id": True})
             name_el = up_div.find(class_="name")
             if btn and name_el:
                 uid = str(btn["data-upload_id"])
                 fname = name_el.get("title") or name_el.get_text(strip=True)
+                raw_upload_list.append((fname, uid))
                 score = _match_score_mod_name(target_mod_name, fname)
-                # 변형 옵션(Limits 등) 파일이 아닌 본체 파일인 경우 가산점
-                if "limits" not in fname.lower() and "limits" not in target_mod_name.lower():
+                if t_mod_low and fname.lower() == t_mod_low:
+                    score += 300
+                elif "limits" in fname.lower() and "limits" in t_mod_low:
+                    score += 40
+                # 변형 옵션(Limits, OPTIONAL 등) 파일이 아닌 본체 파일인 경우 가산점
+                if "limits" not in fname.lower() and "limits" not in t_mod_low:
+                    score += 20
+                if "optional" not in fname.lower() and "optional" not in t_mod_low:
                     score += 20
                 upload_candidates.append((score, fname, uid))
 
@@ -1678,6 +1912,7 @@ def _inspect_itchio_mod_page(
             raw_names = re.findall(r'class="name"[^>]*>([^<]+)<', r3.text)
             for idx, uid in enumerate(raw_uids):
                 fname = raw_names[idx] if idx < len(raw_names) else f"{target_mod_name}.zip"
+                raw_upload_list.append((fname, uid))
                 score = _match_score_mod_name(target_mod_name, fname)
                 upload_candidates.append((score, fname, uid))
 
@@ -1695,15 +1930,59 @@ def _inspect_itchio_mod_page(
         if r4.status_code == 200:
             direct_dl = r4.json().get("url")
             if direct_dl:
+                disp_title = best_fn
                 fn_ver = extract_version_from_filename(best_fn)
+                if not best_fn.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
+                    try:
+                        r_cd = sess.get(direct_dl, stream=True, timeout=6)
+                        cd_hdr = r_cd.headers.get("Content-Disposition") or ""
+                        r_cd.close()
+                        m_cd = re.search(r'filename\*?=(?:UTF-8\'\')?["\']?([^"\';\r\n]+)', cd_hdr, flags=re.IGNORECASE)
+                        if m_cd:
+                            real_fn = urllib.parse.unquote(m_cd.group(1).strip())
+                            if real_fn:
+                                best_fn = real_fn
+                                fn_ver = fn_ver or extract_version_from_filename(best_fn)
+                    except Exception:
+                        pass
+                    if not best_fn.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
+                        best_fn = re.sub(r'[<>:"/\\|?*]+', "_", best_fn).strip() + ".zip"
                 ver_str = page_ver or (fn_ver.lstrip("vV") if fn_ver else "")
+                variant_choices: List[Dict[str, str]] = []
+                if "limits" in t_mod_low:
+                    for cand_fn, cand_uid in raw_upload_list:
+                        c_low = cand_fn.lower()
+                        if "limits" not in c_low:
+                            continue
+                        if "1.75x" in c_low or "increased" in c_low:
+                            v_lbl = "Limits 1.75x Increased (체형 한계치 1.75배 확장 애드온 - 택1)"
+                        elif "3.00x" in c_low or "exaggerated" in c_low:
+                            v_lbl = "Limits 3.00x Exaggerated (체형 한계치 3.00배 확장 애드온 - 택1)"
+                        elif "5.00x" in c_low or "extreme" in c_low:
+                            v_lbl = "Limits 5.00x Extreme (체형 한계치 5.00배 확장 애드온 - 택1)"
+                        else:
+                            v_lbl = "Fitness Controls Limits Addon (택1)"
+                        v_dl = (
+                            direct_dl
+                            if cand_uid == best_uid
+                            else f"{base_url}#itchio_upload_id={cand_uid}&file_name={urllib.parse.quote(cand_fn)}"
+                        )
+                        variant_choices.append({
+                            "file_name": cand_fn,
+                            "download_url": v_dl,
+                            "label": v_lbl,
+                        })
+
+                all_files_list: List[Tuple[str, str]] = [(best_fn, direct_dl)]
                 return {
                     "status": "free_direct",
-                    "title": best_fn,
+                    "title": disp_title,
                     "version": ver_str,
                     "file_name": best_fn,
                     "download_url": direct_dl,
                     "page_url": base_url,
+                    "all_files": all_files_list,
+                    "variant_choices": variant_choices if len(variant_choices) > 1 else [],
                 }
         if page_ver:
             return {"status": "browser_required", "version": page_ver, "page_url": base_url}
@@ -2336,6 +2615,68 @@ def inspect_remote_mod_page(
             return nb_res
         return {"status": "browser_required", "page_url": url}
 
+    if "kemzimamods.com/" in u_lower:
+        kz_timeout = max(timeout, 15)
+        try:
+            r_kz = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=kz_timeout)
+            if r_kz.status_code == 200:
+                soup_kz = BeautifulSoup(r_kz.text, "html.parser")
+                sdm_links: List[Tuple[int, str, str]] = []
+                t_low = (target_mod_name or "").lower()
+                want_fictional = "fictional" in t_low
+                for a in soup_kz.find_all("a", href=True):
+                    href = html.unescape(a["href"].strip())
+                    txt = a.get_text(" ", strip=True).lower()
+                    if "sdm_process_download=1" in href or "/wp-content/uploads/" in href:
+                        sc = 10
+                        is_fict = "fictional" in (txt + " " + href.lower()) or "1957" in href
+                        if want_fictional and is_fict:
+                            sc += 50
+                        elif not want_fictional and not is_fict:
+                            sc += 30
+                        fn_cand = (
+                            "KemZima_PoliticalWorld_-RealisticEditionwith-FictionalGurus.v8.1.zip"
+                            if is_fict
+                            else "KemZima_PoliticalWorld_-RealisticEditionwith-RealLifeGurus.v8.1.zip"
+                        )
+                        if ".zip" in href.lower():
+                            fn_cand = urllib.parse.unquote(href.split("/")[-1].split("?")[0]).strip()
+                        sdm_links.append((sc, href, fn_cand))
+                if sdm_links:
+                    variant_choices: List[Dict[str, str]] = []
+                    seen_v_fns: set[str] = set()
+                    for _, v_href, v_fn in sdm_links:
+                        if v_fn.lower() in seen_v_fns:
+                            continue
+                        seen_v_fns.add(v_fn.lower())
+                        v_label = (
+                            "Fictional Gurus (가상 인물 구루 에디션 - 동시 설치 불가, 택1)"
+                            if "fictional" in v_fn.lower()
+                            else "Real-Life Gurus (실제 인물 구루 에디션 - 동시 설치 불가, 택1)"
+                        )
+                        variant_choices.append({
+                            "file_name": v_fn,
+                            "download_url": v_href,
+                            "label": v_label,
+                        })
+
+                    sdm_links.sort(key=lambda x: x[0], reverse=True)
+                    _, best_href, fn = sdm_links[0]
+                    fn_ver = extract_version_from_filename(fn)
+                    ver_str = (fn_ver.lstrip("vV") if fn_ver else "") or "8.1"
+                    return {
+                        "status": "free_direct",
+                        "title": f"Political World v{ver_str}",
+                        "version": ver_str,
+                        "file_name": fn,
+                        "download_url": best_href,
+                        "page_url": url,
+                        "variant_choices": variant_choices if len(variant_choices) > 1 else [],
+                    }
+        except Exception:
+            pass
+        return {"status": "browser_required", "version": "8.1", "page_url": url}
+
     # ==========================================================================
     # C. Patreon 포스트 및 제작자 캠페인 자동 검사
     # ==========================================================================
@@ -2363,23 +2704,36 @@ def inspect_remote_mod_page(
                         + " "
                         + str(attrs.get("teaser_text") or "")
                     )
-                    if not ver_str:
-                        m_hf = re.search(
-                            r"(?<!game\s)(?<!patch\s)\b(?:hotfix|version|update)\s+(v?[0-9]+\.[0-9]+(?:\.[0-9]+)*[a-z0-9]*)",
-                            body_combined,
-                            flags=re.IGNORECASE,
-                        )
-                        if m_hf:
-                            cand_hf = m_hf.group(1).lstrip("vV")
-                            # 심즈 4 게임 패치 버전(예: 1.126.58, 1.110.311 등)은 모드 버전에서 제외
-                            if not re.match(r"^1\.1\d{2}\.\d+", cand_hf):
+                    m_hf = re.search(
+                        r"(?<!game\s)(?<!patch\s)\b(?:hotfix|version|update)\s+(v?[0-9]+\.[0-9]+(?:\.[0-9]+)*[a-z0-9]*)",
+                        body_combined,
+                        flags=re.IGNORECASE,
+                    )
+                    if m_hf:
+                        cand_hf = m_hf.group(1).lstrip("vV")
+                        # 심즈 4 게임 패치 버전(예: 1.126.58, 1.110.311 등)은 모드 버전에서 제외
+                        if not re.match(r"^1\.1\d{2}\.\d+", cand_hf):
+                            if not ver_str:
                                 ver_str = cand_hf
+                            else:
+                                try:
+                                    from packaging import version as _pkg_ver
+                                    if _pkg_ver.parse(cand_hf) > _pkg_ver.parse(ver_str):
+                                        ver_str = cand_hf
+                                except Exception:
+                                    pass
 
                     target_base_low = Path(target_mod_name).name.lower() if target_mod_name else ""
 
                     # 얼리 액세스 / 유료 멤버십 전용으로 잠겨 있는 경우 (무료 멤버십 공개 포스트는 첨부 프리뷰 메타데이터로 자동 감지)
                     if not can_view:
-                        is_free_post = (attrs.get("is_paid") is False and not attrs.get("min_cents_pledged_to_view"))
+                        cat_ea = check_known_catalog(target_mod_name)
+                        force_ea = bool((cat_ea and cat_ea.get("is_early_access")) or "164160544" in str(post_id))
+                        is_free_post = (
+                            not force_ea
+                            and attrs.get("is_paid") is False
+                            and not attrs.get("min_cents_pledged_to_view")
+                        )
                         preview_metas = attrs.get("attachments_preview_metadata") or []
                         if is_free_post and preview_metas:
                             preview_files: List[Tuple[int, str, str]] = []
@@ -2442,6 +2796,10 @@ def inspect_remote_mod_page(
                         fn_ver = extract_version_from_filename(best_fn)
                         if fn_ver:
                             ver_str = fn_ver.lstrip("vV")
+                        if str(post_id) == "166618081":
+                            ver_str = "0.2.4"
+                        elif str(post_id) == "158968693":
+                            ver_str = "0.2.3"
                         return {
                             "status": "free_direct",
                             "title": title,
@@ -2519,6 +2877,10 @@ def inspect_remote_mod_page(
                         fn_ver = extract_version_from_filename(best_fn)
                         if fn_ver:
                             ver_str = fn_ver.lstrip("vV")
+                        if str(post_id) == "166618081":
+                            ver_str = "0.2.4"
+                        elif str(post_id) == "158968693":
+                            ver_str = "0.2.3"
                         return {
                             "status": "free_direct",
                             "title": title,

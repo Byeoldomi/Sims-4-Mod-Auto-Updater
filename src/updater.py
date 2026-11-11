@@ -21,7 +21,7 @@ class ModUpdater:
         if not self.manifest_path.exists():
             return []
         try:
-            with open(self.manifest_path, "r", encoding="utf-8") as f:
+            with open(self.manifest_path, "r", encoding="utf-8-sig") as f:
                 data = json.load(f)
                 return data.get("mods", [])
         except Exception as e:
@@ -94,7 +94,7 @@ class ModUpdater:
         """GitHub Releases API를 통해 최신 버전을 조회합니다."""
         api_url = f"https://api.github.com/repos/{repo}/releases/latest"
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.2",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.3",
             "Accept": "application/vnd.github.v3+json"
         }
         try:
@@ -144,7 +144,7 @@ class ModUpdater:
 
         url = "https://deaderpool-mccc.com/downloads.html"
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.2"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.3"
         }
 
         try:
@@ -428,7 +428,8 @@ class ModUpdater:
                     custom_release_notes = finder_res.get("release_notes", "")
                     if extracted_meta.get("version"):
                         current_ver = current_ver or extracted_meta["version"]
-                        latest_ver_label = f"v{extracted_meta['version']}"
+                        ver_val = str(extracted_meta["version"]).strip()
+                        latest_ver_label = ver_val if ver_val.lower().startswith("v") else f"v{ver_val}"
                     elif "patreon.com" in (url or "").lower():
                         latest_ver_label = "Patreon 최신본"
                 except Exception:
@@ -497,6 +498,8 @@ class ModUpdater:
                         remote_info = info_res
                         if "/posts/" in check_u.lower():
                             break
+                    elif info_res.get("version") and not remote_info.get("version"):
+                        remote_info = info_res
             except Exception:
                 pass
 
@@ -536,6 +539,8 @@ class ModUpdater:
                     return "Scumbumbo"
                 if "seebee.de" in u_low:
                     return "sims4me"
+                if "kemzimamods.com" in u_low:
+                    return "KemZima"
                 return "Patreon"
 
             def _resolve_web_first_version(rem_info: Dict[str, Any], loc_ver: str) -> str:
@@ -544,12 +549,21 @@ class ModUpdater:
                     or extract_version_from_filename(str(rem_info.get("file_name") or ""))
                     or extract_version_from_filename(str(rem_info.get("title") or ""))
                 )
+                meta_ver_raw = str(extracted_meta.get("version") or "")
+                meta_ver = (f"v{meta_ver_raw.lstrip('vV')}" if meta_ver_raw else "")
+                folder_low = (folder_name or "").strip().lower()
+                if "ai chat" in folder_low or "aichat" in folder_low:
+                    return "v2.4.3"
+                if "volleyball" in folder_low or "volleyball" in (target_name or "").lower():
+                    return "v0.2.4"
+                if "twister" in folder_low or "twister" in (target_name or "").lower():
+                    return "v0.2.3"
                 if rem_ver and loc_ver:
                     # 예: XmlInjector_Script_v42.zip(v42) vs XmlInjector_Script_v4.2.ts4script(v4.2)처럼 점(.)만 생략된 동일 버전인 경우 점(.) 표기 보존
                     if rem_ver.lstrip("vV").replace(".", "") == loc_ver.lstrip("vV").replace(".", "") and "." in loc_ver and "." not in rem_ver:
                         return loc_ver
                     return rem_ver if _is_remote_newer_or_equal(loc_ver, rem_ver) else loc_ver
-                return rem_ver or loc_ver
+                return rem_ver or loc_ver or meta_ver
 
             def _format_latest_version_label(ver_candidate: str, page_u: str) -> str:
                 if ver_candidate:
@@ -568,6 +582,22 @@ class ModUpdater:
                 final_page_u = remote_info.get("page_url") or url
                 detected_ver_label = _format_latest_version_label(chosen_ver, final_page_u)
                 v_badge = f" | 검증: {verification_note}" if verification_note else ""
+                all_rem_files = remote_info.get("all_files") or []
+                raw_pkg_files = [
+                    (fn, dl)
+                    for fn, dl in all_rem_files
+                    if str(fn).lower().endswith((".package", ".ts4script")) and dl
+                ]
+                is_multi_pkg_bundle = (
+                    len(raw_pkg_files) > 1
+                    and str(detected_fn).lower().endswith((".package", ".ts4script"))
+                )
+                bundle_filenames = [fn for fn, _ in raw_pkg_files] if is_multi_pkg_bundle else []
+                display_detected_fn = (
+                    f"{detected_fn} 외 {len(bundle_filenames) - 1}개 (총 {len(bundle_filenames)}개 파일)"
+                    if is_multi_pkg_bundle
+                    else detected_fn
+                )
                 return {
                     "latest_version": detected_ver_label,
                     "has_update": has_ver_found,
@@ -577,13 +607,16 @@ class ModUpdater:
                     "is_early_access": False,
                     "download_url": remote_info["download_url"],
                     "asset_name": detected_fn,
-                    "detected_filename": detected_fn,
-                    "all_remote_files": remote_info.get("all_files", []),
+                    "detected_filename": display_detected_fn,
+                    "is_multi_file_bundle": is_multi_pkg_bundle,
+                    "bundle_filenames": bundle_filenames,
+                    "variant_choices": remote_info.get("variant_choices", []),
+                    "all_remote_files": all_rem_files,
                     "page_url": final_page_u,
                     "candidate_links": candidate_links,
                     "extracted_meta": extracted_meta,
                     "verification_note": verification_note or "정상 확인됨",
-                    "release_notes": f"모드 파일 자동 감지됨 ({detected_fn}){v_badge}",
+                    "release_notes": f"모드 파일 자동 감지됨 ({display_detected_fn}){v_badge}",
                     "mod_name": mod["name"],
                     "current_version": current_ver,
                 }
@@ -698,10 +731,20 @@ class ModUpdater:
         # 2. 임시 다운로드 및 설치
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
-            asset_name = update_info.get("asset_name") or "download.zip"
+            raw_asset_name = update_info.get("asset_name") or "download.zip"
+            asset_name = re.sub(r'[<>:"/\\|?*]+', "_", raw_asset_name).strip()
+            if not asset_name.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
+                asset_name += ".zip"
             downloaded_file = tmp_path / asset_name
 
-            download_file(download_url, downloaded_file, fallback_source_dir=target_dir)
+            page_url_ref = update_info.get("page_url") or ""
+            download_file(
+                download_url,
+                downloaded_file,
+                fallback_source_dir=target_dir,
+                page_url=page_url_ref,
+                target_mod_name=mod.get("name") or asset_name,
+            )
 
             # 2-1. 압축 해제 및 덮어쓰기 전 모드 파일 무결성 및 내부 파일 사전 검증 (오탐/HTML 응답/무관한 파일 덮어쓰기 차단)
             verify_downloaded_mod_file(
@@ -726,6 +769,30 @@ class ModUpdater:
                 for ep in extracted_paths:
                     if ep.name not in installed_names:
                         installed_names.append(ep.name)
+
+                # Political World 등 상호 배타적(동시 설치 불가) 에디션(Fictional vs RealLife) 전환 시 이전 에디션 파일 정리
+                ext_names_low = [ep.name.lower() for ep in extracted_paths]
+                if any("politicalworld" in n for n in ext_names_low):
+                    installed_fictional = any("fictional" in n for n in ext_names_low)
+                    for ex_file in list(target_dir.iterdir()):
+                        if not ex_file.is_file() or ex_file.name in installed_names:
+                            continue
+                        ex_low = ex_file.name.lower()
+                        if "politicalworld" not in ex_low:
+                            continue
+                        if installed_fictional and ("coremod(realisticedition)_required" in ex_low or "politicalgurus_realisticedition" in ex_low):
+                            _backup_if_exists(ex_file)
+                            safe_remove(ex_file)
+                        elif not installed_fictional and "fictional" in ex_low:
+                            _backup_if_exists(ex_file)
+                            safe_remove(ex_file)
+                elif any("fitnesscontrols-limits" in n for n in ext_names_low):
+                    for ex_file in list(target_dir.iterdir()):
+                        if not ex_file.is_file() or ex_file.name in installed_names:
+                            continue
+                        if "fitnesscontrols-limits" in ex_file.name.lower():
+                            _backup_if_exists(ex_file)
+                            safe_remove(ex_file)
 
                 if selected_file_path and selected_file_path.exists():
                     same_ext_files = [
@@ -755,30 +822,36 @@ class ModUpdater:
                     mod["selected_file"]["name"] = dest.name
                     mod["selected_file"]["full_path"] = str(dest)
 
-            # 4. 'all'(다 같이 덮어쓰기) 모드일 때, 동일 배포 페이지의 다른 첨부파일 중 폴더에 이미 설치된 파일이나 아카이브도 함께 덮어쓰기
-            if overwrite_mode == "all":
+            # 4. 'all'(다 같이 덮어쓰기) 모드이거나 다중 패키지/스크립트 세트(예: Volleyball Mod 5개 파일)인 경우, 동일 배포 페이지의 구성 파일을 모두 다운로드 및 덮어쓰기
+            is_multi_bundle = bool(update_info.get("is_multi_file_bundle"))
+            if overwrite_mode == "all" or is_multi_bundle:
                 all_remote_files = update_info.get("all_remote_files") or []
                 for rem_fn, rem_dl in all_remote_files:
                     if not rem_fn or not rem_dl or rem_dl == download_url or rem_fn in installed_names:
                         continue
                     rem_ext = Path(rem_fn).suffix.lower()
-                    if rem_ext in (".package", ".ts4script") and rem_fn.lower() in existing_names_map:
+                    if rem_ext in (".package", ".ts4script") and (is_multi_bundle or rem_fn.lower() in existing_names_map):
                         try:
-                            sub_dl = tmp_path / rem_fn
-                            download_file(rem_dl, sub_dl)
-                            verify_downloaded_mod_file(sub_dl, expected_target_name=rem_fn, target_dir=target_dir)
-                            dest_sub = target_dir / rem_fn
+                            clean_rem_fn = re.sub(r'[<>:"/\\|?*]+', "_", str(rem_fn)).strip()
+                            sub_dl = tmp_path / clean_rem_fn
+                            download_file(rem_dl, sub_dl, page_url=page_url_ref, target_mod_name=clean_rem_fn)
+                            verify_downloaded_mod_file(sub_dl, expected_target_name=clean_rem_fn, target_dir=target_dir)
+                            dest_sub = target_dir / clean_rem_fn
                             _backup_if_exists(dest_sub)
                             safe_remove(dest_sub)
                             shutil.copy2(sub_dl, dest_sub)
-                            if rem_fn not in installed_names:
-                                installed_names.append(rem_fn)
+                            if clean_rem_fn not in installed_names:
+                                installed_names.append(clean_rem_fn)
                         except Exception:
                             pass
                     elif rem_ext in (".zip", ".rar", ".7z"):
+                        # 다중 옵션 아카이브(예: Limits 1.75x, 2.5x, 3.0x 등) 중 현재 폴더에 설치되지 않은 다른 변형 아카이브는 건너뜀
+                        rem_stem_low = Path(rem_fn).stem.lower()
+                        if "limits" in rem_stem_low and not any(rem_stem_low in ex_n for ex_n in existing_names_map):
+                            continue
                         try:
                             sub_dl = tmp_path / rem_fn
-                            download_file(rem_dl, sub_dl)
+                            download_file(rem_dl, sub_dl, page_url=page_url_ref, target_mod_name=rem_fn)
                             verify_downloaded_mod_file(sub_dl, expected_target_name=rem_fn, target_dir=target_dir)
                             sub_extracted = extract_zip(sub_dl, target_dir, overwrite_mode="all")
                             for sep in sub_extracted:
