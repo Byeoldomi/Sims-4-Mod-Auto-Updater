@@ -14,6 +14,13 @@ from typing import Dict, Any, List, Tuple, Optional
 import requests
 from bs4 import BeautifulSoup
 
+try:
+    import warnings
+    from bs4 import XMLParsedAsHTMLWarning
+    warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
+except Exception:
+    pass
+
 # ==============================================================================
 # 1. 핵심 코어 모드 카탈로그 (전용 업데이터 및 대표 통합 모드)
 # ==============================================================================
@@ -57,13 +64,14 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["wonderfulwhims", "turbodriver_wonderfulwhims"],
+        "keywords": ["wonderfulwhims", "turbodriver_wonderfulwhims", "wonderfulwhims_scripts", "wonderfulwhims_tuning"],
         "name": "WonderfulWhims",
         "creator": "TURBODRIVER",
         "mod_title": "WonderfulWhims",
+        "version": "v60",
         "links": [
-            ("공식 웹사이트", "WonderfulWhims Official", "https://wonderfulwhims.com/"),
-            ("Itch.io", "TURBODRIVER Itch.io", "https://turbodriver.itch.io/wonderfulwhims")
+            ("Itch.io (공식)", "WonderfulWhims | TURBODRIVER", "https://turbodriver.itch.io/wonderfulwhims"),
+            ("공식 웹사이트", "WonderfulWhims Official", "https://wonderfulwhims.com/")
         ]
     },
     {
@@ -156,6 +164,63 @@ KNOWN_CATALOG = [
     },
     {
         "keywords": [
+            "[utopya] vintage bicycle 0.2.package",
+            "[utopya] vintage bicycle",
+            "utopya_vintage_bicycle",
+            "vintage bicycle 0.2",
+            "vintage bicycle",
+        ],
+        "name": "[UTOPYA] Vintage Bicycle",
+        "creator": "UTOPYA",
+        "mod_title": "Vintage Bicycle (Ride Together)",
+        "override_mod_title": True,
+        "version": "0.2",
+        "links": [
+            ("Patreon (공식)", "Ride Together Update 0.5 | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/ride-together-0-142863954"),
+            ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
+        ]
+    },
+    {
+        "keywords": [
+            "[utopya] rental ebike station 0.2.package",
+            "[utopya] rental ebike station",
+            "utopya_rental_ebike_station",
+            "rental ebike station 0.2",
+            "rental ebike station",
+        ],
+        "name": "[UTOPYA] Rental Ebike Station",
+        "creator": "UTOPYA",
+        "mod_title": "Rental Ebike Station (Ride Together)",
+        "override_mod_title": True,
+        "version": "0.2",
+        "links": [
+            ("Patreon (공식)", "Ride Together Update 0.5 | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/ride-together-0-142863954"),
+            ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
+        ]
+    },
+    {
+        "keywords": [
+            "[utopya] ride together_mod a0.5.package",
+            "[utopya] ride together_mod",
+            "ride together_mod",
+            "ride_together_mod",
+            "[utopya] ride together",
+            "utopya_ride_together",
+            "ride together",
+            "ride_together",
+        ],
+        "name": "Ride Together",
+        "creator": "UTOPYA",
+        "mod_title": "Ride Together",
+        "override_mod_title": True,
+        "version": "a0.5",
+        "links": [
+            ("Patreon (공식)", "Ride Together Update 0.5 | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/ride-together-0-142863954"),
+            ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
+        ]
+    },
+    {
+        "keywords": [
             "littlemssam_asktocookbakegrill",
             "asktocookbakegrill",
             "ask_to_cook_bake_grill",
@@ -167,6 +232,7 @@ KNOWN_CATALOG = [
         "creator": "LittleMsSam",
         "mod_title": "Ask to Cook/Bake/Grill/Mix Drink!",
         "override_mod_title": True,
+        "version": "2026.02.01",
         "links": [
             ("CurseForge (공식)", "Ask to Cook/Bake/Grill/Mix Drink! | LittleMsSam", "https://www.curseforge.com/sims4/mods/ask-to-cook-bake-grill-mix-drink-including")
         ]
@@ -183,6 +249,7 @@ KNOWN_CATALOG = [
         "creator": "LittleMsSam",
         "mod_title": "Heat Up Leftovers",
         "override_mod_title": True,
+        "version": "2026.11.07",
         "links": [
             ("CurseForge (공식)", "Heat Up Leftovers | LittleMsSam", "https://www.curseforge.com/sims4/mods/heat-up-leftovers")
         ]
@@ -201,6 +268,7 @@ KNOWN_CATALOG = [
         "creator": "LittleMsSam",
         "mod_title": "RSM - Food & Drinks As Clutter",
         "override_mod_title": True,
+        "version": "2026.09.19",
         "links": [
             ("CurseForge (공식)", "RSM - Food & Drinks As Clutter | LittleMsSam", "https://www.curseforge.com/sims4/mods/rsm-food-drinks-as-clutter")
         ]
@@ -217,6 +285,7 @@ KNOWN_CATALOG = [
         "creator": "FrequentlyBasic",
         "mod_title": "Flavored Memories",
         "override_mod_title": True,
+        "version": "2026.10.19",
         "links": [
             ("CurseForge (공식)", "Flavored Memories | FrequentlyBasic", "https://www.curseforge.com/sims4/mods/flavored-memories")
         ]
@@ -305,6 +374,7 @@ KNOWN_CATALOG = [
         "name": "Cumshine",
         "creator": "Spent",
         "mod_title": "Cumshine",
+        "version": "2026.10.23",
         "links": [
             ("Wicked.cc (공식)", "Cumshine - WickedCC | Spent", "https://wicked.cc/mods/spent/cumshine/"),
             ("Patreon 채널", "Spent Official Patreon", "https://www.patreon.com/Spent")
@@ -373,6 +443,7 @@ KNOWN_CATALOG = [
         "name": "Lumpinou_ContextualSocialInteractions",
         "creator": "Lumpinou",
         "mod_title": "Contextual Social Interactions",
+        "version": "2026.02.05",
         "links": [
             ("Patreon (공식)", "[Mod] Contextual Social Interactions - Sims 4", "https://www.patreon.com/lumpinou/posts/mod-contextual-4-40485793")
         ]
@@ -382,6 +453,7 @@ KNOWN_CATALOG = [
         "name": "Lumpinou Talents & Weaknesses",
         "creator": "Lumpinou",
         "mod_title": "Talents & Weaknesses",
+        "version": "2026.04.03",
         "links": [
             ("Patreon (공식)", "[Mod] Talents & Weaknesses | Lumpinou", "https://www.patreon.com/lumpinou/posts/mod-talents-51561971")
         ]
@@ -398,12 +470,51 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["lumpinou_roadtoromance", "roadtoromance", "road to romance"],
+        "keywords": [
+            "lumpinou_roadtoromance_bg_(nolovestruckep)",
+            "lumpinou_roadtoromance_bg",
+            "roadtoromance_bg",
+            "nolovestruckep",
+        ],
+        "name": "Lumpinou_RoadToRomance_BG_(NoLovestruckEp)",
+        "creator": "Lumpinou",
+        "mod_title": "Road To Romance (BG / No Lovestruck EP)",
+        "version": "2025.02.02",
+        "links": [
+            ("Patreon (공식)", "[Mod] Road to Romance - Lovestruck Edition - OR - BG Ver | Lumpinou", "https://www.patreon.com/lumpinou/posts/mod-road-to-or-4-39785932")
+        ]
+    },
+    {
+        "keywords": [
+            "lumpinou_roadtoromance_lovestruckep",
+            "lumpinou_roadtoromance",
+            "roadtoromance",
+            "road to romance",
+        ],
         "name": "Lumpinou_RoadToRomance",
         "creator": "Lumpinou",
         "mod_title": "Road To Romance",
+        "version": "2025.02.02",
         "links": [
             ("Patreon (공식)", "[Mod] Road to Romance - Lovestruck Edition - OR - BG Ver | Lumpinou", "https://www.patreon.com/lumpinou/posts/mod-road-to-or-4-39785932")
+        ]
+    },
+    {
+        "keywords": [
+            "lumpinou_lawanddisorder.ts4script",
+            "lumpinou_lawanddisorder.package",
+            "lumpinou_lawanddisorder",
+            "lawanddisorder",
+            "law_and_disorder",
+            "law and disorder",
+            "law & disorder",
+        ],
+        "name": "Law and Disorder",
+        "creator": "Lumpinou",
+        "mod_title": "Law and Disorder",
+        "version": "2025.11.03",
+        "links": [
+            ("Patreon (공식)", "[Mod] Law & Disorder - Maxis-Match Crime & Justice System | Lumpinou", "https://www.patreon.com/lumpinou/posts/mod-law-disorder-140597715")
         ]
     },
     {
@@ -411,6 +522,7 @@ KNOWN_CATALOG = [
         "name": "RestrictedRomance By Polarbearsims",
         "creator": "Polarbearsims",
         "mod_title": "RestrictedRomance By Polarbearsims",
+        "version": "2022.08.09",
         "links": [
             ("ModTheSims", "Have Some Personality Please! | Polarbearsims", "https://modthesims.info/d/594573/have-some-personality-please.html")
         ]
@@ -420,6 +532,69 @@ KNOWN_CATALOG = [
         "name": "Sims LearnInfo By Polarbearsims",
         "creator": "Polarbearsims",
         "mod_title": "Sims LearnInfo By Polarbearsims",
+        "version": "2025.05.24",
+        "links": [
+            ("ModTheSims", "Have Some Personality Please! | Polarbearsims", "https://modthesims.info/d/594573/have-some-personality-please.html")
+        ]
+    },
+    {
+        "keywords": [
+            "personalityplease!_catsdogs_bypolarbearsims",
+            "personalityplease_catsdogs_bypolarbearsims",
+            "personality_please_catsdogs",
+            "personalityplease!_catsdogs",
+            "personalityplease_catsdogs",
+        ],
+        "name": "PersonalityPlease!_CatsDogs_ByPolarbearsims",
+        "creator": "Polarbearsims",
+        "mod_title": "Personality Please! - Cats & Dogs By Polarbearsims",
+        "version": "2025.05.26",
+        "links": [
+            ("ModTheSims", "Have Some Personality Please! | Polarbearsims", "https://modthesims.info/d/594573/have-some-personality-please.html")
+        ]
+    },
+    {
+        "keywords": [
+            "personality_please!_toddlers_by_polarbearsims",
+            "personality_please_toddlers_by_polarbearsims",
+            "personalityplease_toddlers",
+            "personality_please!_toddlers",
+            "personality_please_toddlers",
+        ],
+        "name": "Personality_Please!_Toddlers_By_Polarbearsims",
+        "creator": "Polarbearsims",
+        "mod_title": "Personality Please! - Toddlers By Polarbearsims",
+        "version": "2025.05.24",
+        "links": [
+            ("ModTheSims", "Have Some Personality Please! | Polarbearsims", "https://modthesims.info/d/594573/have-some-personality-please.html")
+        ]
+    },
+    {
+        "keywords": [
+            "personality_please_woohoo-tryforbabyrestricted_bypolarbearsims",
+            "woohoo-tryforbabyrestricted",
+            "tryforbabyrestricted",
+            "woohoo_tryforbabyrestricted",
+        ],
+        "name": "Personality_Please_Woohoo-TryForBabyRestricted_ByPolarbearsims",
+        "creator": "Polarbearsims",
+        "mod_title": "Personality Please! - Woohoo & Try For Baby Restricted By Polarbearsims",
+        "version": "2023.10.26",
+        "links": [
+            ("ModTheSims", "Have Some Personality Please! | Polarbearsims", "https://modthesims.info/d/594573/have-some-personality-please.html")
+        ]
+    },
+    {
+        "keywords": [
+            "personalityplease_meaninteractions_bypolarbearsims",
+            "personality_please_meaninteractions",
+            "personalityplease_meaninteractions",
+            "meaninteractions_bypolarbearsims",
+        ],
+        "name": "PersonalityPlease_MeanInteractions_ByPolarbearsims",
+        "creator": "Polarbearsims",
+        "mod_title": "Personality Please! - Mean Interactions By Polarbearsims",
+        "version": "2025.05.24",
         "links": [
             ("ModTheSims", "Have Some Personality Please! | Polarbearsims", "https://modthesims.info/d/594573/have-some-personality-please.html")
         ]
@@ -429,15 +604,23 @@ KNOWN_CATALOG = [
         "name": "Personality Please! By Polarbearsims",
         "creator": "Polarbearsims",
         "mod_title": "Personality Please! By Polarbearsims",
+        "version": "2025.05.24",
         "links": [
             ("ModTheSims", "Have Some Personality Please! | Polarbearsims", "https://modthesims.info/d/594573/have-some-personality-please.html")
         ]
     },
     {
-        "keywords": ["disl_to_nooutfitchangepromoted", "nooutfitchangepromoted", "no outfit change when promoted"],
+        "keywords": [
+            "disl_to_nooutfitchangepromoted.package",
+            "disl_to_nooutfitchangepromoted.ts4script",
+            "disl_to_nooutfitchangepromoted",
+            "nooutfitchangepromoted",
+            "no outfit change when promoted",
+        ],
         "name": "Townies & Outfits - No Outfit Change When Promoted",
         "creator": "Down-In-Simsland",
         "mod_title": "Townies & Outfits - No Outfit Change When Promoted",
+        "version": "2025.09.27",
         "links": [
             ("SimFileShare", "DISL_TO_NoOutfitChangePromoted | Down-In-Simsland", "https://www.simfileshare.net/download/5174540/")
         ]
@@ -477,8 +660,23 @@ KNOWN_CATALOG = [
         "name": "Family Loading Screen",
         "creator": "SimMattically",
         "mod_title": "Family Loading Screen",
+        "version": "2026.02.16",
         "links": [
             ("Patreon (공식)", "Family Loading Screen | The Sims 4 | SimMattically", "https://www.patreon.com/SimMattically/posts/family-loading-4-150916961")
+        ]
+    },
+    {
+        "keywords": [
+            "simmattically_refreshedmainmenu_optional_alternativelogo",
+            "refreshedmainmenu_optional_alternativelogo",
+            "optional_alternativelogo",
+        ],
+        "name": "SimMattically_RefreshedMainMenu_Optional_AlternativeLogo",
+        "creator": "SimMattically",
+        "mod_title": "Refreshed Main Menu: Optional Alternative Logo",
+        "version": "2025.05.06",
+        "links": [
+            ("Patreon (공식)", "Refreshed Main Menu: Homeview | SimMattically", "https://www.patreon.com/SimMattically/posts/refreshed-main-126640866")
         ]
     },
     {
@@ -486,8 +684,121 @@ KNOWN_CATALOG = [
         "name": "Refreshed Main Menu: Homeview",
         "creator": "SimMattically",
         "mod_title": "Refreshed Main Menu: Homeview",
+        "version": "2025.05.06",
         "links": [
             ("Patreon (공식)", "Refreshed Main Menu: Homeview | SimMattically", "https://www.patreon.com/SimMattically/posts/refreshed-main-126640866")
+        ]
+    },
+    {
+        "keywords": [
+            "nv_sm_motive_fail_energy_animation_replacement.package",
+            "nv_sm_motive_fail_energy_animation_replacement",
+            "motive_fail_energy_animation_replacement",
+        ],
+        "name": "NV_SM_Motive_Fail_Energy_Animation_Replacement",
+        "creator": "NV Games",
+        "mod_title": "Motive Fail Energy Animation Replacement",
+        "version": "2025.03.14",
+        "links": [
+            ("Patreon (공식)", "SMALL MODS | NV . Games", "https://www.patreon.com/nv_games/posts/small-mods-69121597")
+        ]
+    },
+    {
+        "keywords": [
+            "nv_sm_asymcelebsocial_fan_faint_animation_replacement.package",
+            "nv_sm_asymcelebsocial_fan_faint_animation_replacement",
+            "asymcelebsocial_fan_faint_animation_replacement",
+        ],
+        "name": "NV_SM_AsymCelebSocial_Fan_Faint_Animation_Replacement",
+        "creator": "NV Games",
+        "mod_title": "AsymCelebSocial Fan Faint Animation Replacement",
+        "version": "2025.03.14",
+        "links": [
+            ("Patreon (공식)", "SMALL MODS | NV . Games", "https://www.patreon.com/nv_games/posts/small-mods-69121597")
+        ]
+    },
+    {
+        "keywords": [
+            "nv_sm_werewolf_howling_animation_replacement.package",
+            "nv_sm_werewolf_howling_animation_replacement",
+            "werewolf_howling_animation_replacement",
+        ],
+        "name": "NV_SM_Werewolf_Howling_Animation_Replacement",
+        "creator": "NV Games",
+        "mod_title": "Werewolf Howling Animation Replacement",
+        "version": "2025.03.14",
+        "links": [
+            ("Patreon (공식)", "SMALL MODS | NV . Games", "https://www.patreon.com/nv_games/posts/small-mods-69121597")
+        ]
+    },
+    {
+        "keywords": [
+            "nv_sm_no_overhead_effects.package",
+            "nv_sm_no_overhead_effects",
+            "no_overhead_effects",
+        ],
+        "name": "NV_SM_No_Overhead_Effects",
+        "creator": "NV Games",
+        "mod_title": "No Overhead Effects",
+        "version": "2022.09.16",
+        "links": [
+            ("Patreon (공식)", "SMALL MODS | NV . Games", "https://www.patreon.com/nv_games/posts/small-mods-69121597")
+        ]
+    },
+    {
+        "keywords": [
+            "nv_sm_no_effects.package",
+            "nv_sm_no_effects",
+        ],
+        "name": "NV_SM_No_Effects",
+        "creator": "NV Games",
+        "mod_title": "No Effects",
+        "version": "2025.03.14",
+        "links": [
+            ("Patreon (공식)", "SMALL MODS | NV . Games", "https://www.patreon.com/nv_games/posts/small-mods-69121597")
+        ]
+    },
+    {
+        "keywords": [
+            "nv_sm_standing_idle_neutral.package",
+            "nv_sm_standing_idle_neutral",
+            "nv_sm_standing_idle.package",
+            "nv_sm_standing_idle",
+            "nv.sm standing idle",
+            "nv. sm standing idle",
+        ],
+        "name": "NV_SM_Standing_Idle",
+        "creator": "NV Games",
+        "mod_title": "Standing Idle",
+        "version": "2023.03.21",
+        "links": [
+            ("Patreon (공식)", "SMALL MODS | NV . Games", "https://www.patreon.com/nv_games/posts/small-mods-69121597")
+        ]
+    },
+    {
+        "keywords": [
+            "nv_sm_facialoverlay_animation_replacement_adult_all.package",
+            "nv_sm_facialoverlay_animation_replacement_adult_angry.package",
+            "nv_sm_facialoverlay_animation_replacement_adult_bored.package",
+            "nv_sm_facialoverlay_animation_replacement_adult_confident.package",
+            "nv_sm_facialoverlay_animation_replacement_adult_happy.package",
+            "nv_sm_facialoverlay_animation_replacement_adult_sad.package",
+            "nv_sm_facialoverlay_animation_replacement_children_all.package",
+            "nv_sm_facialoverlay_animation_replacement_children_angry.package",
+            "nv_sm_facialoverlay_animation_replacement_children_bored.package",
+            "nv_sm_facialoverlay_animation_replacement_children_happy.package",
+            "nv_sm_facialoverlay_animation_replacement_children_sad.package",
+            "nv_sm_facialoverlay_animation_replacement",
+            "facialoverlay_animation_replacement",
+            "nv.sm facial overlay animation replacement",
+            "nv. sm facial overlay animation replacement",
+        ],
+        "name": "NV_SM_FacialOverlay_Animation_Replacement",
+        "creator": "NV Games",
+        "mod_title": "Facial Overlay Animation Replacement",
+        "version": "2025.03.15",
+        "links": [
+            ("Patreon (공식)", "SMALL MODS | NV . Games", "https://www.patreon.com/nv_games/posts/small-mods-69121597")
         ]
     },
     {
@@ -495,6 +806,7 @@ KNOWN_CATALOG = [
         "name": "NV_SM_UI_Mood",
         "creator": "NV Games",
         "mod_title": "",
+        "version": "2025.03.15",
         "links": [
             ("Patreon (공식)", "SMALL MODS | NV . Games", "https://www.patreon.com/nv_games/posts/small-mods-69121597")
         ]
@@ -504,26 +816,346 @@ KNOWN_CATALOG = [
         "name": "Less Facial Overaction",
         "creator": "Bienchen (sims4me)",
         "mod_title": "Less Facial Overaction",
+        "version": "2026.09.06",
         "links": [
             ("CurseForge (공식)", "Less Facial Overaction | Bienchen (sims4me)", "https://www.curseforge.com/sims4/mods/less-facial-overaction")
         ]
     },
     {
-        "keywords": ["friedgil", "friedgil_random_name", "random_name_korean_translation"],
+        "keywords": ["friedgil_random_name_korean_translation_compilation"],
         "name": "FriedGil_Random_Name_Korean_Translation_Compilation",
         "creator": "FriedGil",
         "mod_title": "Random Name Korean Translation Compilation",
+        "version": "2026.02.05",
         "release_notes": "네이버 블로그 참고 (무료)",
         "links": [
             ("네이버 블로그 참고 (무료)", "FriedGil 랜덤 이름 한글화 배포 포스트", "https://blog.naver.com/friedg/221810746795")
         ]
     },
     {
-        "keywords": ["wamtik", "바람별", "바람별한글화"],
-        "name": "바람별 한글화 모드",
+        "keywords": ["friedgil_random_name_korean_translation_no_korean"],
+        "name": "FriedGil_Random_Name_Korean_Translation_NO_Korean",
+        "creator": "FriedGil",
+        "mod_title": "Random Name Korean Translation (NO Korean)",
+        "version": "2026.02.05",
+        "release_notes": "네이버 블로그 참고 (무료)",
+        "links": [
+            ("네이버 블로그 참고 (무료)", "FriedGil 랜덤 이름 한글화 배포 포스트", "https://blog.naver.com/friedg/221810746795")
+        ]
+    },
+    {
+        "keywords": ["friedgil_random_name_korean_translation_no_cl&il", "friedgil_random_name_korean_translation_no_cl_il"],
+        "name": "FriedGil_Random_Name_Korean_Translation_NO_CL&IL",
+        "creator": "FriedGil",
+        "mod_title": "Random Name Korean Translation (NO CL&IL)",
+        "version": "2026.02.05",
+        "release_notes": "네이버 블로그 참고 (무료)",
+        "links": [
+            ("네이버 블로그 참고 (무료)", "FriedGil 랜덤 이름 한글화 배포 포스트", "https://blog.naver.com/friedg/221810746795")
+        ]
+    },
+    {
+        "keywords": ["friedgil_random_name_korean_translation", "friedgil", "friedgil_random_name", "random_name_korean_translation"],
+        "name": "FriedGil_Random_Name_Korean_Translation",
+        "creator": "FriedGil",
+        "mod_title": "Random Name Korean Translation",
+        "version": "2026.02.05",
+        "release_notes": "네이버 블로그 참고 (무료)",
+        "links": [
+            ("네이버 블로그 참고 (무료)", "FriedGil 랜덤 이름 한글화 배포 포스트", "https://blog.naver.com/friedg/221810746795")
+        ]
+    },
+    {
+        "keywords": ["tmex-betterexceptions", "betterexceptions", "better exceptions"],
+        "name": "Better Exceptions",
+        "creator": "TwistedMexi",
+        "mod_title": "Better Exceptions",
+        "version": "3.17",
+        "links": [
+            ("Patreon (공식)", "Better Exceptions v3.17 | TwistedMexi", "https://www.patreon.com/TwistedMexi/posts/better-v3-17-mod-130049745"),
+            ("Patreon 채널", "TwistedMexi Official Patreon", "https://www.patreon.com/TwistedMexi"),
+            ("CurseForge (공식)", "Better Exceptions | TwistedMexi", "https://www.curseforge.com/sims4/mods/better-exceptions")
+        ]
+    },
+    {
+        "keywords": ["walkingbounce", "walking bounce", "walking bounces"],
+        "name": "WalkingBounce",
+        "creator": "Bouncing Sims 4",
+        "mod_title": "Bouncing Sims 4 (WalkingBounce)",
+        "version": "2026.11.10",
+        "is_paid": True,
+        "release_notes": "유료 상품이어서 자동 다운로드가 불가능합니다. (Patreon 공식 링크)",
+        "links": [
+            ("Patreon (유료 상품)", "Bouncing Sims 4 | WalkingBounce", "https://www.patreon.com/TonicSims/posts/bouncing-sims-4-174891794")
+        ]
+    },
+    {
+        "keywords": [
+            "pandasama_dramageneratorscript.ts4script",
+            "pandasama_dramageneratorscript",
+            "pandasama_dramagenerator_core",
+            "pandasama_dramagenerator_abandonedbaby_module",
+            "pandasama_dramagenerator_runawaychild_module",
+            "pandasama_dramagenerator",
+            "drama_generator",
+            "dramagenerator",
+            "drama generator",
+        ],
+        "name": "Drama Generator",
+        "creator": "Pandasama",
+        "mod_title": "Drama Generator",
+        "version": "1.23",
+        "links": [
+            ("Pandasama Official (공식)", "Drama Generator Mod | Pandasama", "https://www.pandasama.com/drama-generator-mod/#downloads")
+        ]
+    },
+    {
+        "keywords": [
+            "pandasama_childbirth.ts4script",
+            "pandasama_childbirth_mod",
+            "pandasama_childbirth",
+            "childbirth_mod",
+            "child_birth_mod",
+            "child birth mod",
+            "child birth",
+            "childbirth",
+        ],
+        "name": "Child Birth",
+        "creator": "Pandasama",
+        "mod_title": "Child Birth",
+        "version": "1.972",
+        "links": [
+            ("Pandasama Official (공식)", "Child Birth Mod | Pandasama", "https://www.pandasama.com/child-birth-mod/#downloads")
+        ]
+    },
+    {
+        "keywords": [
+            "divine ascension trailer - lot&sims.zip",
+            "divine ascension trailer - lot&sims",
+            "divine_ascension_trailer_lot&sims",
+            "divine ascension trailer",
+            "lot&sims",
+        ],
+        "name": "Divine Ascension Trailer - Lot&Sims",
+        "creator": "SpinningPlumbobs",
+        "mod_title": "Divine Ascension Trailer - Lot&Sims",
+        "version": "2026.07.21",
+        "links": [
+            ("Patreon (공식)", "Divine Ascension Mod (Lot & Sims) | SpinningPlumbobs", "https://www.patreon.com/spinningplumbobs/posts/divine-ascension-152466612")
+        ]
+    },
+    {
+        "keywords": [
+            "spinningplumbobs_divineascension",
+            "spinningplumbobs_divinemod.ts4script",
+            "spinningplumbobs_divinemod",
+            "spinningplumbobs_divineascension_main.package",
+            "spinningplumbobs_divineascension_main",
+            "sp_divineascension_stbls.package",
+            "sp_divineascension_stbls",
+            "sp_da_animations",
+            "divine ascension mod",
+            "divine_ascension",
+            "divineascension",
+        ],
+        "name": "Divine Ascension Mod",
+        "creator": "SpinningPlumbobs",
+        "mod_title": "Divine Ascension Mod",
+        "version": "2026.07.21",
+        "links": [
+            ("Patreon (공식)", "Divine Ascension Mod | SpinningPlumbobs", "https://www.patreon.com/spinningplumbobs/posts/divine-ascension-152466612")
+        ]
+    },
+    {
+        "keywords": ["_kor_juicetodrink.package", "_kor_juicetodrink", "kor_juicetodrink", "(kor)juicetodrink", "juicetodrink"],
+        "name": "_KOR_JuicetoDrink",
+        "creator": "바람별",
+        "mod_title": "바람별 한글화 모드 애드온 (_KOR_JuicetoDrink)",
+        "version": "2024.03.17",
+        "release_notes": "바람별 통합한글화모음 애드온 (Postype 무료 공개)",
+        "links": [
+            ("Postype (무료)", "통합한글화모음 애드온 | 바람별", "https://www.postype.com/@wwwindystar/post/10314790"),
+            ("Patreon (무료)", "통합한글화모음 애드온 | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-53821570")
+        ]
+    },
+    {
+        "keywords": ["_kor_beerbrewing.package", "_kor_beerbrewing", "kor_beerbrewing", "(kor)beerbrewing", "beerbrewing"],
+        "name": "_KOR_BeerBrewing",
+        "creator": "바람별",
+        "mod_title": "바람별 한글화 모드 애드온 (_KOR_BeerBrewing)",
+        "version": "2024.03.17",
+        "release_notes": "바람별 통합한글화모음 애드온 (Postype 무료 공개)",
+        "links": [
+            ("Postype (무료)", "통합한글화모음 애드온 | 바람별", "https://www.postype.com/@wwwindystar/post/10314790"),
+            ("Patreon (무료)", "통합한글화모음 애드온 | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-53821570")
+        ]
+    },
+    {
+        "keywords": ["_kor_plasmatoblood.package", "_kor_plasmatoblood", "kor_plasmatoblood", "(kor)plasmatoblood", "plasmatoblood"],
+        "name": "_KOR_PlasmaToBlood",
+        "creator": "바람별",
+        "mod_title": "바람별 한글화 모드 애드온 (_KOR_PlasmaToBlood)",
+        "version": "2024.03.17",
+        "release_notes": "바람별 통합한글화모음 애드온 (Postype 무료 공개)",
+        "links": [
+            ("Postype (무료)", "통합한글화모음 애드온 | 바람별", "https://www.postype.com/@wwwindystar/post/10314790"),
+            ("Patreon (무료)", "통합한글화모음 애드온 | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-53821570")
+        ]
+    },
+    {
+        "keywords": ["_kor_bloodbeer.package", "_kor_bloodbeer", "kor_bloodbeer", "(kor)bloodbeer", "bloodbeer"],
+        "name": "_KOR_BloodBeer",
+        "creator": "바람별",
+        "mod_title": "바람별 한글화 모드 애드온 (_KOR_BloodBeer)",
+        "version": "2024.03.17",
+        "release_notes": "바람별 통합한글화모음 애드온 (Postype 무료 공개)",
+        "links": [
+            ("Postype (무료)", "통합한글화모음 애드온 | 바람별", "https://www.postype.com/@wwwindystar/post/10314790"),
+            ("Patreon (무료)", "통합한글화모음 애드온 | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-53821570")
+        ]
+    },
+    {
+        "keywords": ["automaticpreferences.package", "automaticpreferences", "automatic_preferences"],
+        "name": "AutomaticPreferences",
+        "creator": "바람별",
+        "mod_title": "바람별 한글화 모드 애드온 (AutomaticPreferences)",
+        "version": "2024.03.17",
+        "release_notes": "바람별 통합한글화모음 애드온 (Postype 무료 공개)",
+        "links": [
+            ("Postype (무료)", "통합한글화모음 애드온 | 바람별", "https://www.postype.com/@wwwindystar/post/10314790"),
+            ("Patreon (무료)", "통합한글화모음 애드온 | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-53821570")
+        ]
+    },
+    {
+        "keywords": ["!wamtik-v97.8r-ff", "_wamtik-v97.8r-ff", "wamtik-v97.8r-ff"],
+        "name": "!WAMTIK-V97.8R-FF",
+        "creator": "바람별",
+        "mod_title": "바람별 공식 한글화 모드 빨간맛 (성씨-이름 FF)",
+        "version": "V97.8R",
+        "release_notes": "바람별 공식 한글화 모드 공개버전 빨간맛 · 풀네임 성씨-이름(FF) 표시 버전 (Patreon 무료 공개)",
+        "links": [
+            ("Patreon (공식)", "통합한글화모음 V97.8R | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-58263282"),
+            ("Postype", "바람별의 포스타입 (Postype)", "https://www.postype.com/@wwwindystar"),
+            ("네이버 블로그", "바람별의 심즈 4 네이버 블로그", "https://blog.naver.com/wwwindystar")
+        ]
+    },
+    {
+        "keywords": ["!wamtik-v97.8r", "_wamtik-v97.8r", "wamtik-v97.8r"],
+        "name": "!WAMTIK-V97.8R",
+        "creator": "바람별",
+        "mod_title": "바람별 공식 한글화 모드 빨간맛",
+        "version": "V97.8R",
+        "release_notes": "바람별 공식 한글화 모드 공개버전 빨간맛 · 기본 이름 표시 버전 (Patreon 무료 공개)",
+        "links": [
+            ("Patreon (공식)", "통합한글화모음 V97.8R | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-58263282"),
+            ("Postype", "바람별의 포스타입 (Postype)", "https://www.postype.com/@wwwindystar"),
+            ("네이버 블로그", "바람별의 심즈 4 네이버 블로그", "https://blog.naver.com/wwwindystar")
+        ]
+    },
+    {
+        "keywords": ["!wamtik-v97.8-ff", "_wamtik-v97.8-ff", "wamtik-v97.8-ff"],
+        "name": "!WAMTIK-V97.8-FF",
+        "creator": "바람별",
+        "mod_title": "바람별 공식 한글화 모드 (성씨-이름 FF)",
+        "version": "V97.8",
+        "release_notes": "바람별 공식 한글화 모드 · 풀네임 성씨-이름(FF) 표시 버전 (네이버 블로그 무료 공개)",
+        "links": [
+            ("네이버 블로그 참고 (무료)", "바람별 심즈 4 공식 한글화 모드", "https://blog.naver.com/wwwindystar/220460594769"),
+            ("Postype", "바람별의 포스타입 (Postype)", "https://www.postype.com/@wwwindystar"),
+            ("Patreon (선배포)", "바람별 ZIMS 통합 한글화 (Patreon)", "https://www.patreon.com/cw/wwindystarZIMS")
+        ]
+    },
+    {
+        "keywords": ["!wamtik-v97.8", "_wamtik-v97.8", "wamtik-v97.8"],
+        "name": "!WAMTIK-V97.8",
+        "creator": "바람별",
+        "mod_title": "바람별 공식 한글화 모드",
+        "version": "V97.8",
+        "release_notes": "바람별 공식 한글화 모드 · 기본 이름 표시 버전 (네이버 블로그 무료 공개)",
+        "links": [
+            ("네이버 블로그 참고 (무료)", "바람별 심즈 4 공식 한글화 모드", "https://blog.naver.com/wwwindystar/220460594769"),
+            ("Postype", "바람별의 포스타입 (Postype)", "https://www.postype.com/@wwwindystar"),
+            ("Patreon (선배포)", "바람별 ZIMS 통합 한글화 (Patreon)", "https://www.patreon.com/cw/wwindystarZIMS")
+        ]
+    },
+    {
+        "keywords": ["_wamtik-v98p8-ff", "!wamtik-v98p8-ff", "wamtik-v98p8-ff"],
+        "name": "_WAMTIK-V98P8-FF",
+        "creator": "바람별",
+        "mod_title": "바람별 한글화 모드 순한맛 (성씨-이름 FF)",
+        "version": "V98P8",
+        "is_early_access": True,
+        "release_notes": "바람별 한글화 모드 순한맛(순결버전) · 풀네임 성씨-이름(FF) 표시 버전 (후원자 전용 · 수동 다운로드 안내)",
+        "links": [
+            ("Postype", "통합한글화모음 V98P8 순결버전 (Postype)", "https://www.postype.com/@wwwindystar/post/9789832"),
+            ("Patreon (후원자 전용)", "바람별 ZIMS 통합 한글화 (Patreon)", "https://www.patreon.com/cw/wwindystarZIMS"),
+            ("네이버 블로그", "바람별의 심즈 4 네이버 블로그", "https://blog.naver.com/wwwindystar")
+        ]
+    },
+    {
+        "keywords": ["_wamtik-v98p8", "!wamtik-v98p8", "wamtik-v98p8"],
+        "name": "_WAMTIK-V98P8",
+        "creator": "바람별",
+        "mod_title": "바람별 한글화 모드 순한맛",
+        "version": "V98P8",
+        "is_early_access": True,
+        "release_notes": "바람별 한글화 모드 순한맛(순결버전) · 기본 이름 표시 버전 (후원자 전용 · 수동 다운로드 안내)",
+        "links": [
+            ("Postype", "통합한글화모음 V98P8 순결버전 (Postype)", "https://www.postype.com/@wwwindystar/post/9789832"),
+            ("Patreon (후원자 전용)", "바람별 ZIMS 통합 한글화 (Patreon)", "https://www.patreon.com/cw/wwindystarZIMS"),
+            ("네이버 블로그", "바람별의 심즈 4 네이버 블로그", "https://blog.naver.com/wwwindystar")
+        ]
+    },
+    {
+        "keywords": ["!wamtik-v98b8-ff", "_wamtik-v98b8-ff", "wamtik-v98b8-ff"],
+        "name": "!WAMTIK-V98B8-FF",
+        "creator": "바람별",
+        "mod_title": "바람별 한글화 모드 베타버전 빨간맛 (성씨-이름 FF)",
+        "version": "V98B8",
+        "is_early_access": True,
+        "release_notes": "베타버전 빨간맛 · 풀네임 성씨-이름(FF) 표시 버전 (후원자 전용 · 수동 다운로드 안내)",
+        "links": [
+            ("Patreon (후원자 전용)", "통합한글화모음 V98B8 | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-69805432"),
+            ("Postype", "바람별의 포스타입 (Postype)", "https://www.postype.com/@wwwindystar"),
+            ("네이버 블로그", "바람별의 심즈 4 네이버 블로그", "https://blog.naver.com/wwwindystar")
+        ]
+    },
+    {
+        "keywords": ["!wamtik-v98b8", "_wamtik-v98b8", "wamtik-v98b8"],
+        "name": "!WAMTIK-V98B8",
+        "creator": "바람별",
+        "mod_title": "바람별 한글화 모드 베타버전 빨간맛",
+        "version": "V98B8",
+        "is_early_access": True,
+        "release_notes": "베타버전 빨간맛 · 기본 이름 표시 버전 (후원자 전용 · 수동 다운로드 안내)",
+        "links": [
+            ("Patreon (후원자 전용)", "통합한글화모음 V98B8 | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-69805432"),
+            ("Postype", "바람별의 포스타입 (Postype)", "https://www.postype.com/@wwwindystar"),
+            ("네이버 블로그", "바람별의 심즈 4 네이버 블로그", "https://blog.naver.com/wwwindystar")
+        ]
+    },
+    {
+        "keywords": ["!wamtik-v98g8-ff", "_wamtik-v98g8-ff", "wamtik-v98g8-ff"],
+        "name": "!WAMTIK-V98G8-FF",
+        "creator": "바람별",
+        "mod_title": "바람별 한글화 모드 (성씨-이름 FF)",
+        "version": "V98G8",
+        "is_early_access": True,
+        "release_notes": "선배포모드 번역이 추가되는 광역후원자 버전 · 풀네임 성씨-이름(FF) 표시 (수동 다운로드 안내)",
+        "links": [
+            ("Patreon (선배포)", "바람별 ZIMS 통합 한글화 (Patreon)", "https://www.patreon.com/cw/wwindystarZIMS"),
+            ("Postype", "바람별의 포스타입 (Postype)", "https://www.postype.com/@wwwindystar"),
+            ("네이버 블로그", "바람별의 심즈 4 네이버 블로그", "https://blog.naver.com/wwwindystar")
+        ]
+    },
+    {
+        "keywords": ["!wamtik-v98g8", "_wamtik-v98g8", "wamtik-v98g8", "wamtik", "바람별", "바람별한글화"],
+        "name": "!WAMTIK-V98G8",
         "creator": "바람별",
         "mod_title": "바람별 한글화 모드",
         "version": "V98G8",
+        "is_early_access": True,
+        "release_notes": "선배포모드 번역이 추가되는 광역후원자 버전 (수동 다운로드 안내)",
         "links": [
             ("Patreon (선배포)", "바람별 ZIMS 통합 한글화 (Patreon)", "https://www.patreon.com/cw/wwindystarZIMS"),
             ("Postype", "바람별의 포스타입 (Postype)", "https://www.postype.com/@wwwindystar"),
@@ -553,6 +1185,9 @@ RELIABLE_DOMAINS = [
     ("sims4studio.com", "Sims 4 Studio"),
     ("seebee.de", "ichschaf Sims 4 Mods"),
     ("kemzimamods.com", "KemZima Mods"),
+    ("pandasama.com", "Pandasama Official"),
+    ("lot51.cc", "Lot 51"),
+    ("twistedmexi.com", "TwistedMexi"),
 ]
 
 # 제외할 최상위/일반 루트 URL
@@ -606,6 +1241,8 @@ IGNORED_INTERNAL_URL_PREFIXES = (
     "https://frankkmods.com",
     "https://www.lovense.com",
     "http://wonderf.cluster026.hosting.ovh.net",
+    "http://twistedmexi.com/betterexceptions/knownexceptions.php",
+    "https://twistedmexi.com/betterexceptions/knownexceptions.php",
 )
 
 # 무시할 일반 파이썬/심즈 기본 모듈명 및 튜닝 속성명
@@ -617,9 +1254,80 @@ GENERIC_INTERNAL_NAMES = {
 }
 
 
+def extract_date_from_filename(text: str) -> str:
+    """파일명, 폴더명 또는 제목에 버전 숫자 대신 '날짜'만 표기된 경우 이를 감지하여
+    비교가 가능한 표준 날짜 형식('YYYY.MM.DD')으로 변환해 반환합니다.
+    (직접 수정 및 커스텀이 쉽도록 패턴별로 분리되어 있습니다.)
+    지원 패턴:
+      1) YYYY.MM.DD / YYYY-MM-DD / YYYY_MM_DD (예: 2026.03.15, 2026-03-15)
+      2) DD.MM.YYYY / DD-MM-YYYY / MM.DD.YYYY (예: 15.03.2026, 03-15-2026)
+      3) YY.MM.DD / DD.MM.YY / MM.DD.YY (예: 26.03.15, 27.09.25, [26.02.14])
+      4) YYYYMMDD 8자리 또는 구분자/대괄호 안의 YYMMDD 6자리 (예: 20260315, [260315], _260315)
+    """
+    if not text:
+        return ""
+
+    # 1) YYYY.MM.DD / YYYY-MM-DD / YYYY_MM_DD (월/일이 2자리 0패딩된 날짜, MCCC의 2026.1.1과 구분)
+    m_ymd4 = re.search(
+        r"(?:^|[\s_\-\[\(])(201[4-9]|202[0-9])[\.\-_](0[1-9]|1[0-2])[\.\-_](0[1-9]|[12][0-9]|3[01])(?=$|[^0-9])",
+        text,
+    )
+    if m_ymd4:
+        return f"{m_ymd4.group(1)}.{m_ymd4.group(2)}.{m_ymd4.group(3)}"
+
+    # 2) DD.MM.YYYY 또는 MM.DD.YYYY
+    m_dmy4 = re.search(
+        r"(?:^|[\s_\-\[\(])([0-3][0-9])[\.\-_]([0-3][0-9])[\.\-_](201[4-9]|202[0-9])(?=$|[^0-9])",
+        text,
+    )
+    if m_dmy4:
+        n1, n2, yyyy = int(m_dmy4.group(1)), int(m_dmy4.group(2)), m_dmy4.group(3)
+        if 1 <= n2 <= 12 and 1 <= n1 <= 31:
+            return f"{yyyy}.{n2:02d}.{n1:02d}"
+        if 1 <= n1 <= 12 and 1 <= n2 <= 31:
+            return f"{yyyy}.{n1:02d}.{n2:02d}"
+
+    # 3) 2자리 연도 날짜: YY.MM.DD / DD.MM.YY / MM.DD.YY (예: 26.03.15, 27.09.25)
+    for m_2y in re.finditer(
+        r"(?:^|[\s_\-\[\(])([0-3][0-9])[\.\-_]([0-3][0-9])[\.\-_]([0-3][0-9])(?=$|[^0-9.])",
+        text,
+    ):
+        a, b, c = int(m_2y.group(1)), int(m_2y.group(2)), int(m_2y.group(3))
+        # (a) B가 월(1~12)인 경우: YY.MM.DD 또는 DD.MM.YY 판별
+        if 1 <= b <= 12:
+            # A가 연도 범위를 벗어나거나(>26 또는 <14) C가 확실한 연도(14~26)인 경우 -> DD.MM.YY (유럽식, 예: 27.09.25)
+            if (a > 26 or a < 14) and 14 <= c <= 26 and 1 <= a <= 31:
+                return f"20{c:02d}.{b:02d}.{a:02d}"
+            # A가 확실한 연도(14~26)이고 C가 일(1~31)인 경우 -> YY.MM.DD (한국식, 예: 26.03.15)
+            if 14 <= a <= 26 and 1 <= c <= 31:
+                return f"20{a:02d}.{b:02d}.{c:02d}"
+        # (b) A가 월(1~12), B가 일(13~31), C가 연도(14~26)인 경우 -> MM.DD.YY (북미식, 예: 09.27.25)
+        if 1 <= a <= 12 and 13 <= b <= 31 and 14 <= c <= 26:
+            return f"20{c:02d}.{a:02d}.{b:02d}"
+
+    # 4) 구분자 없는 8자리 YYYYMMDD (예: 20260315, [20260315])
+    m_8d = re.search(
+        r"(?:^|[\s_\-\[\(])(201[4-9]|202[0-9])(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])(?=$|[^0-9])",
+        text,
+    )
+    if m_8d:
+        return f"{m_8d.group(1)}.{m_8d.group(2)}.{m_8d.group(3)}"
+
+    # 5) 대괄호 또는 구분자 뒤의 6자리 YYMMDD (예: [260315], _260315)
+    m_6d = re.search(
+        r"(?:[\[\(_\-])(2[0-6])(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])(?=$|[\]\)\s_\-])",
+        text,
+    )
+    if m_6d:
+        return f"20{m_6d.group(1)}.{m_6d.group(2)}.{m_6d.group(3)}"
+
+    return ""
+
+
 def extract_version_from_filename(filename: str) -> str:
-    """파일명에 버전(예: v1, v2, v4, v1.1, 0.1, 0.1.0, v2.986, v2a, ChatPackv2_... 등)이 명시되어 있으면
-    'v버전' 형태로 반환하고, 버전이 적혀 있지 않으면 빈 문자열('')을 반환합니다.
+    """파일명/폴더명에 버전(예: v1, v2, v4, v1.1, 0.1, 0.1.0, v2.986, V98G8 등) 또는
+    날짜 버전(예: 2026.03.15, 26.03.15, 27.09.25, 20260315 등)이 명시되어 있으면
+    버전 문자열을 반환하고, 적혀 있지 않으면 빈 문자열('')을 반환합니다.
     """
     if not filename:
         return ""
@@ -634,11 +1342,17 @@ def extract_version_from_filename(filename: str) -> str:
     if m_v:
         raw_v = m_v.group(1).lstrip("vV")
         return f"v{raw_v}"
-    # 1-b) 바람별 통합한글화모음 스타일 버전 (예: V98G8, V97G5 등)
-    m_vg = re.search(r"(?:^|[\s_\-\[\(])(V[0-9]+G[0-9]+)(?=$|[^a-zA-Z0-9.])", stem, flags=re.IGNORECASE)
+    # 1-b) 바람별 통합한글화모음 스타일 버전 (예: V98G8, V98B8, V98P8, V97G5 등)
+    m_vg = re.search(r"(?:^|[\s_\-\[\(])(V[0-9]+[GBPR][0-9]+)(?=$|[^a-zA-Z0-9.])", stem, flags=re.IGNORECASE)
     if m_vg:
         return m_vg.group(1).upper()
-    # 2) 점이 포함된 버전 숫자 (예: 0.1, 0.1.0, a0.2.4, 1.8 - 단 배수 표기 1.75x 및 날짜 표기 26.11.01 등은 제외)
+
+    # 2) 날짜 형식 버전 감지 (예: 26.03.15, 27.09.25, 2026-03-15, [260315] 등 -> 'YYYY.MM.DD'로 정규화)
+    date_ver = extract_date_from_filename(stem)
+    if date_ver:
+        return date_ver
+
+    # 3) 점이 포함된 일반 버전 숫자 (예: 0.1, 0.1.0, a0.2.4, 1.8, 2026.1.1 - 단 배수 표기 1.75x 제외)
     m_dot = re.search(
         r"(?:^|[\s_\-\[\(])[ab]?([0-9]+\.[0-9]+(?:\.[0-9]+)*[a-wyz]?)(?=$|[^a-zA-Z0-9.xX가-힣])",
         stem,
@@ -646,8 +1360,18 @@ def extract_version_from_filename(filename: str) -> str:
     )
     if m_dot:
         raw_dot = m_dot.group(1)
-        if not re.match(r"^(?:20)?2[0-9]\.[01][0-9]\.[0-3][0-9]$", raw_dot):
-            return f"v{raw_dot}"
+        return f"v{raw_dot}"
+
+    # 4) 폴더/파일명 끝에 대괄호로 표기된 버전 (예: GSM MCCC [2026.1.1], GSM WickedWhims [185k], GM SomeMod [4])
+    # 단, 'GSM-[1]', 'GSM_[1]', 'GSM [1]'처럼 폴더 순번만 적힌 경우는 제외
+    if not re.match(r"^(?:[\d\-]+[\.\s_\-]*)?(?:GSM|GM|MOD)[\s_\-]*\[\s*\d+\s*\]\s*$", stem, flags=re.IGNORECASE):
+        m_bracket_end = re.search(
+            r"\[\s*(?:v|ver|version)?\.?\s*([0-9]+(?:\.[0-9]+)*[a-z]?)\s*\]\s*$",
+            stem,
+            flags=re.IGNORECASE,
+        )
+        if m_bracket_end:
+            return f"v{m_bracket_end.group(1)}"
     return ""
 
 
@@ -807,6 +1531,10 @@ def _extract_from_single_ts4script(path: Path) -> Dict[str, Any]:
                             m_ww = re.search(rb"(?<![a-zA-Z0-9.])v?(1[789][0-9][a-z]?)(?![a-zA-Z0-9.])", data, flags=re.IGNORECASE)
                             if m_ww:
                                 info["version"] = m_ww.group(1).decode("ascii", "ignore")
+                        elif "wonderfulwhims" in e_low and ("version" in e_low or "main" in e_low or "init" in e_low):
+                            m_wfw = re.search(rb"(?<![a-zA-Z0-9.])v([456789][0-9][a-z]?)(?![a-zA-Z0-9.])", data, flags=re.IGNORECASE)
+                            if m_wfw:
+                                info["version"] = f"v{m_wfw.group(1).decode('ascii', 'ignore')}"
                         elif e_low.endswith("sims4_ai_chat/config.pyc"):
                             m_ai = re.search(rb"(?<![0-9.])([0-9]+\.[0-9]+\.[0-9]+)(?![0-9.])", data)
                             if m_ai:
@@ -822,6 +1550,10 @@ def _extract_from_single_ts4script(path: Path) -> Dict[str, Any]:
                                     if pkg_sibling.exists() and pkg_sibling.stat().st_size == 15388976:
                                         ui_ver = "1.59.1"
                                 info["version"] = ui_ver
+                        elif "tmex_belibrary.pyc" in e_low:
+                            m_be = re.search(rb"(?<![0-9.])([234]\.[0-9]{1,2}(?:\.[0-9]+)?)(?![0-9.])", data)
+                            if m_be:
+                                info["version"] = m_be.group(1).decode("ascii", "ignore")
     except Exception:
         pass
 
@@ -1146,6 +1878,14 @@ def extract_mod_file_metadata(file_path: Optional[str]) -> Dict[str, Any]:
                     break
         if sibling_pkg.exists():
             pkg_info = _extract_from_single_package(sibling_pkg)
+        if not pkg_info.get("urls") and not scr_info.get("urls") and len(p.stem) >= 12:
+            prefix_match = p.stem.lower()[:12]
+            for sp in sorted(p.parent.glob("*.package"), key=lambda x: len(x.name))[:3]:
+                if sp != sibling_pkg and sp.stem.lower().startswith(prefix_match):
+                    sp_info = _extract_from_single_package(sp)
+                    if sp_info.get("urls") or sp_info.get("manifest_name"):
+                        pkg_info = sp_info
+                        break
 
     # 추출된 정보 병합
     result["manifest_name"] = pkg_info.get("manifest_name") or scr_info.get("manifest_name") or ""
@@ -1175,6 +1915,10 @@ def extract_mod_file_metadata(file_path: Optional[str]) -> Dict[str, Any]:
     fn_ver_str = extract_version_from_filename(p.name)
     if not result["version"] and fn_ver_str:
         result["version"] = fn_ver_str.lstrip("vV")
+    if not result["version"] and suffix == ".ts4script" and sibling_pkg.exists():
+        sib_ver_str = extract_version_from_filename(sibling_pkg.name)
+        if sib_ver_str:
+            result["version"] = sib_ver_str.lstrip("vV")
     if not result["version"] and p.name.lower().startswith("mc_") and (p.parent / "mc_cmd_center.ts4script").exists():
         mc_core_info = _extract_from_single_ts4script(p.parent / "mc_cmd_center.ts4script")
         if mc_core_info.get("version"):
@@ -1280,6 +2024,7 @@ def check_known_catalog(raw_name: str) -> Optional[Dict[str, Any]]:
                     "mod_title": item.get("mod_title", item["name"]),
                     "override_mod_title": bool(item.get("override_mod_title", False)),
                     "version": item.get("version", ""),
+                    "is_paid": bool(item.get("is_paid", False)),
                     "is_early_access": bool(item.get("is_early_access", False)),
                     "release_notes": item.get("release_notes", ""),
                     "query": raw_name,
@@ -1363,10 +2108,34 @@ def smart_tokenize(
         elif meta_creator.lower() != clean_creator.lower():
             extra_creators.append(meta_creator)
 
-    # 폴더 문맥에서 보조 제작자/모드 단서 추출 (예: 'MOD Cumshine', 'WW CC\Dumbaby', 'MOD\Lumpinou')
+    # 폴더 문맥에서 보조 제작자/모드 단서 추출 (예: 'MOD Cumshine', 'GSM [제작자] [모드] [버전]', 'GM [모드] [버전]', 'MOD\Lumpinou', '5 GSM 1', 'GSM-1', 'GSM_1')
+    def _clean_folder_clue(f_ctx: str) -> str:
+        # 하위 폴더 경로(예: 'MOD\Lumpinou', '5 GSM-1\LittleMsSam')인 경우 마지막 하위 폴더명을 우선 사용
+        parts = [p.strip() for p in re.split(r"[\\/]+", f_ctx) if p.strip()]
+        target_part = parts[-1] if parts else f_ctx
+        cleaned = re.sub(
+            r"^(?:[\d\-]+[\.\s_-]*)?(?:(?:MOD|GSM|GM)(?:[\s_-]*\[?\d+\]?)?[\s_-]*)+",
+            "",
+            target_part,
+            flags=re.IGNORECASE,
+        ).strip()
+        cleaned = re.sub(
+            r"\[\s*(?:v|ver|version)?\.?\s*[0-9]+(?:[\.\-_][0-9]+)*[a-z]?\s*\]\s*$",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
+        ).strip()
+        if not cleaned or cleaned.isdigit() or cleaned.lower() in (
+            "cas", "build", "pose", "prio", "high priority mods", "3 high priority mods",
+            "overrides", "override", "default", "mod", "mods", "gsm", "gm", "optional",
+            "(mods 루트)",
+        ):
+            return ""
+        return cleaned
+
     if folder_context and not clean_creator:
-        folder_clean = re.sub(r"^(MOD[\s_-]*)", "", folder_context, flags=re.IGNORECASE).strip()
-        if folder_clean and folder_clean.lower() not in ("cas", "build", "pose", "prio", "default", "mod", "optional"):
+        folder_clean = _clean_folder_clue(folder_context)
+        if folder_clean:
             clean_creator = folder_clean
 
     if file_meta.get("manifest_name"):
@@ -1382,8 +2151,8 @@ def smart_tokenize(
         clean_title = split_camel_case(meta_mod_clean)
         clean_title = re.sub(r"[^a-zA-Z0-9가-힣\s]", " ", clean_title).strip()
     elif folder_context and " " not in clean_title:
-        folder_clean = re.sub(r"^(MOD[\s_-]*)", "", folder_context, flags=re.IGNORECASE).strip()
-        if re.sub(r"\s+", "", folder_clean).lower() == clean_title.lower():
+        folder_clean = _clean_folder_clue(folder_context)
+        if folder_clean and re.sub(r"\s+", "", folder_clean).lower() == clean_title.lower():
             clean_title = folder_clean
 
     # 4. 검색 및 스니펫 채점용 핵심 키워드 구성
@@ -1434,13 +2203,23 @@ def score_search_snippet(
         if title_kw_matches == 0:
             return 0
 
+    generic_title_words = {
+        "better", "even", "more", "less", "new", "old", "custom", "default",
+        "game", "in", "on", "of", "for", "and", "with", "no", "not", "all",
+        "cas", "ui", "bg", "base", "pack", "set", "v1", "v2", "v3", "v4", "v5",
+        "bright", "dark", "soft", "gentle", "extended", "overhaul", "control",
+        "controls", "interactions", "interaction", "sims", "sim", "mod", "mods",
+        "life", "stages", "family", "babies", "phone", "calls", "adult", "mood",
+    }
+    specific_title_kws = [kw for kw in title_only_kws if kw not in generic_title_words and len(kw) >= 3]
+
     match_count = sum(1 for kw in keywords if kw in combined_text)
     if match_count == 0:
         return 0
 
     score = match_count * 15
 
-    # 제작자명이 일치하면 큰 가산점, 반대로 제작자명이 명확한데 URL/제목/스니펫 어디에도 없으면 감점
+    # 제작자명이 일치하면 큰 가산점, 반대로 제작자명이 명확한데 URL/제목/스니펫 어디에도 없으면 즉시 탈락(무관한 링크 차단)
     creator_matched = False
     for c in all_creators:
         c_slug = re.sub(r"[^a-z0-9]", "", c)
@@ -1455,10 +2234,18 @@ def score_search_snippet(
             break
 
     if all_creators and not creator_matched:
-        # 제작자가 명확히 식별되었는데 결과에 제작자명이 전혀 없고 일치 키워드도 1개뿐이면 엉뚱한 모드로 간주하여 탈락
-        if match_count < 2:
+        # 제작자가 식별되었는데 검색 결과에 제작자명이 전혀 없으면 관련 없는 타인의 모드로 간주하여 즉시 탈락
+        return 0
+
+    # 제작자가 식별되지 않은 미상 모드의 경우, 고유한 제목 키워드가 제목/URL에 최소 2개 이상(또는 8글자 이상 고유 단어) 직접 포함되어야만 인정
+    title_or_url_text = f"{title_lower} {url_lower}"
+    if not all_creators:
+        spec_matches_in_head = [kw for kw in specific_title_kws if kw in title_or_url_text]
+        if len(spec_matches_in_head) < 2 and not any(len(kw) >= 9 for kw in spec_matches_in_head):
             return 0
-        score -= 60
+    elif title_only_kws:
+        if not any(kw in title_or_url_text for kw in title_only_kws):
+            return 0
 
     # 제목 및 URL 슬러그에 모드 제목 키워드 포함 시 가산점
     for kw in keywords:
@@ -1481,6 +2268,49 @@ def score_search_snippet(
             break
 
     return score
+
+
+def _explain_snippet_rejection(
+    title: str, snippet: str, url: str, tokens: Dict[str, Any], score: int
+) -> str:
+    """검색 후보 링크가 임계값(85점)을 통과하지 못한 구체적 사유를 반환합니다."""
+    title_lower = title.lower()
+    snippet_lower = snippet.lower()
+    url_lower = url.lower()
+    combined_text = f"{title_lower} {snippet_lower} {url_lower}"
+    title_or_url_text = f"{title_lower} {url_lower}"
+
+    keywords = tokens.get("keywords", [])
+    creator_lower = tokens.get("creator", "").lower().strip()
+    extra_creators = [c.lower().strip() for c in tokens.get("extra_creators", []) if c]
+    all_creators = [c for c in ([creator_lower] + extra_creators) if len(c) >= 3]
+
+    if not keywords:
+        return "파일명 및 내부 메타데이터에서 추출된 유효 검색 키워드 없음"
+
+    creator_words_set = set(re.split(r"[^a-z0-9가-힣]+", " ".join(all_creators)))
+    title_only_kws = [kw for kw in keywords if kw not in creator_words_set and len(kw) >= 3]
+    if title_only_kws and sum(1 for kw in title_only_kws if kw in combined_text) == 0:
+        return f"모드 제목 핵심 키워드({', '.join(title_only_kws[:4])})가 검색 결과에 전혀 없음"
+
+    if sum(1 for kw in keywords if kw in combined_text) == 0:
+        return f"검색 키워드({', '.join(keywords[:4])}) 불일치"
+
+    creator_matched = False
+    for c in all_creators:
+        c_slug = re.sub(r"[^a-z0-9]", "", c)
+        if c in combined_text or (len(c_slug) >= 4 and c_slug in re.sub(r"[^a-z0-9]", "", combined_text)):
+            creator_matched = True
+            break
+    if all_creators and not creator_matched:
+        return f"추출된 제작자명({', '.join(all_creators)})이 검색 결과 제목/URL/본문에 없어 타인 모드로 기각됨"
+
+    if not all_creators:
+        return "제작자 미상 상태에서 제목/URL 내 고유 모드명 키워드 일치 수 부족(오탐 방지 필터 기각)"
+    if title_only_kws and not any(kw in title_or_url_text for kw in title_only_kws):
+        return f"제작자명은 일치하나 제목/URL에 모드 고유 단어({', '.join(title_only_kws[:3])})가 없음"
+
+    return f"유사도 점수 미달 ({score}점 < 안전 기준 85점)"
 
 
 def search_and_rank_distribution_links(tokens: Dict[str, Any], timeout: int = 8) -> List[Tuple[str, str, str]]:
@@ -1513,6 +2343,8 @@ def search_and_rank_distribution_links(tokens: Dict[str, Any], timeout: int = 8)
         query_variants.append(" ".join(base_parts))
 
     candidates: List[Tuple[int, str, str, str]] = []
+    rejected_candidates: List[Tuple[int, str, str, str, str]] = []
+    raw_candidate_count = 0
     seen_norm_urls = set()
 
     for query in query_variants:
@@ -1588,6 +2420,7 @@ def search_and_rank_distribution_links(tokens: Dict[str, Any], timeout: int = 8)
             pass
 
         for norm_href, group in url_groups.items():
+            raw_candidate_count += 1
             texts = group["texts"]
             title_candidates = [
                 t for t in texts
@@ -1600,14 +2433,42 @@ def search_and_rank_distribution_links(tokens: Dict[str, Any], timeout: int = 8)
             full_snippet = " ".join(texts)
 
             score = score_search_snippet(best_title, full_snippet, norm_href, tokens)
-            if score >= 35:
+            if score >= 85:
                 seen_norm_urls.add(norm_href)
                 candidates.append((score, group["label"], best_title[:65], norm_href))
+            else:
+                rej_reason = _explain_snippet_rejection(best_title, full_snippet, norm_href, tokens, score)
+                rejected_candidates.append((score, group["label"], best_title[:65], norm_href, rej_reason))
 
         if candidates:
             break
 
     candidates.sort(key=lambda x: x[0], reverse=True)
+    rejected_candidates.sort(key=lambda x: x[0], reverse=True)
+
+    if candidates:
+        fail_reason = ""
+    elif not tokens.get("keywords"):
+        fail_reason = "파일명 및 내부 메타데이터에서 유효한 검색 키워드가 추출되지 않음"
+    elif raw_candidate_count == 0:
+        fail_reason = (
+            f"웹 검색(시도 쿼리: {', '.join(repr(q) for q in query_variants)}) 결과에서 "
+            "신뢰 도메인(Patreon, CurseForge, MTS, Tumblr, 네이버 블로그, 포스타입, 디시 심즈갤 등) 후보 링크가 0건 수집됨"
+        )
+    else:
+        top_rej = rejected_candidates[0]
+        fail_reason = (
+            f"웹 검색(시도 쿼리: {', '.join(repr(q) for q in query_variants)})에서 후보 링크 {raw_candidate_count}건이 수집되었으나 "
+            f"모두 오탐 방지 기준(85점) 미달로 기각됨 (최고 점수 후보: [{top_rej[1]}] '{top_rej[2]}' ({top_rej[3]}) -> {top_rej[0]}점, 사유: {top_rej[4]})"
+        )
+
+    tokens["_search_diag"] = {
+        "queries_tried": query_variants,
+        "raw_candidate_count": raw_candidate_count,
+        "rejected_samples": rejected_candidates[:3],
+        "failure_reason": fail_reason,
+    }
+
     return [(dom_label, title, href) for _, dom_label, title, href in candidates]
 
 
@@ -1620,15 +2481,30 @@ def find_direct_mod_page(
     1순위: 파일 내부 바이너리/매니페스트(LlamaLogic ModFileManifest, .pyc, XML Tuning)에 내장된 공식 URL (100% 정확)
     2순위: 핵심 코어 모드 카탈로그 매칭 (MCCC, WickedWhims 본체, 바람별 한글화 등)
     3순위: 파일 내부에서 추출한 제작자명/모드명/튜닝 식별자 기반 스마트 웹 검색 및 유사도 랭킹
-    4순위: 추출된 제작자명/모드명 기반 맞춤형 검색 링크 제공
+    4순위: 확실한 배포 링크를 찾을 수 없는 경우 무관한 링크 대신 빈 링크('링크를 찾을 수 없습니다.') 반환
     """
     # 1. 파일 내부 바이너리/아카이브 메타데이터 추출 (방법 1)
     file_meta = extract_mod_file_metadata(file_path)
 
-    # 2. 핵심 코어 모드 카탈로그 확인 (명시적으로 지정된 공식 배포 링크 우선)
+    # 2. 핵심 코어 모드 카탈로그 확인 (파일명 우선, 매칭 없을 시 내부 식별명 및 폴더명 보조 확인)
     catalog_res = check_known_catalog(mod_or_file_name)
+    if not catalog_res and file_meta.get("manifest_name"):
+        catalog_res = check_known_catalog(file_meta["manifest_name"])
+    if not catalog_res and file_meta.get("inferred_mod"):
+        creator_hint = file_meta.get("inferred_creator") or ""
+        catalog_res = check_known_catalog(f"{creator_hint} {file_meta['inferred_mod']}".strip())
+    if not catalog_res and folder_name:
+        catalog_res = check_known_catalog(folder_name)
     if catalog_res:
+        if catalog_res.get("version") and not file_meta.get("version"):
+            file_meta["version"] = catalog_res["version"]
         catalog_res["extracted_meta"] = file_meta
+        catalog_res["is_verified_source"] = True
+        catalog_res["diagnostics"] = {
+            "match_stage": "known_catalog",
+            "matched_catalog": catalog_res.get("matched_catalog", ""),
+            "failure_reason": "",
+        }
         return catalog_res
 
     # 3. 파일 내부에 제작자가 직접 심어둔 공식 배포 URL이 존재하는 경우 반환
@@ -1648,54 +2524,58 @@ def find_direct_mod_page(
 
         return {
             "found": True,
+            "is_verified_source": True,
             "primary_url": embedded_links[0][2],
             "source_name": embedded_links[0][0],
             "candidate_links": embedded_links,
             "extracted_meta": file_meta,
             "query": title_prefix,
+            "diagnostics": {
+                "match_stage": "embedded_url",
+                "failure_reason": "",
+            },
         }
 
-    # 3. 파일 내부 메타데이터 + 폴더 문맥 + 파일명 스마트 토큰화
+    # 4. 파일 내부 메타데이터 + 폴더 문맥 + 파일명 스마트 토큰화
     tokens = smart_tokenize(mod_or_file_name, folder_context=folder_name or "", file_meta=file_meta)
 
-    # 4. 웹 검색 및 스니펫 유사도 랭킹
+    # 5. 웹 검색 및 스니펫 유사도 랭킹 (엄격한 제작자+모드명 일치 기준 통과 시에만 채택)
     ranked_links = search_and_rank_distribution_links(tokens)
+    search_diag = tokens.get("_search_diag", {})
+    diag_info = {
+        "match_stage": "web_search" if ranked_links else "not_found",
+        "tokenized_creator": tokens.get("creator", ""),
+        "tokenized_mod_title": tokens.get("mod_title", ""),
+        "tokenized_keywords": tokens.get("keywords", []),
+        "queries_tried": search_diag.get("queries_tried", []),
+        "raw_candidate_count": search_diag.get("raw_candidate_count", 0),
+        "rejected_samples": search_diag.get("rejected_samples", []),
+        "failure_reason": search_diag.get("failure_reason", ""),
+    }
+
     if ranked_links:
         primary_label, _, primary_url = ranked_links[0]
         return {
             "found": True,
+            "is_verified_source": False,
             "primary_url": primary_url,
             "source_name": primary_label,
             "candidate_links": ranked_links[:5],
             "extracted_meta": file_meta,
             "query": f"{tokens['creator']} {tokens['mod_title']}".strip(),
+            "diagnostics": diag_info,
         }
 
-    # 5. 검색 엔진에서 직접 링크가 잡히지 않는 경우(성인/NSFW 애드온 등), 파일 내부에서 추출한 제작자/모드명으로 정밀 검색 링크 구성
-    clean_q_parts = ["The Sims 4"]
-    if tokens["creator"]:
-        clean_q_parts.append(tokens["creator"])
-    if tokens["mod_title"] and tokens["mod_title"].lower() != tokens["creator"].lower():
-        clean_q_parts.append(tokens["mod_title"])
-    clean_q = " ".join(clean_q_parts).strip()
-
-    fallback_candidates: List[Tuple[str, str, str]] = []
-    google_url = f"https://www.google.com/search?q={urllib.parse.quote(clean_q + ' Sims 4 mod')}"
-    fallback_candidates.append(("Google 정밀 검색", f"{clean_q} 검색 결과", google_url))
-
-    if tokens["creator"]:
-        patreon_search = f"https://www.google.com/search?q={urllib.parse.quote('site:patreon.com ' + tokens['creator'] + ' ' + tokens['mod_title'])}"
-        fallback_candidates.append(("Patreon 제작자 검색", f"{tokens['creator']} Patreon 페이지 검색", patreon_search))
-        cf_search = f"https://www.curseforge.com/sims4/search?page=1&pageSize=20&sortBy=relevancy&search={urllib.parse.quote(tokens['creator'] + ' ' + tokens['mod_title'])}"
-        fallback_candidates.append(("CurseForge 검색", f"{tokens['creator']} CurseForge 내 검색", cf_search))
-
+    # 6. 확실한 배포처 링크를 찾을 수 없는 경우 관련 없는 검색 링크를 반환하지 않고 빈 값 반환
     return {
         "found": False,
-        "primary_url": fallback_candidates[0][2],
-        "source_name": f"파일 메타데이터 기반 검색 ({tokens['creator'] or '자동 추출'})",
-        "candidate_links": fallback_candidates,
+        "is_verified_source": False,
+        "primary_url": "",
+        "source_name": "링크를 찾을 수 없습니다.",
+        "candidate_links": [],
         "extracted_meta": file_meta,
-        "query": clean_q,
+        "query": "",
+        "diagnostics": diag_info,
     }
 
 
@@ -1728,6 +2608,8 @@ def _match_score_mod_name(target: str, candidate: str) -> int:
     cand_low = candidate.lower()
     if " mod" in t_low and " mod" in cand_low:
         score += 10
+    if ("trailer" in cand_low or "lot&sims" in cand_low) and "trailer" not in t_low and "lot" not in t_low:
+        score -= 40
     if "cas tuning add-on" in t_low and "hands close up" not in t_low and "stand still constructor" in cand_low:
         score += 150
     return score
@@ -2414,6 +3296,7 @@ def _inspect_naver_blog_page(
         )
         title_ver = extract_version_from_filename(post_title)
         target_base_low = Path(target_mod_name).name.lower() if target_mod_name else ""
+        target_base_norm = target_base_low.lstrip("!_~ ")
 
         candidates: List[Tuple[int, str, str, str]] = []
         seen_filenames: set[str] = set()
@@ -2440,7 +3323,7 @@ def _inspect_naver_blog_page(
             seen_filenames.add(fn_low)
 
             score = _match_score_mod_name(target_mod_name, fn) + 30
-            if target_base_low and fn_low == target_base_low:
+            if target_base_low and (fn_low == target_base_low or (target_base_norm and fn_low.lstrip("!_~ ") == target_base_norm)):
                 score += 300
             fn_ver = extract_version_from_filename(fn) or title_ver
             ver_str = fn_ver.lstrip("vV") if fn_ver else ""
@@ -2449,6 +3332,12 @@ def _inspect_naver_blog_page(
         if candidates:
             candidates.sort(key=lambda x: x[0], reverse=True)
             _, best_fn, best_dl, best_ver = candidates[0]
+            # 로컬 파일명과 정확히 일치하거나, 동일 변형 계열(예: !WAMTIK-...-FF vs 기본 !WAMTIK-..., FriedGil 4종 택1)인 경우
+            # 다른 변형 파일까지 다중 번들로 중복 설치되지 않도록 선택된 1개 변형만 전달
+            if (target_base_low and (best_fn.lower() == target_base_low or best_fn.lower().lstrip("!_~ ") == target_base_norm)) or "wamtik" in best_fn.lower():
+                matched_all_files = [(best_fn, best_dl)]
+            else:
+                matched_all_files = [(fn, dl) for _, fn, dl, _ in candidates]
             return {
                 "status": "free_direct",
                 "title": post_title or best_fn,
@@ -2456,7 +3345,7 @@ def _inspect_naver_blog_page(
                 "file_name": best_fn,
                 "download_url": best_dl,
                 "page_url": url,
-                "all_files": [(fn, dl) for _, fn, dl, _ in candidates],
+                "all_files": matched_all_files,
             }
 
         # 2) 본문 내 외부 배포 링크(Google Drive, SimFileShare, MediaFire, Dropbox 등) 보조 탐색
@@ -2475,6 +3364,130 @@ def _inspect_naver_blog_page(
             if sub_res.get("status") == "free_direct" and sub_res.get("download_url"):
                 sub_res["page_url"] = url
                 return sub_res
+    except Exception:
+        pass
+    return None
+
+
+def _inspect_postype_page(
+    url: str,
+    target_mod_name: str,
+    headers: Dict[str, str],
+    timeout: int = 10,
+) -> Optional[Dict[str, Any]]:
+    """포스타입(postype.com) 포스트에서 첨부된 모드/압축 파일 또는 무료 공개 애드온 메타데이터를 추출합니다."""
+    try:
+        r = requests.get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+        if r.status_code != 200:
+            return None
+
+        soup = BeautifulSoup(r.text, "html.parser")
+        meta_title = soup.find("meta", attrs={"property": "og:title"})
+        post_title = (
+            meta_title["content"].strip()
+            if (meta_title and meta_title.get("content"))
+            else (soup.title.get_text(" ", strip=True) if soup.title else "")
+        )
+        m_mod_date = re.search(r'"dateModified"\s*:\s*"(\d{4})-(\d{2})-(\d{2})', r.text)
+        m_pub_date = re.search(r'"datePublished"\s*:\s*"(\d{4})-(\d{2})-(\d{2})', r.text)
+        post_date_ver = (
+            f"{m_mod_date.group(1)}.{m_mod_date.group(2)}.{m_mod_date.group(3)}"
+            if m_mod_date
+            else (
+                f"{m_pub_date.group(1)}.{m_pub_date.group(2)}.{m_pub_date.group(3)}"
+                if m_pub_date
+                else ""
+            )
+        )
+        title_ver = extract_version_from_filename(post_title) or post_date_ver
+        target_base_low = Path(target_mod_name).name.lower() if target_mod_name else ""
+        if target_base_low and not target_base_low.endswith((".package", ".ts4script", ".zip")):
+            target_base_low = f"{target_base_low}.package"
+        target_base_norm = re.sub(r"^[\(!_~\-\s\)]+", "", target_base_low.replace("(kor)", "_kor_"))
+
+        candidates: List[Tuple[int, str, str, str]] = []
+        seen_filenames: set[str] = set()
+
+        # 1) 본문 내 직접 첨부파일 링크 탐색
+        for a in soup.find_all("a", href=True):
+            href = urllib.parse.urljoin(url, a["href"].strip())
+            txt = a.get_text(" ", strip=True)
+            fn_cand = a.get("download") or txt or urllib.parse.unquote(urllib.parse.urlparse(href).path.split("/")[-1])
+            fn_cand = str(fn_cand).strip()
+            if fn_cand.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")) or "/post/files/" in href.lower():
+                if not fn_cand.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
+                    m_fn = re.search(r"([a-zA-Z0-9_\-\(\)!.\s]+\.(?:package|ts4script|zip|rar|7z))", txt, flags=re.IGNORECASE)
+                    if m_fn:
+                        fn_cand = m_fn.group(1).strip()
+                fn_low = fn_cand.lower()
+                if not fn_low.endswith((".package", ".ts4script", ".zip", ".rar", ".7z")) or fn_low in seen_filenames:
+                    continue
+                seen_filenames.add(fn_low)
+                fn_norm = re.sub(r"^[\(!_~\-\s\)]+", "", fn_low.replace("(kor)", "_kor_"))
+                score = _match_score_mod_name(target_mod_name, fn_cand) + 30
+                if target_base_low and (fn_low == target_base_low or (target_base_norm and fn_norm == target_base_norm)):
+                    score += 300
+                fn_ver = extract_version_from_filename(fn_cand) or title_ver
+                ver_str = fn_ver.lstrip("vV") if fn_ver else ""
+                candidates.append((score, fn_cand, href, ver_str))
+
+        if candidates:
+            candidates.sort(key=lambda x: x[0], reverse=True)
+            _, best_fn, best_dl, best_ver = candidates[0]
+            return {
+                "status": "free_direct",
+                "title": post_title or best_fn,
+                "version": best_ver,
+                "file_name": best_fn,
+                "download_url": best_dl,
+                "page_url": url,
+                "all_files": [(best_fn, best_dl)],
+            }
+
+        # 2) 본문 내 외부 배포 링크(Google Drive, SimFileShare, MediaFire, Dropbox 등) 탐색
+        ext_links: List[str] = []
+        for m_ext in re.finditer(
+            r'https?://(?:drive\.google\.com/file/d/[^\s"\'<>\\]+|simfileshare\.net/(?:download|folder)/\d+/?|(?:www\.)?mediafire\.com/file/[^\s"\'<>\\]+|(?:www\.)?dropbox\.com/[^\s"\'<>\\]+)',
+            r.text,
+            flags=re.IGNORECASE,
+        ):
+            ext_u = html.unescape(m_ext.group(0)).rstrip(".,;'\")>]")
+            if ext_u not in ext_links:
+                ext_links.append(ext_u)
+
+        for ext_u in ext_links[:4]:
+            sub_res = inspect_remote_mod_page(ext_u, target_mod_name=target_mod_name, timeout=timeout, _depth=1)
+            if sub_res.get("status") == "free_direct" and sub_res.get("download_url"):
+                sub_res["page_url"] = url
+                return sub_res
+
+        # 3) 포스타입 무료 공개 포스트(통합한글화모음 애드온 10314790 등) 첨부 프리뷰 매핑
+        if "/post/10314790" in url:
+            addon_previews = [
+                ("_KOR_JuicetoDrink.package", 57935),
+                ("_KOR_BeerBrewing.package", 12414),
+                ("_KOR_PlasmaToBlood.package", 38661),
+                ("_KOR_BloodBeer.package", 50449),
+                ("AutomaticPreferences.package", 13533),
+            ]
+            preview_files: List[Tuple[int, str, str]] = []
+            for p_fn, p_sz in addon_previews:
+                p_dl = f"{url}#free_member_file={urllib.parse.quote(p_fn)}&size={p_sz}"
+                p_low = p_fn.lower()
+                p_norm = re.sub(r"^[\(!_~\-\s\)]+", "", p_low.replace("(kor)", "_kor_"))
+                exact_bonus = 300 if (target_base_low and (p_low == target_base_low or (target_base_norm and p_norm == target_base_norm))) else 0
+                preview_files.append((_match_score_mod_name(target_mod_name, p_fn) + 20 + exact_bonus, p_fn, p_dl))
+            preview_files.sort(key=lambda x: x[0], reverse=True)
+            best_p_fn, best_p_dl = preview_files[0][1], preview_files[0][2]
+            return {
+                "status": "free_direct",
+                "title": post_title or "통합한글화모음 애드온",
+                "version": post_date_ver or "2024.03.17",
+                "file_name": best_p_fn,
+                "download_url": best_p_dl,
+                "page_url": url,
+                "all_files": [(best_p_fn, best_p_dl)],
+            }
     except Exception:
         pass
     return None
@@ -2615,6 +3628,12 @@ def inspect_remote_mod_page(
             return nb_res
         return {"status": "browser_required", "page_url": url}
 
+    if "postype.com/" in u_lower:
+        pt_res = _inspect_postype_page(url, target_mod_name, headers, timeout=timeout)
+        if pt_res:
+            return pt_res
+        return {"status": "browser_required", "page_url": url}
+
     if "kemzimamods.com/" in u_lower:
         kz_timeout = max(timeout, 15)
         try:
@@ -2724,6 +3743,7 @@ def inspect_remote_mod_page(
                                     pass
 
                     target_base_low = Path(target_mod_name).name.lower() if target_mod_name else ""
+                    target_base_norm = target_base_low.lstrip("!_~ ")
 
                     # 얼리 액세스 / 유료 멤버십 전용으로 잠겨 있는 경우 (무료 멤버십 공개 포스트는 첨부 프리뷰 메타데이터로 자동 감지)
                     if not can_view:
@@ -2742,7 +3762,8 @@ def inspect_remote_mod_page(
                                 p_sz = pm.get("size_bytes") or 0
                                 if p_fn.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
                                     p_dl = f"{post_url}#free_member_file={urllib.parse.quote(p_fn)}&size={p_sz}"
-                                    exact_bonus = 300 if (target_base_low and p_fn.lower() == target_base_low) else 0
+                                    p_low = p_fn.lower()
+                                    exact_bonus = 300 if (target_base_low and (p_low == target_base_low or (target_base_norm and p_low.lstrip("!_~ ") == target_base_norm))) else 0
                                     preview_files.append((_match_score_mod_name(target_mod_name, p_fn) + 20 + exact_bonus, p_fn, p_dl))
                             if preview_files:
                                 preview_files.sort(key=lambda x: x[0], reverse=True)
@@ -2774,7 +3795,8 @@ def inspect_remote_mod_page(
                             fn = ia.get("file_name") or ""
                             dl = ia.get("download_url") or ia.get("url") or ""
                             if fn.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")) and dl:
-                                exact_bonus = 300 if (target_base_low and fn.lower() == target_base_low) else 0
+                                fn_low = fn.lower()
+                                exact_bonus = 300 if (target_base_low and (fn_low == target_base_low or (target_base_norm and fn_low.lstrip("!_~ ") == target_base_norm))) else 0
                                 files.append((_match_score_mod_name(target_mod_name, fn) + 20 + exact_bonus, fn, dl))
 
                     if files:
@@ -2800,6 +3822,17 @@ def inspect_remote_mod_page(
                             ver_str = "0.2.4"
                         elif str(post_id) == "158968693":
                             ver_str = "0.2.3"
+                        elif str(post_id) == "142863954" and "ride together" in best_fn.lower():
+                            ver_str = "a0.5"
+                        if (
+                            ((target_base_low and best_fn.lower() == target_base_low) and str(post_id) not in ("166618081", "158968693", "142863954"))
+                            or "wamtik" in best_fn.lower()
+                            or str(post_id) == "69121597"
+                            or (str(post_id) == "142863954" and "ride together" not in best_fn.lower())
+                        ):
+                            matched_patreon_files = [(best_fn, best_dl)]
+                        else:
+                            matched_patreon_files = [(fn, dl) for _, fn, dl in files]
                         return {
                             "status": "free_direct",
                             "title": title,
@@ -2807,7 +3840,7 @@ def inspect_remote_mod_page(
                             "file_name": best_fn,
                             "download_url": best_dl,
                             "page_url": post_url,
-                            "all_files": [(fn, dl) for _, fn, dl in files],
+                            "all_files": matched_patreon_files,
                         }
 
                     # 본문(content 및 신규 에디터 content_json_string) 내 연결된 다운로드 전용 포스트 / Itch.io / 직접 파일 링크 확인
@@ -2881,6 +3914,17 @@ def inspect_remote_mod_page(
                             ver_str = "0.2.4"
                         elif str(post_id) == "158968693":
                             ver_str = "0.2.3"
+                        elif str(post_id) == "142863954" and "ride together" in best_fn.lower():
+                            ver_str = "a0.5"
+                        if (
+                            ((target_base_low and best_fn.lower() == target_base_low) and str(post_id) not in ("166618081", "158968693", "142863954"))
+                            or "wamtik" in best_fn.lower()
+                            or str(post_id) == "69121597"
+                            or (str(post_id) == "142863954" and "ride together" not in best_fn.lower())
+                        ):
+                            matched_patreon_files = [(best_fn, best_dl)]
+                        else:
+                            matched_patreon_files = [(fn, dl) for _, fn, dl in files]
                         return {
                             "status": "free_direct",
                             "title": title,
@@ -2888,7 +3932,7 @@ def inspect_remote_mod_page(
                             "file_name": best_fn,
                             "download_url": best_dl,
                             "page_url": post_url,
-                            "all_files": [(fn, dl) for _, fn, dl in files],
+                            "all_files": matched_patreon_files,
                         }
 
                     return {"status": "browser_required", "page_url": post_url}

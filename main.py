@@ -43,7 +43,7 @@ from src.backup import BackupManager
 from src.updater import ModUpdater
 
 def print_banner():
-    title = "🎮 심즈 4 모드 자동 업데이터 (Sims 4 Mod Auto Updater) v0.1.3"
+    title = "🎮 심즈 4 모드 자동 업데이터 (Sims 4 Mod Auto Updater) v0.1.4"
     if USE_RICH:
         console.print(Panel(f"[bold cyan]{title}[/bold cyan]\n[dim]EA The Sims 4 Mod Management Tool[/dim]"))
     else:
@@ -62,7 +62,8 @@ def handle_subfolder_search(scanner: ModScanner, target_dirs: List[Path], select
     while True:
         all_collected_files = []
         for t_dir in target_dirs:
-            file_res = scanner.scan_all_mod_files(t_dir)
+            is_root_dir = (t_dir.resolve() == scanner.mods_folder.resolve())
+            file_res = scanner.scan_all_mod_files(t_dir, root_only=is_root_dir)
             all_files = file_res["all_files"]
             pkgs = file_res["packages"]
             scrs = file_res["scripts"]
@@ -148,7 +149,10 @@ def handle_subfolder_search(scanner: ModScanner, target_dirs: List[Path], select
             meta_plain_lines.append(f"- 내부 식별 모드명: {mod_label}")
         if file_meta.get("version"):
             ver_val = str(file_meta["version"]).strip()
-            ver_disp = ver_val if ver_val.lower().startswith("v") else f"v{ver_val}"
+            if re.match(r"^(?:20\d{2}\.\d{2}\.\d{2}|[ab]\d+\.\d+(?:\.\d+)*)$", ver_val, flags=re.IGNORECASE):
+                ver_disp = ver_val
+            else:
+                ver_disp = ver_val if ver_val.lower().startswith("v") else f"v{ver_val}"
             meta_rich_lines.append(f"[bold]🔖 내장 버전:[/bold] [green]{escape(ver_disp)}[/green]")
             meta_plain_lines.append(f"- 내장 버전: {ver_disp}")
 
@@ -361,6 +365,11 @@ def show_status(config_mgr: ConfigManager):
     mods_folder = config_mgr.mods_folder
     scanner = ModScanner(mods_folder)
     scan_res = scanner.scan()
+    user_mods_res = scanner.scan_user_mods()
+    folder_mods = user_mods_res["folder_mods"]
+    standalone_files = user_mods_res["standalone_files"]
+    mod_units = user_mods_res.get("mod_units", [])
+    updatable_folder_cnt = sum(1 for f in folder_mods if f.get("is_updatable"))
 
     if USE_RICH:
         table = Table(title="📊 전체 모드 폴더 요약 통계")
@@ -372,6 +381,10 @@ def show_status(config_mgr: ConfigManager):
         table.add_row(".package 파일 수", str(scan_res["package_count"]))
         table.add_row(".ts4script 파일 수", str(scan_res["script_count"]))
         table.add_row("총 모드 파일 수", str(scan_res["total_count"]))
+        table.add_row(
+            "업데이트 점검 대상 모드",
+            f"[bold yellow]총 {len(mod_units)}개 개별 모드[/bold yellow] (대상 폴더 {updatable_folder_cnt}개 + 루트 파일 {len(standalone_files)}개)"
+        )
         console.print(table)
 
         if scan_res["warnings"]:
@@ -379,32 +392,36 @@ def show_status(config_mgr: ConfigManager):
             for w in scan_res["warnings"]:
                 console.print(f"  - {w}")
 
-        # 현재 사용자가 가지고 있는 모드 목록 (1단계 폴더 기준) 스캔 및 출력
-        user_mods_res = scanner.scan_user_mods()
-        folder_mods = user_mods_res["folder_mods"]
-        standalone_files = user_mods_res["standalone_files"]
-
         if folder_mods:
-            mod_table = Table(title=f"\n📦 현재 설치된 모드 폴더 목록 (총 {len(folder_mods)}개 감지됨)")
+            mod_table = Table(title=f"\n📦 현재 설치된 모드 폴더 목록 (총 {len(folder_mods)}개 폴더 / 개별 모드 {len(mod_units)}개 감지됨)")
             mod_table.add_column("No", justify="center", style="dim", width=4)
             mod_table.add_column("모드 폴더명", style="bold cyan")
             mod_table.add_column("분류", justify="center")
+            mod_table.add_column("포함 모드 수", justify="right", style="bold yellow")
             mod_table.add_column(".package (전체)", justify="right", style="magenta")
             mod_table.add_column(".ts4script (전체)", justify="right", style="green")
             mod_table.add_column("보조 하위폴더", justify="right", style="dim")
 
             for idx, f_mod in enumerate(folder_mods, 1):
-                type_style = "[bold green]" if "스크립트" in f_mod["mod_type"] else "[cyan]"
-                if "한글" in f_mod["mod_type"]:
+                if "스크립트" in f_mod["mod_type"]:
+                    type_style = "[bold green]"
+                elif "패키지 모드" in f_mod["mod_type"]:
+                    type_style = "[bold magenta]"
+                elif "한글" in f_mod["mod_type"]:
                     type_style = "[bold yellow]"
                 elif "CC" in f_mod["mod_type"]:
                     type_style = "[dim]"
+                else:
+                    type_style = "[cyan]"
 
+                u_cnt = f_mod.get("unit_count", 0)
+                unit_text = f"{u_cnt}개" if u_cnt > 0 else "[dim]-[/dim]"
                 sub_text = f"{f_mod['subdir_count']}개" if f_mod['subdir_count'] > 0 else "-"
                 mod_table.add_row(
                     str(idx),
                     f_mod["name"],
                     f"{type_style}{f_mod['mod_type']}[/]",
+                    unit_text,
                     f"{f_mod['package_count']}개",
                     f"{f_mod['script_count']}개",
                     sub_text
@@ -414,29 +431,28 @@ def show_status(config_mgr: ConfigManager):
         if standalone_files:
             file_names = [f["name"] for f in standalone_files]
             preview = ", ".join(file_names[:5]) + (f" 외 {len(file_names)-5}개" if len(file_names) > 5 else "")
-            console.print(f"\n[dim]📄 Mods 루트 단일 파일: 총 {len(standalone_files)}개 ({preview})[/dim]")
+            console.print(f"\n[bold cyan]📄 Mods 루트 단일 모드 파일 (업데이트 점검 포함):[/bold cyan] 총 {len(standalone_files)}개 ({escape(preview)})")
     else:
         print("\n[전체 모드 폴더 요약 통계]")
         print(f"- Mods 경로: {mods_folder}")
         print(f"- 폴더 존재: {'정상' if scan_res['exists'] else '찾을 수 없음'}")
         print(f"- .package: {scan_res['package_count']}개")
         print(f"- .ts4script: {scan_res['script_count']}개")
+        print(f"- 업데이트 점검 대상 개별 모드: 총 {len(mod_units)}개 (대상 폴더 {updatable_folder_cnt}개 + 루트 파일 {len(standalone_files)}개)")
         if scan_res["warnings"]:
             print("\n[경고]")
             for w in scan_res["warnings"]:
                 print(f"  - {w}")
 
-        user_mods_res = scanner.scan_user_mods()
-        folder_mods = user_mods_res["folder_mods"]
-        standalone_files = user_mods_res["standalone_files"]
-
         if folder_mods:
-            print(f"\n[현재 설치된 모드 폴더 목록 (총 {len(folder_mods)}개)]")
+            print(f"\n[현재 설치된 모드 폴더 목록 (총 {len(folder_mods)}개 폴더 / 개별 모드 {len(mod_units)}개)]")
             for idx, f_mod in enumerate(folder_mods, 1):
-                print(f"  {idx}. {f_mod['name']} [{f_mod['mod_type']}] -> package: {f_mod['package_count']}개, script: {f_mod['script_count']}개 (하위폴더: {f_mod['subdir_count']}개)")
+                u_cnt = f_mod.get("unit_count", 0)
+                u_str = f", 개별 모드: {u_cnt}개" if u_cnt > 0 else ""
+                print(f"  {idx}. {f_mod['name']} [{f_mod['mod_type']}]{u_str} -> package: {f_mod['package_count']}개, script: {f_mod['script_count']}개 (하위폴더: {f_mod['subdir_count']}개)")
 
         if standalone_files:
-            print(f"\n- Mods 루트 단일 파일: 총 {len(standalone_files)}개")
+            print(f"\n- Mods 루트 단일 모드 파일 (업데이트 점검 포함): 총 {len(standalone_files)}개")
 
 def check_updates(updater: ModUpdater):
     mods = updater.load_manifest()
@@ -482,8 +498,9 @@ def check_updates(updater: ModUpdater):
     return results
 
 def select_and_check_mod_update(updater: ModUpdater, scanner: ModScanner) -> bool:
-    """1번 스캔 결과에서 스크립트 모드 분류에 해당하는 모드들을 자동으로 가져와 목록으로 표시하고,
-    사용자가 번호로 선택하여 업데이트 및 중복 감지 작업을 진행하도록 합니다.
+    """1번 스캔 결과에서 업데이트 점검 대상 모드(스크립트 모드, 패키지 모드, 한글화 모드, 루트 단일 파일)들을
+    자동으로 가져와 목록으로 표시하고, 사용자가 번호로 선택하여 업데이트 및 중복 감지 작업을 진행하도록 합니다.
+    (u 키를 눌러 폴더별 보기 ↔ 세부 개별 모드 단위 펼쳐서 보기를 전환할 수 있습니다.)
     반환값:
         True: 메인 메뉴 유지
         False: 프로그램 종료
@@ -491,47 +508,146 @@ def select_and_check_mod_update(updater: ModUpdater, scanner: ModScanner) -> boo
     # 1. Mods 폴더에서 현재 감지된 모드 스캔 자료 가져오기
     user_mods_res = scanner.scan_user_mods()
     folder_mods = user_mods_res.get("folder_mods", [])
+    standalone_files = user_mods_res.get("standalone_files", [])
+    mod_units = user_mods_res.get("mod_units", [])
 
-    # 2. 스크립트 모드 분류에 해당하는 모드만 필터링 (ts4script가 있거나 한글화 모드)
+    # 2. 업데이트 점검 대상 폴더(스크립트 모드, 패키지 모드, 한글화 모드) 필터링
     script_mods = [
         m for m in folder_mods
-        if m.get("script_count", 0) > 0 or "스크립트" in m.get("mod_type", "") or "한글" in m.get("mod_type", "")
+        if m.get("is_updatable", False)
+        or m.get("script_count", 0) > 0
+        or "스크립트" in m.get("mod_type", "")
+        or "패키지 모드" in m.get("mod_type", "")
+        or "한글" in m.get("mod_type", "")
     ]
 
-    if not script_mods:
-        print("\n[!] Mods 폴더에서 스크립트 모드가 감지되지 않았습니다. 1번 메뉴에서 Mods 폴더 상태를 확인하세요.")
+    if standalone_files:
+        root_pkgs = sum(1 for f in standalone_files if (f.get("type") or f.get("suffix")) == ".package")
+        root_scrs = sum(1 for f in standalone_files if (f.get("type") or f.get("suffix")) == ".ts4script")
+        script_mods.append({
+            "name": "(Mods 루트 단일 파일)",
+            "path": str(scanner.mods_folder),
+            "package_count": root_pkgs,
+            "script_count": root_scrs,
+            "subdir_count": 0,
+            "mod_type": "스크립트 모드" if root_scrs > 0 else "패키지 모드",
+            "is_updatable": True,
+            "is_standalone_root": True,
+            "unit_count": sum(1 for u in mod_units if u.get("is_standalone")),
+        })
+
+    if not script_mods and not mod_units:
+        print("\n[!] Mods 폴더에서 업데이트 대상 모드가 감지되지 않았습니다. 1번 메뉴에서 Mods 폴더 상태를 확인하세요.")
         return True
 
-    while True:
-        if USE_RICH:
-            console.print(f"\n[bold cyan]📋 감지된 스크립트 모드 목록 (총 {len(script_mods)}개 감지됨, 업데이트할 모드를 선택하세요):[/bold cyan]")
-            for idx, m in enumerate(script_mods, 1):
-                script_info = f"[green]ts4script: {m['script_count']}개[/green]" if m['script_count'] > 0 else "[yellow]한글화 패키지[/yellow]"
-                pkg_info = f"[magenta]package: {m['package_count']}개[/magenta]"
-                console.print(f"  [bold green]{idx:2d}.[/bold green] [bold]{m['name']:<30}[/bold] [dim]({script_info}, {pkg_info})[/dim]")
-            console.print("  [bold yellow] b.[/bold yellow] 메인 메뉴로 돌아가기")
-        else:
-            print(f"\n📋 감지된 스크립트 모드 목록 (총 {len(script_mods)}개, 업데이트할 모드를 선택하세요):")
-            for idx, m in enumerate(script_mods, 1):
-                print(f"  {idx:2d}. {m['name']:<30} (ts4script: {m['script_count']}개, package: {m['package_count']}개)")
-            print("   b. 메인 메뉴로 돌아가기")
+    view_mode = "folder"  # 'folder' 또는 'unit'
 
-        choice = input("\n모드 선택 > ").strip().lower()
+    while True:
+        active_list = script_mods if view_mode == "folder" else mod_units
+        if view_mode == "folder":
+            if USE_RICH:
+                console.print(
+                    f"\n[bold cyan]📋 감지된 모드 폴더 목록 (총 {len(script_mods)}개 폴더 / 세부 개별 모드 {len(mod_units)}개 감지됨):[/bold cyan]"
+                )
+                for idx, m in enumerate(script_mods, 1):
+                    if m["script_count"] > 0:
+                        script_info = f"[green]ts4script: {m['script_count']}개[/green]"
+                    elif "한글" in m.get("mod_type", ""):
+                        script_info = "[yellow]한글화 패키지[/yellow]"
+                    else:
+                        script_info = "[magenta]패키지 모드[/magenta]"
+                    pkg_info = f"[magenta]package: {m['package_count']}개[/magenta]"
+                    u_cnt = m.get("unit_count", 1)
+                    u_badge = f", [bold yellow]포함 모드: {u_cnt}개[/bold yellow]" if u_cnt > 1 else ""
+                    console.print(
+                        f"  [bold green]{idx:2d}.[/bold green] [bold]{escape(m['name']):<30}[/bold] "
+                        f"[dim]({script_info}, {pkg_info}{u_badge})[/dim]"
+                    )
+                console.print(f"  [bold cyan] u.[/bold cyan] 세부 개별 모드 단위로 펼쳐서 보기 (총 {len(mod_units)}개 개별 모드)")
+                console.print("  [bold yellow] b.[/bold yellow] 메인 메뉴로 돌아가기")
+            else:
+                print(f"\n📋 감지된 모드 폴더 목록 (총 {len(script_mods)}개 폴더 / 세부 개별 모드 {len(mod_units)}개):")
+                for idx, m in enumerate(script_mods, 1):
+                    u_cnt = m.get("unit_count", 1)
+                    u_badge = f", 포함 모드: {u_cnt}개" if u_cnt > 1 else ""
+                    print(f"  {idx:2d}. {m['name']:<30} [{m['mod_type']}] (ts4script: {m['script_count']}개, package: {m['package_count']}개{u_badge})")
+                print(f"   u. 세부 개별 모드 단위로 펼쳐서 보기 (총 {len(mod_units)}개)")
+                print("   b. 메인 메뉴로 돌아가기")
+        else:
+            if USE_RICH:
+                console.print(
+                    f"\n[bold cyan]📋 세부 개별 모드 전체 목록 (총 {len(mod_units)}개 감지됨, 업데이트할 모드를 선택하세요):[/bold cyan]"
+                )
+                for idx, u in enumerate(mod_units, 1):
+                    script_info = f"[green]ts4script: {u['script_count']}개[/green]" if u["script_count"] > 0 else "[magenta]패키지 전용[/magenta]"
+                    pkg_info = f"[magenta]package: {u['package_count']}개[/magenta]"
+                    console.print(
+                        f"  [bold green]{idx:2d}.[/bold green] [bold]{escape(u['folder_name']):<22}[/bold] "
+                        f"→ [cyan]{escape(u['primary_file_name'])}[/cyan] [dim]({script_info}, {pkg_info})[/dim]"
+                    )
+                console.print(f"  [bold cyan] u.[/bold cyan] 상위 폴더 단위로 묶어서 보기 (총 {len(script_mods)}개 폴더)")
+                console.print("  [bold yellow] b.[/bold yellow] 메인 메뉴로 돌아가기")
+            else:
+                print(f"\n📋 세부 개별 모드 전체 목록 (총 {len(mod_units)}개, 업데이트할 모드를 선택하세요):")
+                for idx, u in enumerate(mod_units, 1):
+                    print(
+                        f"  {idx:2d}. [{u['folder_name']}] {u['primary_file_name']} "
+                        f"(ts4script: {u['script_count']}개, package: {u['package_count']}개)"
+                    )
+                print(f"   u. 상위 폴더 단위로 묶어서 보기 (총 {len(script_mods)}개 폴더)")
+                print("   b. 메인 메뉴로 돌아가기")
+
+        choice = input("\n모드 선택 (번호/u/b) > ").strip().lower()
 
         if choice in ["b", "back"]:
             return True
         if choice in ["q", "exit"]:
             return False
+        if choice == "u":
+            view_mode = "unit" if view_mode == "folder" else "folder"
+            continue
 
-        if not choice.isdigit() or not (1 <= int(choice) <= len(script_mods)):
+        if not choice.isdigit() or not (1 <= int(choice) <= len(active_list)):
             print("\n[!] 올바른 번호를 입력해 주세요.")
             continue
 
-        selected_entry = script_mods[int(choice) - 1]
-        folder_name = selected_entry["name"]
-        # 선택한 폴더명을 기반으로 메타데이터 및 배포처 자동 추론
-        selected_mod = updater.infer_mod_config(folder_name)
-        selected_mod["folder_name"] = folder_name
+        if view_mode == "folder":
+            selected_entry = script_mods[int(choice) - 1]
+            folder_name = selected_entry["name"]
+            if selected_entry.get("is_standalone_root"):
+                selected_mod = {
+                    "name": "(Mods 루트 단일 파일)",
+                    "folder_name": "(Mods 루트)",
+                    "install_folder": "",
+                    "path": str(scanner.mods_folder),
+                    "is_standalone": True,
+                    "source_type": "generic_web",
+                    "creator": "파일 내부 메타데이터 자동 감지",
+                    "folder_keywords": [],
+                    "file_keywords": [],
+                }
+            else:
+                selected_mod = updater.infer_mod_config(folder_name)
+                selected_mod["folder_name"] = folder_name
+                selected_mod["path"] = selected_entry.get("path")
+        else:
+            selected_unit = mod_units[int(choice) - 1]
+            folder_name = selected_unit["folder_name"]
+            primary_fn = selected_unit["primary_file_name"]
+            primary_fp = selected_unit["primary_file_path"]
+            selected_mod = updater.infer_mod_config(folder_name)
+            if selected_mod.get("source_type") == "generic_web":
+                by_file = updater.infer_mod_config(primary_fn)
+                if by_file.get("source_type") != "generic_web" or by_file.get("download_url"):
+                    selected_mod = by_file
+            selected_mod["folder_name"] = folder_name
+            selected_mod["path"] = selected_unit.get("path")
+            selected_mod["is_standalone"] = selected_unit.get("is_standalone", False)
+            selected_mod["unit_files"] = selected_unit.get("unit_files", [])
+            selected_mod["selected_file"] = {
+                "name": primary_fn,
+                "full_path": primary_fp,
+            }
 
         print(f"\n🔍 [{folder_name}] 설치 및 업데이트 상태 확인 중...")
 
@@ -595,19 +711,18 @@ def select_and_check_mod_update(updater: ModUpdater, scanner: ModScanner) -> boo
                 if res.get("is_paid"):
                     if USE_RICH:
                         console.print(Panel(
-                            "[bold yellow]🔒 유료 / 멤버십 전용 상품 안내[/bold yellow]\n\n"
-                            "해당 모드(선배포 버전 등)는 제작자의 유료 / 멤버십 전용 상품입니다.\n"
-                            "[bold red]유료 상품은 프로그램에서 직접 다운로드할 수 없으니 제작자의 공식 채널을 이용해 주세요.[/bold red]\n\n"
-                            "[dim]※ Patreon 및 Postype에서 무료로 배포되는 모드는 프로그램이 직접 다운로드 및 자동 설치를 지원합니다.[/dim]",
-                            title="[bold yellow]다운로드 안내[/bold yellow]",
+                            "[bold yellow]🔒 유료 / 멤버십 전용 상품 안내 (자동 다운로드 불가)[/bold yellow]\n\n"
+                            "해당 모드는 제작자의 유료 상품(또는 유료 멤버십 전용)이어서 [bold red]자동 다운로드가 불가능합니다.[/bold red]\n"
+                            "아래 제작자의 공식 배포 채널 링크를 통해 직접 확인해 주세요.\n\n"
+                            "[dim]※ 무료로 공개 배포되는 모드는 프로그램이 직접 다운로드 및 자동 설치를 지원합니다.[/dim]",
+                            title="[bold yellow]유료 상품 안내 (자동 다운로드 불가)[/bold yellow]",
                             border_style="yellow"
                         ))
                     else:
                         print("\n" + "=" * 60)
-                        print("🔒 [유료 / 멤버십 전용 상품 안내]")
-                        print("해당 모드(선배포 버전 등)는 제작자의 유료 / 멤버십 전용 상품입니다.")
-                        print("유료 상품은 프로그램에서 직접 다운로드할 수 없으니 제작자의 공식 채널을 이용해 주세요.")
-                        print("※ Patreon 및 Postype에서 무료로 배포되는 모드는 프로그램이 직접 다운로드 및 자동 설치를 지원합니다.")
+                        print("🔒 [유료 / 멤버십 전용 상품 안내 (자동 다운로드 불가)]")
+                        print("해당 모드는 제작자의 유료 상품이어서 자동 다운로드가 불가능합니다.")
+                        print("아래 제작자의 공식 배포 채널 링크를 통해 직접 확인해 주세요.")
                         print("=" * 60)
 
                     print("\n[공식 배포 채널 바로가기]")
@@ -719,6 +834,17 @@ def select_and_check_mod_update(updater: ModUpdater, scanner: ModScanner) -> boo
                                 except Exception as e:
                                     print(f"\n❌ 다운로드/설치 실패: {e}")
 
+                elif res.get("link_not_found") or (not res.get("page_url") and not res.get("download_url")):
+                    if USE_RICH:
+                        console.print(Panel(
+                            f"[bold yellow]❓ [{escape(selected_mod['name'])}] 링크를 찾을 수 없습니다.[/bold yellow]\n\n"
+                            "파일 내부 메타데이터 및 공식 배포처 검색에서 이 모드와 일치하는 확실한 배포 링크를 찾지 못했습니다.",
+                            title="[bold yellow]링크를 찾을 수 없습니다.[/bold yellow]",
+                            border_style="yellow",
+                        ))
+                    else:
+                        print(f"\n❓ [{selected_mod['name']}] 링크를 찾을 수 없습니다.")
+
                 elif res.get("requires_browser"):
                     print(f"\n💡 [{selected_mod['name']}] 페이지 내 직접 다운로드 파일을 감지하지 못했습니다. 아래 제작자 배포 페이지에서 직접 다운로드해 주세요.")
                     if res.get("patreon_url"):
@@ -820,15 +946,81 @@ def _print_folder_files_detail(scanner: ModScanner, target_dir: Path) -> None:
                 print(f"  • {w}")
 
 
+def _build_mod_query_from_entry(
+    updater: ModUpdater,
+    scanner: ModScanner,
+    entry: dict,
+) -> Tuple[dict, str, Optional[str], Optional[str]]:
+    """개별 모드 유닛(mod_unit) 또는 폴더 항목(folder_mod)에서 업데이트 조회용 mod 딕셔너리와
+    (mod, folder_name, detected_file_name, detected_file_path)를 생성합니다.
+    """
+    folder_name = entry.get("folder_name") or entry.get("name") or ""
+    primary_fn = entry.get("primary_file_name")
+    primary_fp = entry.get("primary_file_path")
+
+    mod = updater.infer_mod_config(folder_name)
+    if primary_fn and mod.get("source_type") == "generic_web":
+        by_file = updater.infer_mod_config(primary_fn)
+        if by_file.get("source_type") != "generic_web" or by_file.get("download_url"):
+            mod = by_file
+
+    mod["folder_name"] = folder_name
+    if entry.get("path"):
+        mod["path"] = entry["path"]
+    if entry.get("is_standalone"):
+        mod["is_standalone"] = True
+    if entry.get("unit_files"):
+        mod["unit_files"] = entry["unit_files"]
+
+    detected_file_name = primary_fn
+    detected_file_path = primary_fp
+
+    if not detected_file_name or not detected_file_path:
+        info = scanner.detect_mod_installed(mod)
+        if info.get("scripts"):
+            chosen_scr = next(
+                (p for p in info["scripts"] if "cmd_center" in p.name.lower() or "scripts" in p.name.lower() or "main" in p.name.lower()),
+                info["scripts"][0],
+            )
+            detected_file_name = chosen_scr.name
+            detected_file_path = str(chosen_scr)
+        elif info.get("packages"):
+            chosen_pkg = next(
+                (p for p in info["packages"] if "!wamtik" in p.name.lower() or "_wamtik" in p.name.lower()),
+                info["packages"][0],
+            )
+            detected_file_name = chosen_pkg.name
+            detected_file_path = str(chosen_pkg)
+
+    if detected_file_name:
+        mod["name"] = detected_file_name
+        f_lower = detected_file_name.lower()
+        is_core_special_file = (
+            (mod.get("source_type") == "mccc" and "mc_" in f_lower)
+            or (mod.get("source_type") == "wickedwhims" and "turbodriver_wickedwhims" in f_lower)
+            or (mod.get("source_type") == "barambyul" and "wamtik" in f_lower)
+        )
+        if not is_core_special_file:
+            mod["source_type"] = "generic_web"
+            mod["download_url"] = ""
+            mod["homepage"] = ""
+            mod["creator"] = "파일 내부 메타데이터 자동 감지"
+    if detected_file_path:
+        mod["file_path"] = detected_file_path
+
+    return mod, folder_name, detected_file_name, detected_file_path
+
+
 def _handle_update_all_subfolder_inspect(scanner: ModScanner, script_mods: List[dict]) -> str:
-    """보유 모드 목록에서 특정 폴더 번호(1~N) 또는 전체(a)를 선택해 내부 파일 및 하위 폴더를 확인합니다."""
+    """보유 모드 목록에서 특정 폴더/항목 번호(1~N) 또는 전체(a)를 선택해 내부 파일 및 하위 폴더를 확인합니다."""
     while True:
         if USE_RICH:
             console.print(f"\n[bold cyan]📁 내부 파일 및 하위 폴더를 확인할 모드를 선택하세요 (총 {len(script_mods)}개):[/bold cyan]")
             for idx, m in enumerate(script_mods, 1):
+                label = m.get("display_name") or m.get("name") or ""
                 sub_badge = f", [yellow]하위폴더: {m['subdir_count']}개[/yellow]" if m.get("subdir_count", 0) > 0 else ""
                 console.print(
-                    f"  [bold green]{idx:2d}.[/bold green] [bold]{escape(m['name']):<30}[/bold] "
+                    f"  [bold green]{idx:2d}.[/bold green] [bold]{escape(label):<42}[/bold] "
                     f"[dim](ts4script: {m['script_count']}개, package: {m['package_count']}개{sub_badge})[/dim]"
                 )
             console.print("  [bold cyan] a.[/bold cyan] 전체 모드 폴더 일괄 확인")
@@ -836,52 +1028,82 @@ def _handle_update_all_subfolder_inspect(scanner: ModScanner, script_mods: List[
         else:
             print(f"\n📁 내부 파일 및 하위 폴더를 확인할 모드를 선택하세요 (총 {len(script_mods)}개):")
             for idx, m in enumerate(script_mods, 1):
+                label = m.get("display_name") or m.get("name") or ""
                 sub_badge = f", 하위폴더: {m['subdir_count']}개" if m.get("subdir_count", 0) > 0 else ""
-                print(f"  {idx:2d}. {m['name']:<30} (ts4script: {m['script_count']}개, package: {m['package_count']}개{sub_badge})")
+                print(f"  {idx:2d}. {label:<42} (ts4script: {m['script_count']}개, package: {m['package_count']}개{sub_badge})")
             print("   a. 전체 모드 폴더 일괄 확인")
             print("   b. 이전 작업 선택 메뉴로 돌아가기")
 
-        sub_ch = input("\n폴더 선택 (번호/a/b) > ").strip().lower()
+        sub_ch = input("\n항목 선택 (번호/a/b) > ").strip().lower()
         if sub_ch in ["b", "back"]:
             return "back"
         if sub_ch in ["q", "exit"]:
             return "exit"
         if sub_ch in ["a", "all"]:
+            seen_dirs = set()
             for m in script_mods:
-                _print_folder_files_detail(scanner, Path(m["path"]))
-            input("\n확인을 완료했습니다. 폴더 선택 목록으로 돌아가려면 Enter 키를 누르세요...")
+                p = Path(m["path"])
+                target_d = p.parent if p.is_file() else p
+                key = str(target_d.resolve())
+                if key not in seen_dirs:
+                    seen_dirs.add(key)
+                    _print_folder_files_detail(scanner, target_d)
+            input("\n확인을 완료했습니다. 선택 목록으로 돌아가려면 Enter 키를 누르세요...")
             continue
         if sub_ch.isdigit() and (1 <= int(sub_ch) <= len(script_mods)):
             chosen = script_mods[int(sub_ch) - 1]
-            _print_folder_files_detail(scanner, Path(chosen["path"]))
-            input("\n확인을 완료했습니다. 폴더 선택 목록으로 돌아가려면 Enter 키를 누르세요...")
+            p = Path(chosen["path"])
+            _print_folder_files_detail(scanner, p.parent if p.is_file() else p)
+            input("\n확인을 완료했습니다. 선택 목록으로 돌아가려면 Enter 키를 누르세요...")
             continue
 
-        print("\n[!] 올바른 폴더 번호(1~{}) 또는 a, b를 입력해 주세요.".format(len(script_mods)))
+        print("\n[!] 올바른 번호(1~{}) 또는 a, b를 입력해 주세요.".format(len(script_mods)))
 
 
 def _handle_pre_update_backup(updater: ModUpdater, script_mods: List[dict]) -> None:
-    """재확인된 업데이트 대상 모드 폴더 전체(스크립트/한글화 폴더들)를 백업 폴더(backups/)에 일괄 백업합니다."""
+    """재확인된 업데이트 대상 모드 폴더 및 루트 단일 파일 전체를 백업 폴더(backups/)에 중복 없이 일괄 백업합니다."""
     backup_mgr = updater.backup_manager
     if not backup_mgr:
         print("\n[!] 백업 관리자가 설정되어 있지 않습니다.")
         return
 
-    print(f"\n📦 총 {len(script_mods)}개의 업데이트 대상 모드 폴더를 일괄 백업 중입니다...")
+    # 다중 모드 폴더(예: MOD, PRIO 등)가 여러 번 중복 백업되지 않도록 최상위 폴더 또는 루트 단일 파일 단위로 중복 제거
+    backup_targets: List[Tuple[str, Path]] = []
+    seen_target_keys: set[str] = set()
+    mods_root_resolved = updater.mods_folder.resolve()
+
+    for m in script_mods:
+        raw_p = Path(m["path"])
+        if not raw_p.exists():
+            continue
+        try:
+            rel_parts = raw_p.resolve().relative_to(mods_root_resolved).parts
+            if len(rel_parts) >= 1:
+                top_item = updater.mods_folder / rel_parts[0]
+            else:
+                top_item = raw_p
+        except Exception:
+            top_item = raw_p
+
+        key = str(top_item.resolve()).lower()
+        if key not in seen_target_keys:
+            seen_target_keys.add(key)
+            backup_targets.append((top_item.name, top_item))
+
+    print(f"\n📦 총 {len(backup_targets)}개의 업데이트 대상 폴더/파일(개별 모드 {len(script_mods)}개)을 일괄 백업 중입니다...")
     session_dir = backup_mgr.create_backup_session(label="PreUpdate_All")
     backed_up_folders: List[str] = []
     failed_folders: List[str] = []
 
-    for m in script_mods:
-        folder_path = Path(m["path"])
+    for label_name, target_path in backup_targets:
         try:
-            res_path = backup_mgr.backup_item(folder_path, session_dir)
+            res_path = backup_mgr.backup_item(target_path, session_dir)
             if res_path:
-                backed_up_folders.append(m["name"])
+                backed_up_folders.append(label_name)
             else:
-                failed_folders.append(f"{m['name']} (경로 없음)")
+                failed_folders.append(f"{label_name} (경로 없음)")
         except Exception as e:
-            failed_folders.append(f"{m['name']} ({e})")
+            failed_folders.append(f"{label_name} ({e})")
 
     if USE_RICH:
         folder_lines = "\n".join(f"  • [cyan]{escape(fn)}[/cyan]" for fn in backed_up_folders)
@@ -893,14 +1115,14 @@ def _handle_pre_update_backup(updater: ModUpdater, script_mods: List[dict]) -> N
         console.print(Panel(
             f"[bold green]✅ 업데이트 전 보유 모드 일괄 백업이 완료되었습니다![/bold green]\n\n"
             f"• [bold]백업 저장 경로:[/bold] {escape(str(session_dir))}\n"
-            f"• [bold]백업 완료 폴더 ({len(backed_up_folders)}개):[/bold]\n{folder_lines}"
+            f"• [bold]백업 완료 항목 ({len(backed_up_folders)}개 폴더/파일, 총 {len(script_mods)}개 모드 포함):[/bold]\n{folder_lines}"
             f"{fail_block}",
             title="[bold green]💾 업데이트 전 미리 백업 완료[/bold green]",
             border_style="green"
         ))
     else:
         print("\n" + "=" * 60)
-        print(f"✅ 업데이트 전 보유 모드 일괄 백업 완료! ({len(backed_up_folders)}개 폴더)")
+        print(f"✅ 업데이트 전 보유 모드 일괄 백업 완료! ({len(backed_up_folders)}개 항목)")
         print(f"- 백업 저장 경로: {session_dir}")
         for fn in backed_up_folders:
             print(f"  • {fn}")
@@ -917,11 +1139,11 @@ def _execute_batch_update_all(
     script_mods: List[dict],
     skip_backup: bool = True,
 ) -> None:
-    """보유 중인 스크립트 / 한글화 모드 전체를 순차 조회하여,
+    """보유 중인 업데이트 대상 개별 모드 전체를 순차 조회하여,
     직접 다운로드 가능한 무료 모드는 일괄 자동 다운로드 및 덮어쓰기하고,
     유료/선배포/브라우저 확인 필요 모드는 결과 요약 및 링크 안내를 제공합니다.
     """
-    print(f"\n🚀 총 {len(script_mods)}개 보유 모드 폴더에 대한 최신 버전 조회 및 일괄 업데이트를 시작합니다...")
+    print(f"\n🚀 총 {len(script_mods)}개 보유 개별 모드에 대한 최신 버전 조회 및 일괄 업데이트를 시작합니다...")
     if skip_backup:
         print("   (직전 사전 일괄 백업이 완료되었으므로 개별 중복 백업은 생략합니다.)")
 
@@ -931,43 +1153,9 @@ def _execute_batch_update_all(
     summary_rows: List[tuple] = []
 
     for idx, entry in enumerate(script_mods, 1):
-        folder_name = entry["name"]
-        mod = updater.infer_mod_config(folder_name)
-        mod["folder_name"] = folder_name
-
-        info = scanner.detect_mod_installed(mod)
-        detected_file_name = None
-        detected_file_path = None
-        if info.get("scripts"):
-            chosen_scr = next(
-                (p for p in info["scripts"] if "cmd_center" in p.name.lower() or "scripts" in p.name.lower() or "main" in p.name.lower()),
-                info["scripts"][0]
-            )
-            detected_file_name = chosen_scr.name
-            detected_file_path = str(chosen_scr)
-        elif info.get("packages"):
-            chosen_pkg = next(
-                (p for p in info["packages"] if "!wamtik" in p.name.lower() or "_wamtik" in p.name.lower()),
-                info["packages"][0]
-            )
-            detected_file_name = chosen_pkg.name
-            detected_file_path = str(chosen_pkg)
-
-        if detected_file_name:
-            mod["name"] = detected_file_name
-            f_lower = detected_file_name.lower()
-            is_core_special_file = (
-                (mod.get("source_type") == "mccc" and "mc_" in f_lower)
-                or (mod.get("source_type") == "wickedwhims" and "turbodriver_wickedwhims" in f_lower)
-                or (mod.get("source_type") == "barambyul" and "wamtik" in f_lower)
-            )
-            if not is_core_special_file:
-                mod["source_type"] = "generic_web"
-                mod["download_url"] = ""
-                mod["homepage"] = ""
-                mod["creator"] = "파일 내부 메타데이터 자동 감지"
-        if detected_file_path:
-            mod["file_path"] = detected_file_path
+        mod, folder_name, detected_file_name, detected_file_path = _build_mod_query_from_entry(
+            updater, scanner, entry
+        )
 
         display_label = f"{folder_name} ({mod['name']})" if mod.get("name") and mod["name"] != folder_name else folder_name
         print(f"\n[{idx}/{len(script_mods)}] 🔍 {display_label} 최신 배포 정보 확인 중...")
@@ -1011,19 +1199,31 @@ def _execute_batch_update_all(
                     f"설치 실패 ({e})",
                 ))
         else:
-            # 유료 / 얼리 액세스 / 브라우저 수동 확인 필요한 모드
+            # 링크 미발견 / 유료 / 얼리 액세스 / 브라우저 수동 확인 필요한 모드
             page_link = res.get("page_url") or res.get("download_url") or res.get("patreon_url") or res.get("postype_url") or ""
-            if res.get("is_paid") or res.get("is_early_access"):
-                reason_rich = "[yellow]🔒 유료/선배포 (공식 채널 확인)[/yellow]"
-                reason_plain = "유료/선배포 (공식 채널 확인)"
-                print(f"   🔒 [{folder_name}] 유료/선배포 전용 -> 공식 배포 링크 안내 대상")
+            if res.get("link_not_found") or not page_link:
+                reason_rich = "[dim]❓ 링크를 찾을 수 없습니다.[/dim]"
+                reason_plain = "링크를 찾을 수 없습니다."
+                print(f"   ❓ [{folder_name}] 링크를 찾을 수 없습니다.")
+                summary_rows.append((str(idx), folder_name, mod["name"], "링크를 찾을 수 없습니다.", reason_rich, reason_plain))
+            elif res.get("is_paid"):
+                reason_rich = "[yellow]🔒 유료 상품 (자동 다운로드 불가)[/yellow]"
+                reason_plain = "유료 상품 (자동 다운로드 불가)"
+                print(f"   🔒 [{folder_name}] 유료 상품이어서 자동 다운로드 불가 -> 공식 배포 링크 안내 대상")
+                manual_required.append((folder_name, mod["name"], latest_ver, page_link, res))
+                summary_rows.append((str(idx), folder_name, mod["name"], latest_ver, reason_rich, reason_plain))
+            elif res.get("is_early_access"):
+                reason_rich = "[yellow]🔒 선배포/멤버십 제한 (공식 채널 확인)[/yellow]"
+                reason_plain = "선배포/멤버십 제한 (공식 채널 확인)"
+                print(f"   🔒 [{folder_name}] 선배포/멤버십 전용 -> 공식 배포 링크 안내 대상")
+                manual_required.append((folder_name, mod["name"], latest_ver, page_link, res))
+                summary_rows.append((str(idx), folder_name, mod["name"], latest_ver, reason_rich, reason_plain))
             else:
                 reason_rich = "[cyan]🌐 브라우저 직접 다운로드 필요[/cyan]"
                 reason_plain = "브라우저 직접 다운로드 필요"
                 print(f"   🌐 [{folder_name}] 브라우저 직접 확인 필요 ({latest_ver})")
-
-            manual_required.append((folder_name, mod["name"], latest_ver, page_link, res))
-            summary_rows.append((str(idx), folder_name, mod["name"], latest_ver, reason_rich, reason_plain))
+                manual_required.append((folder_name, mod["name"], latest_ver, page_link, res))
+                summary_rows.append((str(idx), folder_name, mod["name"], latest_ver, reason_rich, reason_plain))
 
     # 전체 결과 요약 테이블 출력
     if USE_RICH:
@@ -1039,9 +1239,9 @@ def _execute_batch_update_all(
         console.print(res_table)
 
         console.print(Panel(
-            f"• [bold green]자동 다운로드 및 덮어쓰기 완료:[/bold green] {len(auto_updated)}개 모드 폴더\n"
-            f"• [bold yellow]수동/브라우저 확인 필요:[/bold yellow] {len(manual_required)}개 모드 폴더\n"
-            f"• [bold red]오류 발생:[/bold red] {len(failed_items)}개 모드 폴더",
+            f"• [bold green]자동 다운로드 및 덮어쓰기 완료:[/bold green] {len(auto_updated)}개 모드\n"
+            f"• [bold yellow]수동/브라우저 확인 필요:[/bold yellow] {len(manual_required)}개 모드\n"
+            f"• [bold red]오류 발생:[/bold red] {len(failed_items)}개 모드",
             title="[bold cyan]🎉 전체 업데이트 실행 요약[/bold cyan]",
             border_style="cyan"
         ))
@@ -1090,55 +1290,60 @@ def _execute_batch_update_all(
 
 def prepare_update_all(updater: ModUpdater, scanner: ModScanner) -> bool:
     """3번 메뉴(모드 업데이트 전체 실행) 진입 시, 바로 업데이트를 실행하지 않고
-    현재 보유 중인 업데이트 대상(스크립트 / 한글화) 모드 목록을 우선 재확인합니다.
+    현재 보유 중인 업데이트 대상(스크립트 / 패키지 모드 / 한글화 / 루트 파일) 개별 모드 전체 목록을 우선 재확인합니다.
     반환값:
         True: 메인 메뉴 유지 (다른 메뉴로 전환)
         False: 프로그램 종료
     """
     user_mods_res = scanner.scan_user_mods()
     folder_mods = user_mods_res.get("folder_mods", [])
+    mod_units = user_mods_res.get("mod_units", [])
 
-    script_mods = [
+    updatable_folders = [
         m for m in folder_mods
-        if m.get("script_count", 0) > 0 or "스크립트" in m.get("mod_type", "") or "한글" in m.get("mod_type", "")
+        if m.get("is_updatable", False)
     ]
 
-    if not script_mods:
-        print("\n[!] Mods 폴더에서 업데이트 대상(스크립트/한글화) 모드가 감지되지 않았습니다. 1번 메뉴에서 Mods 폴더 상태를 확인하세요.")
+    if not mod_units:
+        print("\n[!] Mods 폴더에서 업데이트 대상 모드가 감지되지 않았습니다. 1번 메뉴에서 Mods 폴더 상태를 확인하세요.")
         return True
 
-    total_pkgs = sum(m.get("package_count", 0) for m in script_mods)
-    total_scripts = sum(m.get("script_count", 0) for m in script_mods)
+    total_pkgs = sum(u.get("package_count", 0) for u in mod_units)
+    total_scripts = sum(u.get("script_count", 0) for u in mod_units)
 
     if USE_RICH:
         console.print(Panel(
             f"[bold cyan]전체 업데이트를 진행하기 전에 현재 보유 중인 모드를 재확인합니다.[/bold cyan]\n"
             f"[dim]대상 경로: {scanner.mods_folder}[/dim]\n\n"
-            f"• [bold]감지된 업데이트 대상 모드 폴더:[/bold] [green]{len(script_mods)}개[/green]\n"
-            f"• [bold]전체 .ts4script 파일 합계:[/bold] [green]{total_scripts}개[/green]\n"
-            f"• [bold]전체 .package 파일 합계:[/bold] [magenta]{total_pkgs}개[/magenta]",
+            f"• [bold]감지된 업데이트 대상 개별 모드:[/bold] [bold yellow]{len(mod_units)}개[/bold yellow] (상위 폴더 {len(updatable_folders)}개)\n"
+            f"• [bold]대상 .ts4script 파일 합계:[/bold] [green]{total_scripts}개[/green]\n"
+            f"• [bold]대상 .package 파일 합계:[/bold] [magenta]{total_pkgs}개[/magenta]",
             title="[bold cyan]🔍 보유 모드 재확인 (전체 업데이트 대상)[/bold cyan]",
             border_style="cyan"
         ))
 
-        mod_table = Table(title=f"📋 현재 보유 중인 스크립트 / 한글화 모드 목록 (총 {len(script_mods)}개)")
+        mod_table = Table(title=f"📋 현재 보유 중인 업데이트 대상 개별 모드 목록 (총 {len(mod_units)}개)")
         mod_table.add_column("번호", justify="right", style="cyan", width=5)
-        mod_table.add_column("모드 폴더명", style="bold white")
+        mod_table.add_column("위치 (폴더)", style="bold white")
+        mod_table.add_column("기준 모드 파일명", style="cyan")
         mod_table.add_column("분류", justify="center")
         mod_table.add_column(".ts4script", justify="right", style="green")
         mod_table.add_column(".package", justify="right", style="magenta")
-        mod_table.add_column("보조 하위폴더", justify="right", style="dim")
 
-        for idx, m in enumerate(script_mods, 1):
-            type_style = "[bold yellow]" if "한글" in m["mod_type"] else "[bold green]"
-            sub_text = f"{m['subdir_count']}개" if m.get("subdir_count", 0) > 0 else "-"
+        for idx, u in enumerate(mod_units, 1):
+            if "한글" in u["mod_type"]:
+                type_style = "[bold yellow]"
+            elif "패키지" in u["mod_type"]:
+                type_style = "[bold magenta]"
+            else:
+                type_style = "[bold green]"
             mod_table.add_row(
                 str(idx),
-                m["name"],
-                f"{type_style}{m['mod_type']}[/]",
-                f"{m['script_count']}개",
-                f"{m['package_count']}개",
-                sub_text
+                u["folder_name"],
+                u["primary_file_name"],
+                f"{type_style}{u['mod_type']}[/]",
+                f"{u['script_count']}개",
+                f"{u['package_count']}개",
             )
         console.print(mod_table)
     else:
@@ -1146,12 +1351,14 @@ def prepare_update_all(updater: ModUpdater, scanner: ModScanner) -> bool:
         print("🔍 [보유 모드 재확인 (전체 업데이트 대상)]")
         print("전체 업데이트를 진행하기 전에 현재 보유 중인 모드를 재확인합니다.")
         print(f"- 대상 경로: {scanner.mods_folder}")
-        print(f"- 감지된 업데이트 대상 모드 폴더: {len(script_mods)}개 (ts4script: {total_scripts}개, package: {total_pkgs}개)")
+        print(f"- 감지된 업데이트 대상 개별 모드: {len(mod_units)}개 (ts4script: {total_scripts}개, package: {total_pkgs}개)")
         print("=" * 60)
-        print(f"\n📋 현재 보유 중인 스크립트 / 한글화 모드 목록 (총 {len(script_mods)}개):")
-        for idx, m in enumerate(script_mods, 1):
-            sub_text = f", 하위폴더: {m['subdir_count']}개" if m.get("subdir_count", 0) > 0 else ""
-            print(f"  {idx:2d}. {m['name']:<30} [{m['mod_type']}] (ts4script: {m['script_count']}개, package: {m['package_count']}개{sub_text})")
+        print(f"\n📋 현재 보유 중인 업데이트 대상 개별 모드 목록 (총 {len(mod_units)}개):")
+        for idx, u in enumerate(mod_units, 1):
+            print(
+                f"  {idx:2d}. [{u['folder_name']}] {u['primary_file_name']} "
+                f"[{u['mod_type']}] (ts4script: {u['script_count']}개, package: {u['package_count']}개)"
+            )
 
     while True:
         print("\n[원하시는 작업을 선택하세요]")
@@ -1166,11 +1373,11 @@ def prepare_update_all(updater: ModUpdater, scanner: ModScanner) -> bool:
             print("\n➡️ 다른 메뉴(메인 메뉴)로 전환합니다.")
             return True
         elif act == "2":
-            sub_res = _handle_update_all_subfolder_inspect(scanner, script_mods)
+            sub_res = _handle_update_all_subfolder_inspect(scanner, mod_units)
             if sub_res == "exit":
                 return False
         elif act == "3":
-            _handle_pre_update_backup(updater, script_mods)
+            _handle_pre_update_backup(updater, mod_units)
             while True:
                 print("\n[원하시는 작업을 선택하세요]")
                 print("1. 다른 메뉴로 전환")
@@ -1181,14 +1388,14 @@ def prepare_update_all(updater: ModUpdater, scanner: ModScanner) -> bool:
                     print("\n➡️ 다른 메뉴(메인 메뉴)로 전환합니다.")
                     return True
                 elif post_bk_act == "2":
-                    _execute_batch_update_all(updater, scanner, script_mods, skip_backup=True)
+                    _execute_batch_update_all(updater, scanner, mod_units, skip_backup=True)
                     return True
                 elif post_bk_act in ["q", "exit"]:
                     return False
                 else:
                     print("\n[!] 1 또는 2 번호를 입력해 주세요.")
         elif act == "4":
-            _execute_batch_update_all(updater, scanner, script_mods, skip_backup=True)
+            _execute_batch_update_all(updater, scanner, mod_units, skip_backup=True)
             return True
         elif act in ["5", "q", "exit"]:
             return False
@@ -1199,8 +1406,9 @@ def _extract_local_version_token(
     detected_file_name: str,
     detected_file_path: Optional[str],
     manifest_entries: List[dict],
+    folder_name: str = "",
 ) -> str:
-    """로컬 모드 파일명, 파일 내부 메타데이터(.ts4script/.package), 또는 매니페스트 기록에서
+    """로컬 모드 파일명, 파일 내부 메타데이터(.ts4script/.package), 폴더명(예: GSM MCCC [버전]), 또는 매니페스트 기록에서
     현재 설치된 로컬 버전 문자열을 추출합니다.
     """
     from src.finder import extract_version_from_filename, extract_mod_file_metadata
@@ -1216,11 +1424,19 @@ def _extract_local_version_token(
             meta = extract_mod_file_metadata(detected_file_path)
             m_ver = (meta.get("version") or "").strip()
             if m_ver:
-                if m_ver.upper().startswith("V") and re.match(r"^V\d+G\d+$", m_ver.upper()):
+                if re.match(r"^20\d{2}\.\d{2}\.\d{2}$", m_ver):
+                    return m_ver
+                if m_ver.upper().startswith("V") and re.match(r"^V\d+[GBPR]\d+$", m_ver.upper()):
                     return m_ver.upper()
                 return m_ver if m_ver.lower().startswith("v") else f"v{m_ver}"
         except Exception:
             pass
+
+    # 3) 폴더명에 명시된 버전 추출 (예: 바람별 폴더 구조 'GSM MCCC [2026.1.1]', 'GM 모드이름 [v1.2]')
+    if folder_name:
+        f_ver = extract_version_from_filename(folder_name)
+        if f_ver:
+            return f_ver
 
     # 3) mods_manifest.json에 기록된 로컬 버전 확인
     t_low = (detected_file_name or "").strip().lower()
@@ -1250,19 +1466,19 @@ def _compare_local_and_remote_version(local_ver: str, remote_ver_label: str, res
         l_clean = local_ver.strip()
         r_clean = remote_tok.strip()
 
-        # 1) 바람별 통합한글화모음 스타일 (예: V98G8)
-        m_l_vg = re.match(r"^V(\d+)G(\d+)$", l_clean, flags=re.IGNORECASE)
-        m_r_vg = re.match(r"^V(\d+)G(\d+)$", r_clean, flags=re.IGNORECASE)
-        if m_l_vg and m_r_vg:
-            l_tuple = (int(m_l_vg.group(1)), int(m_l_vg.group(2)))
-            r_tuple = (int(m_r_vg.group(1)), int(m_r_vg.group(2)))
+        # 1) 바람별 통합한글화모음 스타일 (예: V98G8, V98B8, V98P8)
+        m_l_vg = re.match(r"^V(\d+)([GBPR])(\d+)$", l_clean, flags=re.IGNORECASE)
+        m_r_vg = re.match(r"^V(\d+)([GBPR])(\d+)$", r_clean, flags=re.IGNORECASE)
+        if m_l_vg and m_r_vg and m_l_vg.group(2).upper() == m_r_vg.group(2).upper():
+            l_tuple = (int(m_l_vg.group(1)), int(m_l_vg.group(3)))
+            r_tuple = (int(m_r_vg.group(1)), int(m_r_vg.group(3)))
             if r_tuple > l_tuple:
                 return ("update_needed", "[bold yellow]🔄 업데이트 필요[/bold yellow]", "업데이트 필요")
             return ("up_to_date", "[bold green]✅ 최신 상태[/bold green]", "최신 상태")
 
         # 2) 알파벳 접미사 포함 버전 (예: v185k vs v185l) 또는 일반 숫자 버전
-        l_norm = l_clean.lstrip("vV")
-        r_norm = r_clean.lstrip("vV")
+        l_norm = l_clean.lstrip("vVaAbB")
+        r_norm = r_clean.lstrip("vVaAbB")
         if l_norm.lower() == r_norm.lower() or l_norm.replace(".", "").lower() == r_norm.replace(".", "").lower():
             return ("up_to_date", "[bold green]✅ 최신 상태[/bold green]", "최신 상태")
 
@@ -1297,37 +1513,94 @@ def _compare_local_and_remote_version(local_ver: str, remote_ver_label: str, res
     return ("manual_check", "[cyan]🔍 배포처 확인 권장[/cyan]", "배포처 확인 권장 (버전 미표기)")
 
 
-def _verify_local_matches_remote_zip_tail(folder_path: Optional[Path], res: dict) -> bool:
-    """핫픽스(예: 1.59 -> 1.59.1)などで 모드 제작자가 스크립트 내부 버전 문자열만 이전 버전으로 남겨둔 경우,
-    원격 .zip 파일의 끝부분(Central Directory, 16KB)만 메모리에서 조회(파일 다운로드 없음)하여
-    로컬 폴더의 .package / .ts4script 파일 크기 및 CRC32가 원격 최신본과 100% 동일한지 검증합니다.
+def _verify_local_matches_remote_zip_tail(
+    folder_path: Optional[Path],
+    res: dict,
+    target_file_path: Optional[Path] = None,
+) -> Optional[bool]:
+    """원격 배포 파일(.zip Central Directory 또는 단일 .package/.ts4script 바이트 크기)을
+    메모리에서 조회(디스크 저장 없음)하여 로컬 모드 파일과 일치하는지 검증합니다.
+    반환값:
+        True: 로컬 파일이 원격 최신본과 크기/CRC32가 일치함 (최신 상태)
+        False: 원격 파일 정보가 확인되었으나 로컬 파일과 크기 또는 CRC32가 다름 (업데이트 필요)
+        None: 원격 아카이브/파일 메타데이터를 직접 비교할 수 없음
     """
-    if not folder_path or not folder_path.exists():
-        return False
     dl_url = (res.get("download_url") or "").strip()
     if not dl_url or not dl_url.startswith(("http://", "https://")):
-        return False
+        return None
     if "mediafire.com/file/" in dl_url.lower() or "drive.google.com" in dl_url.lower():
-        return False
+        return None
+
+    search_dir = folder_path if (folder_path and folder_path.exists()) else (
+        target_file_path.parent if (target_file_path and target_file_path.exists()) else None
+    )
+    if not search_dir or not search_dir.exists():
+        return None
 
     try:
         import struct
         import zlib
         import requests
 
+        local_files = {
+            p.name.lower(): p
+            for p in search_dir.rglob("*")
+            if p.is_file() and p.suffix.lower() in (".package", ".ts4script")
+        }
+        if target_file_path and target_file_path.exists():
+            local_files[target_file_path.name.lower()] = target_file_path
+
+        # 1) Patreon #free_member_file=...&size=<bytes> 프래그먼트에 파일 크기가 명시된 단일 .package/.ts4script 검증
+        m_frag_sz = re.search(r"[#&]size=(\d+)", dl_url)
+        asset_name = str(res.get("asset_name") or res.get("detected_filename") or "").strip()
+        if m_frag_sz and asset_name.lower().endswith((".package", ".ts4script")):
+            remote_sz = int(m_frag_sz.group(1))
+            if remote_sz > 0:
+                loc_p = local_files.get(Path(asset_name).name.lower()) or target_file_path
+                if loc_p and loc_p.exists():
+                    return loc_p.stat().st_size == remote_sz
+
+        clean_dl_url = dl_url.split("#")[0]
+        ua_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.4",
+        }
+
+        # 2) 단일 .package / .ts4script 직링크인 경우 HEAD Content-Length 비교
+        if clean_dl_url.lower().endswith((".package", ".ts4script")) or (
+            asset_name.lower().endswith((".package", ".ts4script")) and not clean_dl_url.lower().endswith((".zip", ".rar", ".7z"))
+        ):
+            r_head = requests.head(clean_dl_url, headers=ua_headers, allow_redirects=True, timeout=8)
+            cl = r_head.headers.get("Content-Length")
+            if r_head.status_code == 200 and cl and cl.isdigit() and int(cl) > 0:
+                loc_p = local_files.get(Path(asset_name).name.lower()) or target_file_path
+                if loc_p and loc_p.exists():
+                    return loc_p.stat().st_size == int(cl)
+            return None
+
+        # 3) .zip 아카이브의 끝부분(Central Directory, 16KB) 조회 (Edge CDN 등 Range 미지원 시 소형 아카이브 일반 GET 폴백)
         r = requests.get(
-            dl_url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.3",
-                "Range": "bytes=-16384",
-            },
+            clean_dl_url,
+            headers={**ua_headers, "Range": "bytes=-16384"},
             timeout=8,
         )
-        if r.status_code not in (200, 206):
-            return False
-        buf = r.content
+        buf = r.content if r.status_code in (200, 206) else b""
         if b"PK\x01\x02" not in buf:
-            return False
+            r_full = requests.get(clean_dl_url, headers=ua_headers, stream=True, timeout=10)
+            if r_full.status_code == 200:
+                cl_str = r_full.headers.get("Content-Length") or "0"
+                if not cl_str.isdigit() or int(cl_str) <= 15 * 1024 * 1024:
+                    chunks = []
+                    total_b = 0
+                    for ch in r_full.iter_content(chunk_size=65536):
+                        chunks.append(ch)
+                        total_b += len(ch)
+                        if total_b > 15 * 1024 * 1024:
+                            break
+                    buf = b"".join(chunks)
+            r_full.close()
+
+        if b"PK\x01\x02" not in buf:
+            return None
 
         remote_entries = []
         pos = 0
@@ -1343,114 +1616,696 @@ def _verify_local_matches_remote_zip_tail(folder_path: Optional[Path], res: dict
             pos = idx + 46 + fn_len + ex_len + cm_len
 
         if not remote_entries:
-            return False
+            return None
 
-        local_files = {
-            p.name.lower(): p
-            for p in folder_path.rglob("*")
-            if p.is_file() and p.suffix.lower() in (".package", ".ts4script")
-        }
         matched_count = 0
+        mismatched_count = 0
         for base_fn, uncomp_sz, crc in remote_entries:
             loc_p = local_files.get(base_fn.lower())
-            if not loc_p or loc_p.stat().st_size != uncomp_sz:
-                return False
+            if not loc_p:
+                continue
+            if loc_p.stat().st_size != uncomp_sz:
+                mismatched_count += 1
+                continue
             loc_crc = zlib.crc32(loc_p.read_bytes()) & 0xFFFFFFFF
             if loc_crc != crc:
-                return False
+                mismatched_count += 1
+                continue
             matched_count += 1
 
-        return matched_count > 0
+        if mismatched_count > 0:
+            return False
+        if matched_count > 0:
+            return True
+        return None
     except Exception:
-        return False
+        return None
+
+
+def _get_base_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent.resolve()
+    return Path(__file__).parent.resolve()
+
+
+def _to_rel_mods_path(raw_path: Optional[str], mods_folder: Path) -> str:
+    """절대 경로를 사용자 계정명이나 드라이브 경로가 노출되지 않는 Mods 기준 상대 경로(예: Mods\\폴더\\파일.package)로 변환합니다."""
+    if not raw_path:
+        return "-"
+    try:
+        p = Path(raw_path).resolve()
+        m_root = mods_folder.resolve()
+        if p == m_root:
+            return "Mods"
+        rel = p.relative_to(m_root)
+        return str(Path("Mods") / rel)
+    except Exception:
+        try:
+            return Path(raw_path).name
+        except Exception:
+            return "-"
+
+
+def _sanitize_report_privacy(text: str, mods_folder: Path) -> str:
+    """리포트 본문에 혹시라도 남아있을 수 있는 Mods 절대 경로, 프로그램 폴더 절대 경로,
+    Windows 사용자 계정 경로(C:\\Users\\사용자명 등)를 모두 상대 경로 및 마스킹 문자열로 치환합니다.
+    """
+    out = text
+    try:
+        m_str = str(mods_folder.resolve())
+        if m_str:
+            out = out.replace(m_str, "Mods")
+            out = out.replace(m_str.replace("\\", "/"), "Mods")
+    except Exception:
+        pass
+
+    try:
+        b_str = str(_get_base_dir())
+        if b_str:
+            out = out.replace(b_str, ".")
+            out = out.replace(b_str.replace("\\", "/"), ".")
+    except Exception:
+        pass
+
+    try:
+        home_str = str(Path.home().resolve())
+        if home_str:
+            out = out.replace(home_str, "<USER_HOME>")
+            out = out.replace(home_str.replace("\\", "/"), "<USER_HOME>")
+    except Exception:
+        pass
+
+    # C:\Users\<계정명> 또는 /Users/<계정명> 패턴 정규식 마스킹
+    out = re.sub(r"(?i)[a-z]:\\Users\\[^\\/\r\n]+", r"C:\\Users\\<USER>", out)
+    out = re.sub(r"(?i)[a-z]:/Users/[^\\/\r\n]+", "C:/Users/<USER>", out)
+    return out
+
+
+def _format_metadata_for_report(meta: dict) -> List[str]:
+    """extract_mod_file_metadata가 추출한 내부 메타데이터를 리포트용 문자열 리스트로 포맷합니다."""
+    if not meta:
+        return ["      - 내부 메타데이터: 추출 결과 없음 (빈 딕셔너리)"]
+    has_meta = bool(meta.get("has_metadata"))
+    manifest_name = meta.get("manifest_name") or "(없음)"
+    creators = ", ".join(meta.get("creators") or []) or "(없음)"
+    inferred_creator = meta.get("inferred_creator") or "(없음)"
+    inferred_mod = meta.get("inferred_mod") or "(없음)"
+    ver = meta.get("version") or "(없음)"
+    urls = ", ".join(meta.get("urls") or []) or "(없음)"
+    modules = ", ".join((meta.get("modules") or [])[:10]) or "(없음)"
+    root_tunings = ", ".join((meta.get("root_tunings") or [])[:10]) or "(없음)"
+    display_names = ", ".join((meta.get("display_names") or [])[:6]) or "(없음)"
+    is_ww_addon = "예 (WickedWhims 애드온)" if meta.get("is_ww_addon") else "아니오"
+
+    return [
+        f"      - has_metadata (내부 단서 존재 여부): {has_meta}",
+        f"      - manifest_name (ModFileManifest 모드명): {manifest_name}",
+        f"      - creators (명시적 제작자 태그): {creators}",
+        f"      - inferred_creator (추론된 제작자): {inferred_creator}",
+        f"      - inferred_mod (추론된 모드명): {inferred_mod}",
+        f"      - version (파일 내장 버전): {ver}",
+        f"      - urls (파일 내장 URL): {urls}",
+        f"      - modules (.ts4script 모듈명): {modules}",
+        f"      - root_tunings (.package 루트 튜닝 식별자): {root_tunings}",
+        f"      - display_names (내부 표시 이름): {display_names}",
+        f"      - is_ww_addon (WW 애드온 여부): {is_ww_addon}",
+    ]
+
+
+def _build_failure_reasons_for_report(
+    row: dict,
+    res: dict,
+    meta: dict,
+) -> List[str]:
+    """웹 배포처 링크 미발견 또는 버전 매칭 실패 시 구체적인 실패 원인을 분석하여 반환합니다."""
+    reasons: List[str] = []
+    f_diag = res.get("finder_diagnostics") or {}
+    page_url = row.get("page_url") or ""
+    local_ver = row.get("local_ver") or ""
+    remote_ver = str(row.get("remote_ver") or "")
+    verif_note = str(res.get("verification_note") or "")
+
+    # 1) 오류 발생 여부
+    if row.get("status_code") == "error" or res.get("error"):
+        reasons.append(f"[네트워크/스크래퍼 오류] 조회 중 예외가 발생했습니다: {res.get('error') or row.get('status_plain')}")
+        return reasons
+
+    # 2) 웹 배포처 링크 미발견 (link_not_found)
+    if res.get("link_not_found") or not page_url or remote_ver == "링크를 찾을 수 없습니다.":
+        reasons.append(
+            f"[카탈로그 미일치] KNOWN_CATALOG에서 로컬 파일명('{row.get('file_name')}'), "
+            f"폴더명('{row.get('folder_name')}'), 내부 모드명('{meta.get('manifest_name') or meta.get('inferred_mod') or '-'}')과 일치하는 등록 항목을 찾지 못함."
+        )
+        if not meta.get("urls"):
+            reasons.append(
+                "[파일 내장 URL 없음] extract_mod_file_metadata로 바이너리/XML/매니페스트를 검사했으나 제작자가 파일 내부에 심어둔 배포처 URL이 없음."
+            )
+        tok_c = f_diag.get("tokenized_creator") or "(미식별)"
+        tok_m = f_diag.get("tokenized_mod_title") or "(미식별)"
+        tok_kws = ", ".join(f_diag.get("tokenized_keywords") or []) or "(없음)"
+        reasons.append(
+            f"[스마트 토큰화 분석] 추론 제작자='{tok_c}', 추론 모드명='{tok_m}', 검색 키워드=[{tok_kws}]"
+        )
+        if f_diag.get("failure_reason"):
+            reasons.append(f"[웹 검색 실패 사유] {f_diag['failure_reason']}")
+        else:
+            reasons.append(
+                "[웹 검색 실패 사유] 신뢰 가능한 배포 도메인(Patreon, CurseForge, MTS, Tumblr, 네이버 블로그, 포스타입, 디시 심즈갤 등)에서 "
+                "오탐 방지 기준(유사도 85점 이상)을 충족하는 공식 배포 페이지를 찾지 못함."
+            )
+        for rej in (f_diag.get("rejected_samples") or [])[:3]:
+            if len(rej) >= 5:
+                r_score, r_lbl, r_tit, r_url, r_why = rej[:5]
+                reasons.append(f"  ↳ [기각된 후보 ({r_score}점)] [{r_lbl}] {r_tit} ({r_url}) — 사유: {r_why}")
+        return reasons
+
+    # 3) 배포처 링크는 찾았으나 버전 매칭에 실패한 경우 (버전 미표기 / 수동 확인 필요 / 유료 / 선배포 등)
+    if not local_ver or local_ver == "버전 미표기":
+        reasons.append(
+            f"[로컬 버전 미검출] 로컬 파일명('{row.get('file_name')}'), 폴더명('{row.get('folder_name')}'), "
+            f"파일 내부 메타데이터(version='{meta.get('version') or ''}'), 매니페스트 기록 어디에도 "
+            "버전 숫자(예: v1.0)나 날짜(예: 2026.03.15)가 표기되어 있지 않아 로컬 버전을 특정할 수 없음."
+        )
+
+    if res.get("is_paid"):
+        reasons.append(
+            f"[유료 상품 제한] 매칭된 배포처({page_url})는 유료 상품이어서 비로그인 상태에서 첨부파일 및 최신 버전 자동 확인/다운로드가 불가능함."
+        )
+    elif res.get("is_early_access"):
+        reasons.append(
+            f"[얼리 액세스/선배포 제한] 매칭된 배포처({page_url})가 현재 후원자 전용 선배포 상태여서 비로그인 상태에서 첨부파일/버전 접근이 제한됨."
+        )
+    elif remote_ver in ("-", "수동 확인 필요") or "수동 확인" in remote_ver:
+        reasons.append(
+            f"[원격 버전 미검출] 배포처 URL({page_url})에는 정상 연결되었으나, 웹페이지 제목·본문·첨부파일명에서 "
+            "버전 번호/날짜 패턴이 감지되지 않거나 외부 다운로드 보호(CurseForge Cloudflare, LoversLab 로그인, 블로그 본문 등)로 인해 원격 버전을 추출하지 못함."
+        )
+
+    if verif_note and "자동 다운로드 보류" in verif_note:
+        reasons.append(f"[원격 파일 유사도 안전 보류] {verif_note}")
+
+    if not reasons:
+        reasons.append(
+            f"[버전 대조 미확정] 로컬 버전('{local_ver}')과 웹 최신 버전('{remote_ver}') 간 자동 비교를 확정할 수 없어 배포처 수동 확인 권장 상태로 분류됨."
+        )
+
+    return reasons
+
+
+def generate_scan_diagnostic_report(
+    updater: ModUpdater,
+    scanner: ModScanner,
+    report_path: Optional[Path] = None,
+    precomputed_rows: Optional[List[dict]] = None,
+) -> Tuple[Path, Dict[str, int]]:
+    """Mods 폴더 전체 스캔 결과, 감지 성공 모드, 스캔 제외/병합된 폴더 및 파일 사유,
+    웹 배포처 링크 미발견 및 버전 매칭 실패 상세 원인을 분석하여 scan_report.txt 파일로 저장합니다.
+    """
+    from datetime import datetime
+    from src.finder import extract_mod_file_metadata
+
+    if report_path is None:
+        report_path = _get_base_dir() / "scan_report.txt"
+
+    scan_summary = scanner.scan()
+    diag = scanner.collect_scan_diagnostics()
+    mod_units = diag.get("mod_units", [])
+    manifest_entries = updater.load_manifest()
+
+    evaluated_rows: List[dict] = []
+    if precomputed_rows is not None:
+        evaluated_rows = precomputed_rows
+    else:
+        for idx, entry in enumerate(mod_units, 1):
+            mod, folder_name, detected_file_name, detected_file_path = _build_mod_query_from_entry(
+                updater, scanner, entry
+            )
+            local_ver = _extract_local_version_token(
+                detected_file_name or folder_name,
+                detected_file_path,
+                manifest_entries,
+                folder_name=folder_name,
+            )
+            if local_ver:
+                mod["current_version"] = local_ver
+
+            display_label = (
+                f"{folder_name} ({mod['name']})"
+                if mod.get("name") and mod["name"] != folder_name
+                else folder_name
+            )
+            print(f"  [{idx:2d}/{len(mod_units)}] 🩺 진단 중: {display_label}...")
+            res = updater.check_mod_update(mod)
+
+            if "error" in res:
+                err_msg = res["error"]
+                evaluated_rows.append({
+                    "idx": idx,
+                    "folder_name": folder_name,
+                    "file_name": mod.get("name") or folder_name,
+                    "file_path": detected_file_path or entry.get("primary_file_path") or "",
+                    "unit_files": entry.get("unit_files", []),
+                    "mod_type": entry.get("mod_type", ""),
+                    "local_ver": local_ver or "버전 미표기",
+                    "remote_ver": "-",
+                    "status_code": "error",
+                    "status_plain": f"조회 실패 ({err_msg})",
+                    "page_url": "",
+                    "res": res,
+                })
+                continue
+
+            remote_ver_label = res.get("latest_version", "-")
+            if res.get("link_not_found") or (not res.get("page_url") and not res.get("download_url")):
+                remote_ver_label = "링크를 찾을 수 없습니다."
+                status_code = "manual_check"
+                status_plain = "링크를 찾을 수 없습니다."
+            elif res.get("is_paid") and not local_ver:
+                status_code = "manual_check"
+                status_plain = "유료 상품 (자동 다운로드 불가)"
+            else:
+                status_code, _, status_plain = _compare_local_and_remote_version(
+                    local_ver, remote_ver_label, res
+                )
+
+            unit_dir_path = Path(entry["path"]) if entry.get("path") else (scanner.mods_folder / folder_name)
+            if unit_dir_path.is_file():
+                unit_dir_path = unit_dir_path.parent
+            target_fp = Path(detected_file_path) if detected_file_path else None
+
+            if status_code == "update_needed":
+                if _verify_local_matches_remote_zip_tail(unit_dir_path, res, target_file_path=target_fp) is True:
+                    from src.finder import extract_version_from_filename
+                    rem_tok = (
+                        extract_version_from_filename(str(remote_ver_label or ""))
+                        or extract_version_from_filename(str(res.get("detected_filename") or ""))
+                        or extract_version_from_filename(str(res.get("asset_name") or ""))
+                    )
+                    if rem_tok:
+                        local_ver = rem_tok
+                    status_code = "up_to_date"
+                    status_plain = "최신 상태"
+            elif status_code == "manual_check" and res.get("direct_file_detected"):
+                match_state = _verify_local_matches_remote_zip_tail(unit_dir_path, res, target_file_path=target_fp)
+                if match_state is True:
+                    if not local_ver:
+                        local_ver = "최신본 일치"
+                    status_code = "up_to_date"
+                    status_plain = "최신 상태 (파일 일치)"
+                elif match_state is False:
+                    status_code = "update_needed"
+                    status_plain = "업데이트 필요"
+
+            page_link = (
+                res.get("page_url")
+                or res.get("post_link")
+                or res.get("patreon_url")
+                or res.get("postype_url")
+                or res.get("download_url")
+                or ""
+            )
+
+            evaluated_rows.append({
+                "idx": idx,
+                "folder_name": folder_name,
+                "file_name": mod.get("name") or folder_name,
+                "file_path": detected_file_path or entry.get("primary_file_path") or "",
+                "unit_files": entry.get("unit_files", []),
+                "mod_type": entry.get("mod_type", ""),
+                "local_ver": local_ver or "버전 미표기",
+                "remote_ver": remote_ver_label,
+                "status_code": status_code,
+                "status_plain": status_plain,
+                "page_url": page_link,
+                "res": res,
+            })
+
+    # 감지 성공 목록 vs 웹 링크 미발견/버전 매칭 실패 목록 분류
+    matched_success_rows: List[dict] = []
+    failed_or_unmatched_rows: List[dict] = []
+
+    for r in evaluated_rows:
+        res_obj = r.get("res") or {}
+        page_u = r.get("page_url") or ""
+        rem_v = str(r.get("remote_ver") or "")
+        is_link_missing = bool(res_obj.get("link_not_found") or not page_u or rem_v == "링크를 찾을 수 없습니다.")
+        is_ver_failed = bool(
+            r.get("status_code") in ("manual_check", "error")
+            or rem_v in ("-", "수동 확인 필요")
+            or "수동 확인" in rem_v
+            or "자동 다운로드 보류" in str(res_obj.get("verification_note") or "")
+        )
+        if not is_link_missing:
+            matched_success_rows.append(r)
+        if is_link_missing or is_ver_failed:
+            failed_or_unmatched_rows.append(r)
+
+    excluded_top = diag.get("excluded_top_folders", [])
+    excluded_sub = diag.get("excluded_subfolders", [])
+    pkg_only = diag.get("package_only_folders", [])
+    multi_scr = diag.get("multi_script_folders", [])
+    merged_units = diag.get("merged_unit_files", [])
+    root_diag = diag.get("root_files_diagnostics", [])
+    unaccounted = diag.get("unaccounted_files", [])
+
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    lines: List[str] = []
+    lines.append("=" * 90)
+    lines.append("심즈 4 모드 자동 업데이터 (Sims 4 Mod Auto Updater) v0.1.4 - 모드 스캔 & 누락 원인 진단 리포트")
+    lines.append("=" * 90)
+    lines.append(f"- 생성 일시: {now_str}")
+    lines.append("- 대상 Mods 경로: ./Mods (개인정보 보호를 위해 상대 경로 표기)")
+    lines.append(f"- 전체 모드 파일 수: 총 {scan_summary.get('total_count', 0)}개 (.package: {scan_summary.get('package_count', 0)}개, .ts4script: {scan_summary.get('script_count', 0)}개)")
+    lines.append(f"- 업데이트 점검 대상 개별 모드(Mod Unit): 총 {len(mod_units)}개")
+    lines.append(f"- 웹 배포처 URL 매칭 성공 모드: {len(matched_success_rows)}개")
+    lines.append(f"- 웹 배포처 링크 미발견 또는 버전 매칭 실패/수동확인 모드: {len(failed_or_unmatched_rows)}개")
+    lines.append(
+        f"- 스캔 제외/병합 현황: 최상위 제외 폴더 {len(excluded_top)}개 | 제외 하위폴더 {len(excluded_sub)}개 | "
+        f"다중 .ts4script 폴더 {len(multi_scr)}개 | 부속 파일 병합 그룹 {len(merged_units)}개 | "
+        f"루트 단일 파일 {len(root_diag)}개 | 미분류 사각지대 파일 {len(unaccounted)}개"
+    )
+    lines.append("=" * 90)
+    lines.append("")
+
+    # [섹션 1] 감지 성공된 모드 목록
+    lines.append("━" * 90)
+    lines.append(f"[1] 감지 및 배포처 매칭 성공 모드 목록 (총 {len(matched_success_rows)}개 / 전체 감지 유닛 {len(evaluated_rows)}개)")
+    lines.append("━" * 90)
+    if not matched_success_rows:
+        lines.append("  (감지 및 배포처 매칭에 성공한 모드가 없습니다.)")
+    else:
+        for idx_m, r in enumerate(matched_success_rows, 1):
+            res_obj = r.get("res") or {}
+            meta_obj = res_obj.get("extracted_meta") or {}
+            creator_name = (
+                res_obj.get("matched_creator")
+                or meta_obj.get("inferred_creator")
+                or (meta_obj.get("creators")[0] if meta_obj.get("creators") else "")
+                or "제작자 자동 감지"
+            )
+            f_diag = res_obj.get("finder_diagnostics") or {}
+            stage = f_diag.get("match_stage") or "web_or_catalog"
+            u_files = [Path(p).name for p in (r.get("unit_files") or [])]
+            bundle_note = f" (그룹 내 총 {len(u_files)}개 파일 묶임)" if len(u_files) > 1 else ""
+
+            lines.append(
+                f"  {idx_m:02d}. 폴더/파일명: [{r['folder_name']}] › {r['file_name']}{bundle_note}"
+            )
+            lines.append(
+                f"      - 상대 경로: {_to_rel_mods_path(r.get('file_path'), scanner.mods_folder)}"
+            )
+            lines.append(
+                f"      - 분류: {r.get('mod_type') or '-'} | 매칭 방식: {stage}"
+            )
+            lines.append(
+                f"      - 매칭된 제작자: {creator_name}"
+            )
+            lines.append(
+                f"      - 배포처 URL: {r.get('page_url') or '-'}"
+            )
+            lines.append(
+                f"      - 버전 및 상태: 내 로컬 버전 [{r.get('local_ver')}] / 웹 최신 버전 [{r.get('remote_ver')}] → {r.get('status_plain')}"
+            )
+            lines.append("")
+
+    # [섹션 2] 스캔에서 제외되었거나 대표 파일로 병합/생략된 폴더 및 파일 목록과 사유
+    lines.append("━" * 90)
+    lines.append("[2] 스캔에서 제외되었거나 대표 파일로 병합/생략된 폴더 및 파일 상세 사유")
+    lines.append("━" * 90)
+
+    # 2-1. 루트 폴더(Mods/)의 단일 파일 진단
+    lines.append(f"\n  ▶ 2-1. 루트 폴더(Mods/)의 단일 파일 진단 (총 {len(root_diag)}개)")
+    if not root_diag:
+        lines.append("    - Mods 루트 폴더에 직속 단일 파일이 없습니다.")
+    else:
+        for rd in root_diag:
+            lines.append(f"    • 파일명: {rd['file_name']} (상대 경로: Mods\\{rd['file_name']})")
+            lines.append(f"      - 처리 상태: {rd['status']}")
+            lines.append(f"      - 사유: {rd['reason']}")
+
+    # 2-2. .package 전용 폴더 분류 및 제외/포함 사유
+    lines.append(f"\n  ▶ 2-2. .package 전용 폴더(.ts4script 없음) 및 CC 제외 폴더 분류 내역 (총 {len(pkg_only)}개)")
+    if not pkg_only:
+        lines.append("    - 해당되는 .package 전용 폴더가 없습니다.")
+    else:
+        for pf in pkg_only:
+            lines.append(
+                f"    • 폴더명: [{pf['folder_name']}] (상대 경로: Mods\\{pf['folder_name']} | .package {pf['package_count']}개, .ts4script {pf['script_count']}개)"
+            )
+            lines.append(f"      - 처리 상태: {pf['status']}")
+            lines.append(f"      - 사유: {pf['reason']}")
+
+    # 2-3. 한 폴더 안에 여러 개의 .ts4script가 들어있어 대표 1개 외 []개가 누락/병합된 내역
+    lines.append(
+        f"\n  ▶ 2-3. 한 폴더 안에 여러 개의 .ts4script가 들어있어 대표 1개 외 [N]개가 병합/생략된 폴더 (총 {len(multi_scr)}개)"
+    )
+    if not multi_scr:
+        lines.append("    - 한 폴더 안에 2개 이상의 .ts4script가 들어있는 폴더가 없습니다.")
+    else:
+        for ms in multi_scr:
+            lines.append(
+                f"    • 폴더명: [{ms['folder_name']}] (상대 경로: Mods\\{ms['folder_name']} | .ts4script 총 {ms['total_scripts']}개)"
+            )
+            lines.append(
+                f"      - 폴더 대표 1개: {ms['representative_script']} / 외 [{ms['omitted_in_folder_view_count']}]개: {', '.join(ms['other_scripts'])}"
+            )
+            lines.append(f"      - 사유: {ms['reason']}")
+
+    # 2-4. 동일 모드 그룹(Mod Unit) 내부에서 대표 1개 외 부속 파일로 묶여 생략된 파일 내역
+    lines.append(
+        f"\n  ▶ 2-4. 동일 모드 그룹 내 대표 파일 1개 외 부속 파일로 묶여 개별 검색에서 생략된 항목 (총 {len(merged_units)}개 그룹)"
+    )
+    if not merged_units:
+        lines.append("    - 다중 파일로 병합된 모드 그룹이 없습니다.")
+    else:
+        for mu in merged_units:
+            lines.append(
+                f"    • 위치/대표 파일: [{mu['folder_name']}] › 대표 1개: {mu['primary_file']} (외 [{mu['omitted_count']}]개 병합됨)"
+            )
+            lines.append(f"      - 사유: {mu['reason']}")
+            if mu["omitted_scripts"]:
+                lines.append(f"      - 생략된 부속 .ts4script ({len(mu['omitted_scripts'])}개): {', '.join(mu['omitted_scripts'])}")
+            if mu["omitted_packages"]:
+                pkg_preview = ", ".join(mu["omitted_packages"][:15])
+                if len(mu["omitted_packages"]) > 15:
+                    pkg_preview += f" 외 {len(mu['omitted_packages']) - 15}개"
+                lines.append(f"      - 생략된 부속 .package ({len(mu['omitted_packages'])}개): {pkg_preview}")
+
+    # 2-5. 모드 폴더 내부 보조/옵션/백업/CC 하위폴더로 분류되어 제외된 하위폴더
+    lines.append(
+        f"\n  ▶ 2-5. 모드 폴더 내부의 보조/옵션/백업/CC 하위폴더로 분류되어 스캔에서 제외된 하위폴더 (총 {len(excluded_sub)}개)"
+    )
+    if not excluded_sub:
+        lines.append("    - 제외된 내부 보조/CC 하위폴더가 없습니다.")
+    else:
+        for es in excluded_sub:
+            f_prev = ", ".join(es["files"][:10])
+            if len(es["files"]) > 10:
+                f_prev += f" 외 {len(es['files']) - 10}개"
+            lines.append(
+                f"    • 하위폴더 상대 경로: [Mods\\{es['folder_name']}] (.package {es['package_count']}개, .ts4script {es['script_count']}개)"
+            )
+            lines.append(f"      - 사유: {es['reason']}")
+            lines.append(f"      - 포함 파일: {f_prev}")
+
+    # 2-6. 최상위 제외 폴더 (빈 폴더 / 기타) 및 전체 파일 전수 대조 검증
+    empty_top = [et for et in excluded_top if et["package_count"] == 0 and et["script_count"] == 0]
+    lines.append(f"\n  ▶ 2-6. 모드 파일이 없는 빈 폴더 / 기타 제외 폴더 (총 {len(empty_top)}개) 및 전수 대조 검증")
+    if empty_top:
+        for et in empty_top:
+            lines.append(f"    • 폴더 상대 경로: [Mods\\{et['folder_name']}] → 사유: {et['reason']}")
+    else:
+        lines.append("    - 모드 파일이 없는 빈 최상위 폴더가 없습니다.")
+
+    if unaccounted:
+        lines.append(f"    ⚠️ [미분류 누락 파일 감지: {len(unaccounted)}개]")
+        for ua in unaccounted:
+            lines.append(f"      • Mods\\{ua['relative_path']} → {ua['reason']}")
+    else:
+        lines.append(
+            f"    ✅ [전수 대조 완료] Mods 폴더 내 모든 .package / .ts4script 파일(총 {scan_summary.get('total_count', 0)}개)이 "
+            "단 1개의 미분류 누락도 없이 위 포함/제외/병합 항목에 100% 추적되었습니다."
+        )
+    lines.append("")
+
+    # [섹션 3] 웹 배포처 링크를 못 찾았거나 버전 매칭에 실패한 모드 상세 진단
+    lines.append("━" * 90)
+    lines.append(
+        f"[3] 웹 배포처 링크 미발견 또는 버전 매칭 실패 모드 상세 진단 (총 {len(failed_or_unmatched_rows)}개)"
+    )
+    lines.append("━" * 90)
+    if not failed_or_unmatched_rows:
+        lines.append("  🎉 모든 감지 모드의 웹 배포처 링크 및 버전 매칭이 100% 성공했습니다!")
+    else:
+        for idx_f, r in enumerate(failed_or_unmatched_rows, 1):
+            res_obj = r.get("res") or {}
+            fp_str = r.get("file_path") or ""
+            meta_obj = res_obj.get("extracted_meta")
+            if not meta_obj and fp_str:
+                try:
+                    meta_obj = extract_mod_file_metadata(fp_str)
+                except Exception:
+                    meta_obj = {}
+            meta_obj = meta_obj or {}
+
+            u_files_names = [Path(p).name for p in (r.get("unit_files") or [])]
+            rel_fp_str = _to_rel_mods_path(fp_str, scanner.mods_folder)
+            lines.append(
+                f"  [{idx_f:02d}] 로컬 폴더 / 파일명: [{r['folder_name']}] › {r['file_name']}"
+            )
+            lines.append(f"    • 로컬 파일 상대 경로: {rel_fp_str}")
+            if len(u_files_names) > 1:
+                lines.append(f"    • 그룹 내 묶인 파일 목록 ({len(u_files_names)}개): {', '.join(u_files_names)}")
+            lines.append(
+                f"    • 버전/링크 상태: 로컬 버전='{r.get('local_ver')}' | 웹 최신 버전='{r.get('remote_ver')}' | "
+                f"판정='{r.get('status_plain')}' | 배포처 URL='{r.get('page_url') or '(미발견)'}'"
+            )
+            lines.append("    • [extract_mod_file_metadata 추출 내부 메타데이터]:")
+            lines.extend(_format_metadata_for_report(meta_obj))
+            lines.append("    • [검색 실패 / 버전 매칭 실패 상세 사유]:")
+            for reason_line in _build_failure_reasons_for_report(r, res_obj, meta_obj):
+                lines.append(f"      - {reason_line}")
+            lines.append("")
+
+    lines.append("=" * 90)
+    lines.append("End of Diagnostic Report (개인정보/절대 경로 미포함 · 이 scan_report.txt 파일을 개발자에게 전달해 주세요.)")
+    lines.append("=" * 90)
+
+    sanitized_content = _sanitize_report_privacy("\n".join(lines), scanner.mods_folder)
+    report_path.write_text(sanitized_content, encoding="utf-8")
+
+    stats = {
+        "total_units": len(mod_units),
+        "matched_url_count": len(matched_success_rows),
+        "failed_or_manual_count": len(failed_or_unmatched_rows),
+        "excluded_top_count": len(excluded_top),
+        "excluded_sub_count": len(excluded_sub),
+        "multi_script_count": len(multi_scr),
+        "merged_unit_count": len(merged_units),
+        "unaccounted_count": len(unaccounted),
+    }
+    return report_path, stats
+
+
+def run_diagnostic_report_menu(updater: ModUpdater, scanner: ModScanner) -> bool:
+    """7번 메뉴: 모드 누락 원인을 추적하는 정밀 진단 리포트(scan_report.txt)를 생성합니다."""
+    if not scanner.mods_folder.exists():
+        print("\n[!] Mods 폴더가 존재하지 않습니다. 6번 메뉴에서 Mods 폴더 경로를 먼저 확인해 주세요.")
+        return True
+
+    report_file = _get_base_dir() / "scan_report.txt"
+    if USE_RICH:
+        console.print(Panel(
+            "[bold cyan]🩺 모드 누락 & 웹 매칭 원인 정밀 진단 리포트 (scan_report.txt) 생성[/bold cyan]\n\n"
+            "• [bold]감지 성공 모드:[/bold] 폴더/파일명, 매칭된 제작자, 공식 배포처 URL, 버전 상태 기록\n"
+            "• [bold]스캔 제외/병합 추적:[/bold] 루트 단일 파일, .package 전용/CC 폴더, 한 폴더 내 다중 .ts4script 중 대표 1개 외 [N]개 병합 사유 기록\n"
+            "• [bold]웹 링크 미발견/버전 매칭 실패:[/bold] 로컬 파일명, [cyan]extract_mod_file_metadata[/cyan] 내부 메타데이터, 상세 실패 사유 기록\n"
+            "• [bold green]🔒 개인정보 보호:[/bold green] 모든 경로는 상대 경로([cyan]./Mods/...[/cyan])로만 기록되어 PC 사용자명이 절대 노출되지 않습니다.",
+            title="[bold cyan]📋 7. 모드 누락/매칭 진단 리포트 생성[/bold cyan]",
+            border_style="cyan",
+        ))
+    else:
+        print("\n" + "=" * 70)
+        print("🩺 [7. 모드 누락 & 웹 매칭 원인 정밀 진단 리포트 (scan_report.txt) 생성]")
+        print("※ 개인정보 보호를 위해 모든 경로는 상대 경로(./Mods/...)로만 기록됩니다.")
+        print("=" * 70)
+
+    saved_path, stats = generate_scan_diagnostic_report(updater, scanner, report_path=report_file)
+    rel_report_disp = f"./{saved_path.name}"
+
+    if USE_RICH:
+        console.print(Panel(
+            f"[bold green]✅ 진단 리포트 생성이 완료되었습니다![/bold green]\n\n"
+            f"• [bold]저장된 파일 경로 (상대 경로):[/bold] [bold yellow]{escape(rel_report_disp)}[/bold yellow]\n"
+            f"• [bold]감지된 개별 모드:[/bold] 총 {stats['total_units']}개 (배포처 URL 매칭 성공: [green]{stats['matched_url_count']}개[/green])\n"
+            f"• [bold]스캔 제외/병합 추적:[/bold] 제외 폴더 {stats['excluded_top_count']}개, 제외 하위폴더 {stats['excluded_sub_count']}개, "
+            f"다중 .ts4script 폴더 {stats['multi_script_count']}개, 부속 병합 그룹 {stats['merged_unit_count']}개\n"
+            f"• [bold]링크 미발견 / 버전 수동 확인 상세 분석:[/bold] [yellow]{stats['failed_or_manual_count']}개[/yellow]\n"
+            f"• [bold]미분류 사각지대 파일:[/bold] {stats['unaccounted_count']}개 (100% 전수 추적 완료)\n\n"
+            "[dim]💡 모든 경로가 상대 경로로 기록되어 PC 사용자명이 노출되지 않습니다. 생성된 scan_report.txt 파일 하나만 개발자에게 보내주세요.[/dim]",
+            title="[bold green]📄 scan_report.txt 생성 완료[/bold green]",
+            border_style="green",
+        ))
+    else:
+        print("\n" + "=" * 70)
+        print("✅ 진단 리포트(scan_report.txt) 생성이 완료되었습니다!")
+        print(f"- 저장 위치 (상대 경로): {rel_report_disp}")
+        print(f"- 감지된 개별 모드: 총 {stats['total_units']}개 (URL 매칭 성공: {stats['matched_url_count']}개)")
+        print(f"- 링크 미발견 / 버전 매칭 수동 확인 상세 기록: {stats['failed_or_manual_count']}개")
+        print("=" * 70)
+
+    while True:
+        print("\n[원하시는 작업을 선택하세요]")
+        print("1. 생성된 scan_report.txt 파일 바로 열기")
+        print("2. 다른 메뉴로 전환 (메인 메뉴)")
+        print("3. 프로그램 종료")
+        ch = input("\n선택 (1/2/3, 기본 2) > ").strip().lower()
+        if ch == "1":
+            try:
+                if hasattr(os, "startfile"):
+                    os.startfile(str(saved_path))
+                    print(f"✅ [{rel_report_disp}] 파일을 열었습니다.")
+                else:
+                    print(f"📄 파일 경로: {rel_report_disp}")
+            except Exception as e:
+                print(f"[!] 파일 열기 실패: {e}")
+        elif ch in ("", "2", "b", "back"):
+            return True
+        elif ch in ("3", "q", "exit"):
+            return False
+        else:
+            print("[!] 1, 2, 3 중 하나를 입력해 주세요.")
 
 
 def check_update_needed_only(updater: ModUpdater, scanner: ModScanner) -> bool:
     """4번 메뉴(모드 업데이트 필요 여부 확인):
     어떠한 파일 다운로드나 덮어쓰기도 수행하지 않고(100% 읽기 전용),
-    현재 보유 중인 모드들의 로컬 버전과 웹 최신 버전을 대조하여 업데이트 필요 유무만 빠르게 점검합니다.
+    현재 보유 중인 개별 모드 전체(스크립트 모드, 패키지 모드, 한글화 모드, 루트 파일 포함)의
+    로컬 버전/파일과 웹 최신 버전을 대조하여 업데이트 필요 유무만 빠르게 점검합니다.
     반환값:
         True: 메인 메뉴 유지 (다른 메뉴로 전환)
         False: 프로그램 종료
     """
     user_mods_res = scanner.scan_user_mods()
-    folder_mods = user_mods_res.get("folder_mods", [])
+    mod_units = user_mods_res.get("mod_units", [])
 
-    script_mods = [
-        m for m in folder_mods
-        if m.get("script_count", 0) > 0 or "스크립트" in m.get("mod_type", "") or "한글" in m.get("mod_type", "")
-    ]
-
-    if not script_mods:
-        print("\n[!] Mods 폴더에서 점검 대상(스크립트/한글화) 모드가 감지되지 않았습니다. 1번 메뉴에서 Mods 폴더 상태를 확인하세요.")
+    if not mod_units:
+        print("\n[!] Mods 폴더에서 점검 대상 모드가 감지되지 않았습니다. 1번 메뉴에서 Mods 폴더 상태를 확인하세요.")
         return True
 
     if USE_RICH:
         console.print(Panel(
             f"[bold green]🔒 안심 읽기 전용 점검 모드 (파일 다운로드 및 수정 없음)[/bold green]\n"
-            f"내 컴퓨터의 모드 파일을 일절 건드리지 않고, 보유 중인 모드 [bold cyan]{len(script_mods)}개[/bold cyan]의\n"
-            f"[bold]내 로컬 버전[/bold]과 [bold]웹 최신 버전[/bold]만 비교하여 업데이트 필요 여부를 알려드립니다.",
+            f"내 컴퓨터의 모드 파일을 일절 건드리지 않고, 보유 중인 개별 모드 [bold cyan]{len(mod_units)}개[/bold cyan]의\n"
+            f"[bold]내 로컬 버전/파일[/bold]과 [bold]웹 최신 버전[/bold]만 비교하여 업데이트 필요 여부를 알려드립니다.",
             title="[bold cyan]🔎 4. 모드 업데이트 필요 여부 확인[/bold cyan]",
             border_style="green",
         ))
     else:
         print("\n" + "=" * 70)
-        print("🔎 [4. 모드 업데이트 필요 여부 확인 - 읽기 전용 안심 점검]")
+        print(f"🔎 [4. 모드 업데이트 필요 여부 확인 - 읽기 전용 안심 점검 (총 {len(mod_units)}개 개별 모드)]")
         print("※ 내 컴퓨터의 파일을 일절 다운로드하거나 덮어쓰지 않고 버전만 비교합니다.")
         print("=" * 70)
 
     manifest_entries = updater.load_manifest()
     check_rows: List[dict] = []
 
-    for idx, entry in enumerate(script_mods, 1):
-        folder_name = entry["name"]
-        mod = updater.infer_mod_config(folder_name)
-        mod["folder_name"] = folder_name
-
-        info = scanner.detect_mod_installed(mod)
-        detected_file_name = None
-        detected_file_path = None
-        if info.get("scripts"):
-            chosen_scr = next(
-                (p for p in info["scripts"] if "cmd_center" in p.name.lower() or "scripts" in p.name.lower() or "main" in p.name.lower()),
-                info["scripts"][0],
-            )
-            detected_file_name = chosen_scr.name
-            detected_file_path = str(chosen_scr)
-        elif info.get("packages"):
-            chosen_pkg = next(
-                (p for p in info["packages"] if "!wamtik" in p.name.lower() or "_wamtik" in p.name.lower()),
-                info["packages"][0],
-            )
-            detected_file_name = chosen_pkg.name
-            detected_file_path = str(chosen_pkg)
-
-        if detected_file_name:
-            mod["name"] = detected_file_name
-            f_lower = detected_file_name.lower()
-            is_core_special_file = (
-                (mod.get("source_type") == "mccc" and "mc_" in f_lower)
-                or (mod.get("source_type") == "wickedwhims" and "turbodriver_wickedwhims" in f_lower)
-                or (mod.get("source_type") == "barambyul" and "wamtik" in f_lower)
-            )
-            if not is_core_special_file:
-                mod["source_type"] = "generic_web"
-                mod["download_url"] = ""
-                mod["homepage"] = ""
-                mod["creator"] = "파일 내부 메타데이터 자동 감지"
-        if detected_file_path:
-            mod["file_path"] = detected_file_path
+    for idx, entry in enumerate(mod_units, 1):
+        mod, folder_name, detected_file_name, detected_file_path = _build_mod_query_from_entry(
+            updater, scanner, entry
+        )
 
         local_ver = _extract_local_version_token(
             detected_file_name or folder_name,
             detected_file_path,
             manifest_entries,
+            folder_name=folder_name,
         )
         if local_ver:
             mod["current_version"] = local_ver
 
         display_label = f"{folder_name} ({mod['name']})" if mod.get("name") and mod["name"] != folder_name else folder_name
-        print(f"  [{idx:2d}/{len(script_mods)}] 🔎 {display_label} 버전 대조 중...")
+        print(f"  [{idx:2d}/{len(mod_units)}] 🔎 {display_label} 버전 대조 중...")
 
         res = updater.check_mod_update(mod)
         if "error" in res:
@@ -1459,29 +2314,63 @@ def check_update_needed_only(updater: ModUpdater, scanner: ModScanner) -> bool:
                 "idx": idx,
                 "folder_name": folder_name,
                 "file_name": mod.get("name") or folder_name,
+                "file_path": detected_file_path or entry.get("primary_file_path") or "",
+                "unit_files": entry.get("unit_files", []),
+                "mod_type": entry.get("mod_type", ""),
                 "local_ver": local_ver or "버전 미표기",
                 "remote_ver": "-",
                 "status_code": "error",
                 "status_rich": f"[red]❌ 조회 실패 ({escape(err_msg)})[/red]",
                 "status_plain": f"조회 실패 ({err_msg})",
                 "page_url": "",
+                "res": res,
             })
             continue
 
         remote_ver_label = res.get("latest_version", "-")
-        status_code, status_rich, status_plain = _compare_local_and_remote_version(local_ver, remote_ver_label, res)
-        if status_code == "update_needed" and _verify_local_matches_remote_zip_tail(scanner.mods_folder / folder_name, res):
-            from src.finder import extract_version_from_filename
-            rem_tok = (
-                extract_version_from_filename(str(remote_ver_label or ""))
-                or extract_version_from_filename(str(res.get("detected_filename") or ""))
-                or extract_version_from_filename(str(res.get("asset_name") or ""))
-            )
-            if rem_tok:
-                local_ver = rem_tok
-            status_code = "up_to_date"
-            status_rich = "[bold green]✅ 최신 상태[/bold green]"
-            status_plain = "최신 상태"
+        if res.get("link_not_found") or (not res.get("page_url") and not res.get("download_url")):
+            remote_ver_label = "링크를 찾을 수 없습니다."
+            status_code = "manual_check"
+            status_rich = "[dim]❓ 링크를 찾을 수 없습니다.[/dim]"
+            status_plain = "링크를 찾을 수 없습니다."
+        elif res.get("is_paid") and not local_ver:
+            status_code = "manual_check"
+            status_rich = "[yellow]🔒 유료 상품 (자동 다운로드 불가)[/yellow]"
+            status_plain = "유료 상품 (자동 다운로드 불가)"
+        else:
+            status_code, status_rich, status_plain = _compare_local_and_remote_version(local_ver, remote_ver_label, res)
+
+        unit_dir_path = Path(entry["path"]) if entry.get("path") else (scanner.mods_folder / folder_name)
+        if unit_dir_path.is_file():
+            unit_dir_path = unit_dir_path.parent
+        target_fp = Path(detected_file_path) if detected_file_path else None
+
+        if status_code == "update_needed":
+            if _verify_local_matches_remote_zip_tail(unit_dir_path, res, target_file_path=target_fp) is True:
+                from src.finder import extract_version_from_filename
+                rem_tok = (
+                    extract_version_from_filename(str(remote_ver_label or ""))
+                    or extract_version_from_filename(str(res.get("detected_filename") or ""))
+                    or extract_version_from_filename(str(res.get("asset_name") or ""))
+                )
+                if rem_tok:
+                    local_ver = rem_tok
+                status_code = "up_to_date"
+                status_rich = "[bold green]✅ 최신 상태[/bold green]"
+                status_plain = "최신 상태"
+        elif status_code == "manual_check" and res.get("direct_file_detected"):
+            match_state = _verify_local_matches_remote_zip_tail(unit_dir_path, res, target_file_path=target_fp)
+            if match_state is True:
+                if not local_ver:
+                    local_ver = "최신본 일치"
+                status_code = "up_to_date"
+                status_rich = "[bold green]✅ 최신 상태 (파일 일치)[/bold green]"
+                status_plain = "최신 상태 (파일 일치)"
+            elif match_state is False:
+                status_code = "update_needed"
+                status_rich = "[bold yellow]🔄 업데이트 필요[/bold yellow]"
+                status_plain = "업데이트 필요"
+
         page_link = (
             res.get("page_url")
             or res.get("post_link")
@@ -1495,13 +2384,25 @@ def check_update_needed_only(updater: ModUpdater, scanner: ModScanner) -> bool:
             "idx": idx,
             "folder_name": folder_name,
             "file_name": mod.get("name") or folder_name,
+            "file_path": detected_file_path or entry.get("primary_file_path") or "",
+            "unit_files": entry.get("unit_files", []),
+            "mod_type": entry.get("mod_type", ""),
             "local_ver": local_ver or "버전 미표기",
             "remote_ver": remote_ver_label,
             "status_code": status_code,
             "status_rich": status_rich,
             "status_plain": status_plain,
             "page_url": page_link,
+            "res": res,
         })
+
+    report_saved_path = None
+    try:
+        report_saved_path, _ = generate_scan_diagnostic_report(
+            updater, scanner, precomputed_rows=check_rows
+        )
+    except Exception:
+        pass
 
     cnt_update = sum(1 for r in check_rows if r["status_code"] == "update_needed")
     cnt_latest = sum(1 for r in check_rows if r["status_code"] == "up_to_date")
@@ -1511,7 +2412,7 @@ def check_update_needed_only(updater: ModUpdater, scanner: ModScanner) -> bool:
     if USE_RICH:
         cmp_table = Table(title="\n📊 보유 모드 업데이트 필요 여부 비교표 (읽기 전용 점검)")
         cmp_table.add_column("번호", justify="right", style="cyan", width=4)
-        cmp_table.add_column("모드 폴더명", style="bold white")
+        cmp_table.add_column("위치 (폴더)", style="bold white")
         cmp_table.add_column("기준 파일명", style="dim")
         cmp_table.add_column("내 로컬 버전", justify="center", style="magenta")
         cmp_table.add_column("웹 최신 버전", justify="center", style="green")
@@ -1528,11 +2429,17 @@ def check_update_needed_only(updater: ModUpdater, scanner: ModScanner) -> bool:
             )
         console.print(cmp_table)
 
+        report_line_rich = (
+            f"\n• [bold magenta]📄 진단 리포트 자동 저장 (상대 경로):[/bold magenta] ./{escape(report_saved_path.name)}"
+            if report_saved_path
+            else ""
+        )
         console.print(Panel(
-            f"• [bold yellow]🔄 업데이트 필요:[/bold yellow] {cnt_update}개 모드 폴더\n"
-            f"• [bold green]✅ 최신 상태 (업데이트 불필요):[/bold green] {cnt_latest}개 모드 폴더\n"
-            f"• [bold cyan]🔍 배포처 직접 확인 권장 (버전 미표기):[/bold cyan] {cnt_manual}개 모드 폴더"
-            + (f"\n• [bold red]❌ 조회 실패:[/bold red] {cnt_error}개 모드 폴더" if cnt_error else "")
+            f"• [bold yellow]🔄 업데이트 필요:[/bold yellow] {cnt_update}개 모드\n"
+            f"• [bold green]✅ 최신 상태 (업데이트 불필요):[/bold green] {cnt_latest}개 모드\n"
+            f"• [bold cyan]🔍 배포처 직접 확인 권장 (버전 미표기):[/bold cyan] {cnt_manual}개 모드"
+            + (f"\n• [bold red]❌ 조회 실패:[/bold red] {cnt_error}개 모드" if cnt_error else "")
+            + report_line_rich
             + "\n\n[dim]※ 이 점검은 읽기 전용으로 수행되었으며, 어떠한 파일도 다운로드하거나 변경하지 않았습니다.[/dim]",
             title="[bold green]✅ 업데이트 필요 여부 점검 요약[/bold green]",
             border_style="green",
@@ -1551,6 +2458,8 @@ def check_update_needed_only(updater: ModUpdater, scanner: ModScanner) -> bool:
         print(f"- 🔍 배포처 직접 확인 권장 (버전 미표기): {cnt_manual}개")
         if cnt_error:
             print(f"- ❌ 조회 실패: {cnt_error}개")
+        if report_saved_path:
+            print(f"- 📄 진단 리포트 자동 저장 (상대 경로): ./{report_saved_path.name}")
         print("※ 이 점검은 읽기 전용으로 수행되었으며, 어떠한 파일도 다운로드하거나 변경하지 않았습니다.")
         print("=" * 78)
 
@@ -1558,9 +2467,10 @@ def check_update_needed_only(updater: ModUpdater, scanner: ModScanner) -> bool:
         print("\n[원하시는 작업을 선택하세요]")
         print("1. 다른 메뉴로 전환")
         print("2. 공식 배포 페이지 웹 브라우저로 열기 (직접 눈으로 확인/수동 다운로드)")
-        print("3. 프로그램 종료")
+        print("3. 생성된 진단 리포트(scan_report.txt) 열기")
+        print("4. 프로그램 종료")
 
-        act = input("\n선택 (1/2/3) > ").strip().lower()
+        act = input("\n선택 (1/2/3/4) > ").strip().lower()
         if act in ["1", "b", "back"]:
             print("\n➡️ 다른 메뉴(메인 메뉴)로 전환합니다.")
             return True
@@ -1598,10 +2508,17 @@ def check_update_needed_only(updater: ModUpdater, scanner: ModScanner) -> bool:
                         print("[!] 해당 모드의 공식 배포 페이지 링크를 찾지 못했습니다.")
                 else:
                     print(f"[!] 1~{len(check_rows)} 번호, u, a 또는 b(이전으로)를 입력해 주세요.")
-        elif act in ["3", "q", "exit"]:
+        elif act == "3":
+            target_rp = report_saved_path or (_get_base_dir() / "scan_report.txt")
+            if target_rp.exists() and hasattr(os, "startfile"):
+                os.startfile(str(target_rp))
+                print(f"✅ [{target_rp.name}] 파일을 열었습니다.")
+            else:
+                print(f"📄 파일 경로: {target_rp}")
+        elif act in ["4", "q", "exit"]:
             return False
         else:
-            print("\n[!] 1, 2, 3 번호 중 하나를 입력해 주세요.")
+            print("\n[!] 1, 2, 3, 4 번호 중 하나를 입력해 주세요.")
 
 
 def run_update_all(updater: ModUpdater, results):
@@ -1889,7 +2806,7 @@ def run_developer_catalog_test(updater: ModUpdater) -> bool:
                 creator = item.get("creator") or "-"
                 raw_v = str(item.get("version") or "").strip()
                 if raw_v:
-                    ver = raw_v if raw_v.lower().startswith("v") else f"v{raw_v}"
+                    ver = raw_v if (raw_v.lower().startswith("v") or re.match(r"^(?:20\d{2}\.\d{2}\.\d{2}|[ab]\d+\.\d+(?:\.\d+)*)$", raw_v, flags=re.IGNORECASE)) else f"v{raw_v}"
                 else:
                     ver = "수동 확인 필요"
                 first_link = item["links"][0][2] if item.get("links") else "-"
@@ -1903,7 +2820,7 @@ def run_developer_catalog_test(updater: ModUpdater) -> bool:
                 mod_label = item.get("mod_title") or item.get("name") or "-"
                 creator = item.get("creator") or "-"
                 raw_v = str(item.get("version") or "").strip()
-                ver = (raw_v if raw_v.lower().startswith("v") else f"v{raw_v}") if raw_v else "수동 확인 필요"
+                ver = (raw_v if (raw_v.lower().startswith("v") or re.match(r"^(?:20\d{2}\.\d{2}\.\d{2}|[ab]\d+\.\d+(?:\.\d+)*)$", raw_v, flags=re.IGNORECASE)) else f"v{raw_v}") if raw_v else "수동 확인 필요"
                 print(f"  {idx:2d}. {mod_label} | 제작자: {creator} | 버전: {ver}")
             print("   b. 메인 메뉴로 돌아가기")
             print("=" * 70)
@@ -1919,13 +2836,13 @@ def run_developer_catalog_test(updater: ModUpdater) -> bool:
 
         item = KNOWN_CATALOG[int(ch) - 1]
         sample_kw = item["keywords"][0] if item.get("keywords") else item["name"]
-        virtual_fn = sample_kw if sample_kw.lower().endswith((".package", ".ts4script")) else f"{sample_kw}.package"
+        virtual_fn = sample_kw if sample_kw.lower().endswith((".package", ".ts4script", ".zip")) else f"{sample_kw}.package"
         cat_info = check_known_catalog(virtual_fn) or check_known_catalog(item["name"]) or {}
 
         creator_disp = cat_info.get("creator") or item.get("creator") or "자동 감지"
         mod_title_disp = cat_info.get("mod_title") or item.get("mod_title") or item.get("name") or virtual_fn
         ver_raw = cat_info.get("version") or item.get("version") or ""
-        ver_disp = (ver_raw if ver_raw.lower().startswith("v") else f"v{ver_raw}") if ver_raw else "(버전 미표기 / 수동 확인)"
+        ver_disp = (ver_raw if (ver_raw.lower().startswith("v") or re.match(r"^(?:20\d{2}\.\d{2}\.\d{2}|[ab]\d+\.\d+(?:\.\d+)*)$", ver_raw, flags=re.IGNORECASE)) else f"v{ver_raw}") if ver_raw else "(버전 미표기 / 수동 확인)"
 
         if USE_RICH:
             console.print(Panel(
@@ -2048,15 +2965,13 @@ def run_developer_catalog_test(updater: ModUpdater) -> bool:
                         else:
                             print("🔒 선배포(얼리 액세스) / 수동 다운로드 안내 상태로 정상 감지되었습니다.")
 
-                    tested_ok = False
                     if sub_act == "2":
-                        tested_ok = _run_dev_sandbox_download_test(item["name"], virtual_fn, res)
+                        _run_dev_sandbox_download_test(item["name"], virtual_fn, res)
                     elif can_auto_download:
                         dl_q = input("\n🧪 임시 테스트 폴더에 실제 파일을 다운로드하여 압축해제까지 검증해보시겠습니까? (y/n) > ").strip().lower()
                         if dl_q == "y":
-                            tested_ok = _run_dev_sandbox_download_test(item["name"], virtual_fn, res)
-
-                    if page_link and not tested_ok:
+                            _run_dev_sandbox_download_test(item["name"], virtual_fn, res)
+                    elif page_link:
                         open_q = input(f"\n🌐 배포 페이지({page_link})를 웹 브라우저로 열어보시겠습니까? (y/n) > ").strip().lower()
                         if open_q == "y":
                             import webbrowser
@@ -2085,6 +3000,7 @@ def main():
         print("4. 모드 업데이트 필요 여부 확인")
         print("5. 백업 목록 확인")
         print("6. Mods 폴더 경로 수동 변경")
+        print("7. 모드 누락/매칭 진단 리포트 생성 (scan_report.txt)")
         print("q. 종료")
 
         choice = input("\n입력 > ").strip().lower()
@@ -2120,6 +3036,11 @@ def main():
                     print("✅ 경로가 성공적으로 저장되었습니다.")
                 else:
                     print("❌ 해당 경로가 존재하지 않습니다.")
+        elif choice == "7":
+            if not run_diagnostic_report_menu(updater, scanner):
+                print("\n프로그램을 종료합니다. 즐거운 심즈 플레이 되세요!")
+                break
+            continue
         elif choice in ["dev", "test"]:
             if not run_developer_catalog_test(updater):
                 print("\n프로그램을 종료합니다. 즐거운 심즈 플레이 되세요!")

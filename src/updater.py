@@ -1,4 +1,5 @@
 import json
+import re
 import tempfile
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -94,7 +95,7 @@ class ModUpdater:
         """GitHub Releases API를 통해 최신 버전을 조회합니다."""
         api_url = f"https://api.github.com/repos/{repo}/releases/latest"
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.3",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.4",
             "Accept": "application/vnd.github.v3+json"
         }
         try:
@@ -144,7 +145,7 @@ class ModUpdater:
 
         url = "https://deaderpool-mccc.com/downloads.html"
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.3"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.4"
         }
 
         try:
@@ -269,13 +270,138 @@ class ModUpdater:
             "requires_browser": True,
         }
 
-    def check_barambyul_update(self, current_ver: str) -> Dict[str, Any]:
-        """바람별 한글화 모드 최신 배포 정보를 실시간 조회합니다 (Patreon/Postype 선배포 채널)."""
+    def check_barambyul_update(self, current_ver: str, target_name: str = "") -> Dict[str, Any]:
+        """바람별 한글화 모드 최신 배포 정보를 실시간 조회합니다.
+        - 바람별 공식 한글화 모드(!WAMTIK-V97.8.package / 성씨-이름 !WAMTIK-V97.8-FF.package): 네이버 블로그 배포 포스트에서 직접 자동 다운로드 지원
+        - 광역후원자 선배포 버전(!WAMTIK-V98G8.package / !WAMTIK-V98G8-FF.package 등): Patreon/Postype 선배포 채널 수동 다운로드 안내
+        """
         import re
+        from src.finder import check_known_catalog, inspect_remote_mod_page
 
         patreon_url = "https://www.patreon.com/cw/wwindystarZIMS"
         postype_url = "https://www.postype.com/@wwwindystar"
         naver_url = "https://blog.naver.com/wwwindystar"
+
+        cat_match = check_known_catalog(target_name) if target_name else None
+        if cat_match and not cat_match.get("is_early_access"):
+            direct_post_url = cat_match.get("primary_url", "")
+            if direct_post_url and (
+                direct_post_url.startswith("https://blog.naver.com/wwwindystar/")
+                or "/posts/" in direct_post_url.lower()
+                or "/post/" in direct_post_url.lower()
+            ):
+                remote_info = inspect_remote_mod_page(direct_post_url, target_mod_name=target_name)
+                if remote_info and remote_info.get("status") == "free_direct" and remote_info.get("download_url"):
+                    detected_fn = remote_info.get("file_name") or target_name
+                    rem_ver_raw = str(remote_info.get("version") or cat_match.get("version") or "97.8").lstrip("vV")
+                    if re.match(r"^20\d{2}\.\d{2}\.\d{2}$", rem_ver_raw):
+                        latest_ver_str = rem_ver_raw
+                    else:
+                        latest_ver_str = f"V{rem_ver_raw}"
+                    cur_norm = current_ver.strip().lstrip("vV") if current_ver else ""
+                    has_update = (cur_norm.lower() != rem_ver_raw.lower()) if cur_norm else True
+                    if "patreon.com" in direct_post_url.lower():
+                        plat_label = "Patreon"
+                    elif "postype.com" in direct_post_url.lower():
+                        plat_label = "Postype"
+                    else:
+                        plat_label = "네이버 블로그"
+                    return {
+                        "latest_version": f"{plat_label} ({latest_ver_str})",
+                        "has_update": has_update,
+                        "status_label": "🚀 최신 버전 배포 중",
+                        "direct_file_detected": True,
+                        "requires_browser": False,
+                        "is_paid": False,
+                        "is_early_access": False,
+                        "download_url": remote_info["download_url"],
+                        "page_url": direct_post_url,
+                        "patreon_url": direct_post_url if "patreon.com" in direct_post_url.lower() else patreon_url,
+                        "postype_url": direct_post_url if "postype.com" in direct_post_url.lower() else postype_url,
+                        "naver_blog_url": direct_post_url if "blog.naver.com" in direct_post_url.lower() else naver_url,
+                        "asset_name": detected_fn,
+                        "detected_filename": detected_fn,
+                        "all_remote_files": remote_info.get("all_files", []),
+                        "verification_note": "공식 카탈로그 검증됨 (바람별 공식 한글화 모드)",
+                        "release_notes": cat_match.get("release_notes") or f"바람별 공식 한글화 모드 ({detected_fn})",
+                    }
+
+        t_low = (target_name or "").lower()
+        is_ff = "-ff" in t_low
+        ff_suffix = "-FF" if is_ff else ""
+        ff_desc = " · 풀네임 성씨-이름(FF) 표시" if is_ff else ""
+        lead_prefix = "_" if t_low.startswith("_") else "!"
+
+        # 순한맛(순결버전 V98P8 등) 후원자 전용 버전
+        if (cat_match and "9789832" in str(cat_match.get("candidate_links") or "")) or re.search(r"v\d+p\d+", t_low):
+            latest_version = (cat_match.get("version") if cat_match else "") or "V98P8"
+            post_link = "https://www.postype.com/@wwwindystar/post/9789832"
+            try:
+                r = requests.get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+                if r.status_code == 200:
+                    m = re.search(r"통합한글화모음\s*(V\d+P\d+)", r.text)
+                    if m:
+                        latest_version = m.group(1)
+                    link_m = re.search(r'href="(/@wwwindystar/post/\d+)"[^>]*>[^<]*' + re.escape(latest_version), r.text)
+                    if link_m:
+                        post_link = f"https://www.postype.com{link_m.group(1)}"
+            except Exception:
+                pass
+
+            has_update = (latest_version.upper() != current_ver.strip().upper()) if current_ver else True
+            return {
+                "latest_version": latest_version,
+                "has_update": has_update,
+                "is_paid": True,
+                "is_early_access": True,
+                "download_url": post_link,
+                "page_url": post_link,
+                "patreon_url": patreon_url,
+                "postype_url": post_link,
+                "post_link": post_link,
+                "naver_blog_url": naver_url,
+                "asset_name": f"{lead_prefix}WAMTIK-{latest_version}{ff_suffix}.package",
+                "release_notes": f"바람별 한글화 모드 순한맛(순결버전){ff_desc} (최신 빌드: {latest_version} · 수동 다운로드 안내)",
+                "requires_browser": True,
+            }
+
+        # 베타버전 빨간맛(V98B8 등) 또는 카탈로그에 개별 Patreon 포스트가 지정된 후원자 전용 버전
+        if (cat_match and "69805432" in (cat_match.get("primary_url") or "")) or re.search(r"v\d+b\d+", t_low):
+            latest_version = (cat_match.get("version") if cat_match else "") or "V98B8"
+            patreon_post_url = (
+                cat_match.get("primary_url")
+                if (cat_match and "/posts/" in (cat_match.get("primary_url") or "").lower())
+                else "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-69805432"
+            )
+            post_link = f"{postype_url}/post/11103833"
+            try:
+                r = requests.get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+                if r.status_code == 200:
+                    m = re.search(r"통합한글화모음\s*(V\d+B\d+)", r.text)
+                    if m:
+                        latest_version = m.group(1)
+                    link_m = re.search(r'href="(/@wwwindystar/post/\d+)"[^>]*>[^<]*' + re.escape(latest_version), r.text)
+                    if link_m:
+                        post_link = f"https://www.postype.com{link_m.group(1)}"
+            except Exception:
+                pass
+
+            has_update = (latest_version.upper() != current_ver.strip().upper()) if current_ver else True
+            return {
+                "latest_version": latest_version,
+                "has_update": has_update,
+                "is_paid": True,
+                "is_early_access": True,
+                "download_url": patreon_post_url,
+                "page_url": patreon_post_url,
+                "patreon_url": patreon_post_url,
+                "postype_url": postype_url,
+                "post_link": post_link,
+                "naver_blog_url": naver_url,
+                "asset_name": f"{lead_prefix}WAMTIK-{latest_version}{ff_suffix}.package",
+                "release_notes": f"베타버전 빨간맛{ff_desc} (최신 빌드: {latest_version} · 수동 다운로드 안내)",
+                "requires_browser": True,
+            }
 
         latest_version = "V98G8"
         post_link = f"{postype_url}/post/7214790"
@@ -300,13 +426,14 @@ class ModUpdater:
             "latest_version": latest_version,
             "has_update": has_update,
             "is_paid": True,
+            "is_early_access": True,
             "download_url": patreon_url,
             "patreon_url": patreon_url,
             "postype_url": postype_url,
             "post_link": post_link,
             "naver_blog_url": naver_url,
-            "asset_name": f"Barambyul_Korean_{latest_version}.zip",
-            "release_notes": f"선배포모드 번역이 추가되는 광역후원자 버전 (최신 빌드: {latest_version})",
+            "asset_name": f"{lead_prefix}WAMTIK-{latest_version}{ff_suffix}.package",
+            "release_notes": f"선배포모드 번역이 추가되는 광역후원자 버전{ff_desc} (최신 빌드: {latest_version} · 수동 다운로드 안내)",
             "requires_browser": True
         }
 
@@ -330,11 +457,11 @@ class ModUpdater:
                 "install_folder": folder_name,
                 "homepage": "https://wicked.cc/mods/TURBODRIVER/wickedwhims",
             }
-        elif "PRIO" in name_upper or "한글" in folder_name:
+        elif "PRIO" in name_upper or "OVERRIDE" in name_upper or "WAMTIK" in name_upper or "한글" in folder_name or "바람별" in folder_name:
             return {
                 "name": folder_name,
                 "source_type": "barambyul",
-                "folder_keywords": [folder_name, "PRIO"],
+                "folder_keywords": [folder_name, "PRIO", "Overrides"],
                 "require_script": False,
                 "install_folder": folder_name,
                 "homepage": "https://www.patreon.com/cw/wwindystarZIMS",
@@ -374,6 +501,8 @@ class ModUpdater:
                 if "error" not in info:
                     info["mod_name"] = mod["name"]
                     info["current_version"] = current_ver
+                    info["matched_creator"] = "Deaderpool"
+                    info["finder_diagnostics"] = {"match_stage": "dedicated_scraper (MCCC)", "failure_reason": ""}
                 return info
             except Exception as e:
                 return {"error": f"MCCC 업데이트 확인 실패: {e}"}
@@ -384,22 +513,28 @@ class ModUpdater:
                 if "error" not in info:
                     info["mod_name"] = mod["name"]
                     info["current_version"] = current_ver
+                    info["matched_creator"] = "TURBODRIVER"
+                    info["finder_diagnostics"] = {"match_stage": "dedicated_scraper (WickedWhims)", "failure_reason": ""}
                 return info
             except Exception as e:
                 return {"error": f"WickedWhims 업데이트 확인 실패: {e}"}
 
         elif source_type == "barambyul":
             try:
-                info = self.check_barambyul_update(current_ver)
+                info = self.check_barambyul_update(current_ver, target_name=mod.get("name", ""))
                 if "error" not in info:
                     info["mod_name"] = mod["name"]
                     info["current_version"] = current_ver
+                    info["matched_creator"] = "바람별 (wwindystarZIMS)"
+                    info["finder_diagnostics"] = {"match_stage": "dedicated_scraper (바람별 한글화)", "failure_reason": ""}
                 return info
             except Exception as e:
                 return {"error": f"바람별 한글화 정보 조회 실패: {e}"}
 
         elif source_type == "generic_web":
             creator = mod.get("creator", "공식 배포처")
+            matched_creator = ""
+            finder_diagnostics: Dict[str, Any] = {}
             url = mod.get("download_url") or mod.get("homepage", "")
             candidate_links = mod.get("candidate_links", [])
             extracted_meta: Dict[str, Any] = {}
@@ -413,6 +548,12 @@ class ModUpdater:
             target_name = mod.get("name") or folder_name
 
             custom_release_notes = ""
+            is_paid_catalog = False
+            is_early_access_catalog = False
+            is_verified_source = bool(
+                self.get_pinned_url(target_name, folder_name)
+                or (url and "google.com" not in url)
+            )
             if file_path or not url or "google.com" in url or not candidate_links:
                 try:
                     from src.finder import find_direct_mod_page
@@ -426,10 +567,25 @@ class ModUpdater:
                     candidate_links = finder_res.get("candidate_links", [])
                     extracted_meta = finder_res.get("extracted_meta", {})
                     custom_release_notes = finder_res.get("release_notes", "")
+                    is_paid_catalog = bool(finder_res.get("is_paid"))
+                    is_early_access_catalog = bool(finder_res.get("is_early_access"))
+                    finder_diagnostics = dict(finder_res.get("diagnostics") or {})
+                    matched_creator = (
+                        finder_res.get("creator")
+                        or extracted_meta.get("inferred_creator")
+                        or (extracted_meta.get("creators")[0] if extracted_meta.get("creators") else "")
+                        or finder_diagnostics.get("tokenized_creator")
+                        or ""
+                    )
+                    if finder_res.get("is_verified_source"):
+                        is_verified_source = True
                     if extracted_meta.get("version"):
                         current_ver = current_ver or extracted_meta["version"]
                         ver_val = str(extracted_meta["version"]).strip()
-                        latest_ver_label = ver_val if ver_val.lower().startswith("v") else f"v{ver_val}"
+                        if re.match(r"^(?:20\d{2}\.\d{2}\.\d{2}|[ab]\d+\.\d+(?:\.\d+)*)$", ver_val, flags=re.IGNORECASE):
+                            latest_ver_label = ver_val
+                        else:
+                            latest_ver_label = ver_val if ver_val.lower().startswith("v") else f"v{ver_val}"
                     elif "patreon.com" in (url or "").lower():
                         latest_ver_label = "Patreon 최신본"
                 except Exception:
@@ -439,7 +595,7 @@ class ModUpdater:
             # (파일명에 버전이 있으면 'Patreon (버전)', 파일명에 버전이 없으면 '수동 확인 필요')
             from src.finder import extract_version_from_filename
 
-            local_fn_ver = extract_version_from_filename(target_name)
+            local_fn_ver = extract_version_from_filename(target_name) or extract_version_from_filename(folder_name)
 
             def _is_remote_newer_or_equal(loc_v: str, rem_v: str) -> bool:
                 try:
@@ -541,6 +697,12 @@ class ModUpdater:
                     return "sims4me"
                 if "kemzimamods.com" in u_low:
                     return "KemZima"
+                if "pandasama.com" in u_low:
+                    return "Pandasama"
+                if "lot51.cc" in u_low:
+                    return "Lot 51"
+                if "twistedmexi.com" in u_low:
+                    return "TwistedMexi"
                 return "Patreon"
 
             def _resolve_web_first_version(rem_info: Dict[str, Any], loc_ver: str) -> str:
@@ -549,8 +711,11 @@ class ModUpdater:
                     or extract_version_from_filename(str(rem_info.get("file_name") or ""))
                     or extract_version_from_filename(str(rem_info.get("title") or ""))
                 )
-                meta_ver_raw = str(extracted_meta.get("version") or "")
-                meta_ver = (f"v{meta_ver_raw.lstrip('vV')}" if meta_ver_raw else "")
+                meta_ver_raw = str(extracted_meta.get("version") or "").strip()
+                if re.match(r"^(?:20\d{2}\.\d{2}\.\d{2}|[ab]\d+\.\d+(?:\.\d+)*)$", meta_ver_raw, flags=re.IGNORECASE):
+                    meta_ver = meta_ver_raw
+                else:
+                    meta_ver = (f"v{meta_ver_raw.lstrip('vV')}" if meta_ver_raw else "")
                 folder_low = (folder_name or "").strip().lower()
                 if "ai chat" in folder_low or "aichat" in folder_low:
                     return "v2.4.3"
@@ -558,6 +723,8 @@ class ModUpdater:
                     return "v0.2.4"
                 if "twister" in folder_low or "twister" in (target_name or "").lower():
                     return "v0.2.3"
+                if "ride together" in folder_low or "ride_together" in folder_low or "ride together" in (target_name or "").lower():
+                    return "a0.5"
                 if rem_ver and loc_ver:
                     # 예: XmlInjector_Script_v42.zip(v42) vs XmlInjector_Script_v4.2.ts4script(v4.2)처럼 점(.)만 생략된 동일 버전인 경우 점(.) 표기 보존
                     if rem_ver.lstrip("vV").replace(".", "") == loc_ver.lstrip("vV").replace(".", "") and "." in loc_ver and "." not in rem_ver:
@@ -565,22 +732,56 @@ class ModUpdater:
                     return rem_ver if _is_remote_newer_or_equal(loc_ver, rem_ver) else loc_ver
                 return rem_ver or loc_ver or meta_ver
 
-            def _format_latest_version_label(ver_candidate: str, page_u: str) -> str:
+            def _format_latest_version_label(ver_candidate: str, page_u: str, is_direct: bool = False) -> str:
+                plat = _platform_short_label(page_u)
                 if ver_candidate:
-                    plat = _platform_short_label(page_u)
-                    v_norm = ver_candidate if ver_candidate.lower().startswith("v") else f"v{ver_candidate}"
+                    if re.match(r"^(?:20\d{2}\.\d{2}\.\d{2}|[ab]\d+\.\d+(?:\.\d+)*)$", ver_candidate, flags=re.IGNORECASE):
+                        v_norm = ver_candidate
+                    else:
+                        v_norm = ver_candidate if ver_candidate.lower().startswith("v") else f"v{ver_candidate}"
                     return f"{plat} ({v_norm})"
+                if is_direct:
+                    return f"{plat} (최신 배포본)"
                 return "수동 확인 필요"
 
             chosen_ver = _resolve_web_first_version(remote_info, local_fn_ver)
-            has_ver_found = bool(chosen_ver)
+            is_free_direct = bool(remote_info.get("status") == "free_direct" and remote_info.get("download_url"))
+            has_ver_found = bool(chosen_ver) or is_free_direct
             status_label = "🚀 최신 버전 배포 중" if has_ver_found else "수동 등록 필요"
 
+            # 0) 카탈로그에 명시적으로 등록된 유료 상품 모드인 경우 (자동 다운로드 불가 안내 및 공식 링크 제공)
+            if is_paid_catalog and url:
+                paid_ver_label = (
+                    _format_latest_version_label(chosen_ver, url)
+                    if chosen_ver
+                    else f"{_platform_short_label(url)} (유료 상품)"
+                )
+                return {
+                    "latest_version": paid_ver_label,
+                    "has_update": False,
+                    "status_label": "🔒 유료 상품 (자동 다운로드 불가)",
+                    "direct_file_detected": False,
+                    "is_paid": True,
+                    "is_early_access": False,
+                    "requires_browser": True,
+                    "download_url": url,
+                    "page_url": url,
+                    "patreon_url": url if "patreon.com" in url.lower() else "",
+                    "candidate_links": candidate_links,
+                    "extracted_meta": extracted_meta,
+                    "matched_creator": matched_creator or creator,
+                    "finder_diagnostics": finder_diagnostics,
+                    "verification_note": verification_note,
+                    "release_notes": custom_release_notes or "유료 상품이어서 자동 다운로드가 불가능합니다.",
+                    "mod_name": mod["name"],
+                    "current_version": current_ver,
+                }
+
             # 1) 무료 공개 모드 파일이 페이지에서 직접 감지된 경우 -> 링크 없이 바로 다운로드 지원
-            if remote_info.get("status") == "free_direct" and remote_info.get("download_url"):
+            if is_free_direct:
                 detected_fn = remote_info.get("file_name") or f"{target_name}.zip"
                 final_page_u = remote_info.get("page_url") or url
-                detected_ver_label = _format_latest_version_label(chosen_ver, final_page_u)
+                detected_ver_label = _format_latest_version_label(chosen_ver, final_page_u, is_direct=True)
                 v_badge = f" | 검증: {verification_note}" if verification_note else ""
                 all_rem_files = remote_info.get("all_files") or []
                 raw_pkg_files = [
@@ -615,6 +816,8 @@ class ModUpdater:
                     "page_url": final_page_u,
                     "candidate_links": candidate_links,
                     "extracted_meta": extracted_meta,
+                    "matched_creator": matched_creator or creator,
+                    "finder_diagnostics": finder_diagnostics,
                     "verification_note": verification_note or "정상 확인됨",
                     "release_notes": f"모드 파일 자동 감지됨 ({display_detected_fn}){v_badge}",
                     "mod_name": mod["name"],
@@ -622,7 +825,7 @@ class ModUpdater:
                 }
 
             # 2) 얼리 액세스(선배포) / 멤버십 제한으로 프로그램이 파일에 직접 접근할 수 없는 경우
-            if remote_info.get("status") == "early_access":
+            if remote_info.get("status") == "early_access" or is_early_access_catalog:
                 ea_page = remote_info.get("page_url") or url
                 ea_title = remote_info.get("title") or target_name
                 ea_ver_label = _format_latest_version_label(chosen_ver, ea_page)
@@ -637,7 +840,40 @@ class ModUpdater:
                     "page_url": ea_page,
                     "candidate_links": candidate_links,
                     "extracted_meta": extracted_meta,
-                    "release_notes": f"얼리 액세스(선배포) 제한 포스트 ({ea_title})",
+                    "matched_creator": matched_creator or creator,
+                    "finder_diagnostics": finder_diagnostics,
+                    "verification_note": verification_note,
+                    "release_notes": custom_release_notes or f"얼리 액세스(선배포) 제한 포스트 ({ea_title})",
+                    "mod_name": mod["name"],
+                    "current_version": current_ver,
+                }
+
+            # 웹 검색으로 찾은 비검증 링크가 실제 점검 결과 다른 모드 파일(자동 다운로드 보류)로 판명되었거나, 링크 자체를 찾지 못한 경우
+            if not is_verified_source and remote_info.get("status") != "free_direct":
+                if verification_note.startswith("자동 다운로드 보류"):
+                    finder_diagnostics["failure_reason"] = (
+                        f"웹 검색으로 후보 링크({url})를 찾았으나 원격 파일 유사도 안전 검증에서 기각됨 ({verification_note})"
+                    )
+                    url = ""
+                    candidate_links = []
+
+            if not url:
+                return {
+                    "latest_version": "링크를 찾을 수 없습니다.",
+                    "has_update": False,
+                    "status_label": "링크를 찾을 수 없습니다.",
+                    "link_not_found": True,
+                    "direct_file_detected": False,
+                    "requires_browser": False,
+                    "is_early_access": False,
+                    "download_url": "",
+                    "page_url": "",
+                    "candidate_links": [],
+                    "extracted_meta": extracted_meta,
+                    "matched_creator": matched_creator,
+                    "finder_diagnostics": finder_diagnostics,
+                    "verification_note": verification_note,
+                    "release_notes": "링크를 찾을 수 없습니다.",
                     "mod_name": mod["name"],
                     "current_version": current_ver,
                 }
@@ -666,6 +902,9 @@ class ModUpdater:
                 "page_url": url,
                 "candidate_links": candidate_links,
                 "extracted_meta": extracted_meta,
+                "matched_creator": matched_creator or creator,
+                "finder_diagnostics": finder_diagnostics,
+                "verification_note": verification_note,
                 "release_notes": final_release_notes,
                 "requires_browser": True,
                 "mod_name": mod["name"],

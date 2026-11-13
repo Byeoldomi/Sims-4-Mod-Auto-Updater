@@ -1,5 +1,6 @@
 import hashlib
 import os
+import re
 import shutil
 import zipfile
 from pathlib import Path
@@ -27,16 +28,23 @@ def download_file(
 
     dest_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Patreon 무료 멤버십 공개 포스트(#free_member_file=...) 처리
+    # Patreon / Postype 무료 공개 포스트(#free_member_file=...) 처리
     if "#free_member_file=" in url:
         base_u, frag = url.split("#", 1)
         qs = urllib.parse.parse_qs(frag)
         target_fn = (qs.get("free_member_file") or [dest_path.name])[0]
-        if fallback_source_dir:
-            cand_local = fallback_source_dir / target_fn
-            if cand_local.exists() and cand_local.is_file():
-                shutil.copy2(cand_local, dest_path)
-                return dest_path
+        alt_fn = (
+            target_fn.replace("_KOR_", "(KOR)").replace("_kor_", "(KOR)")
+            if target_fn.lower().startswith("_kor_")
+            else (f"_KOR_{target_fn[5:]}" if target_fn.lower().startswith("(kor)") else target_fn)
+        )
+        search_dirs = [d for d in (fallback_source_dir, Path.home() / "Downloads") if d and d.exists()]
+        for s_dir in search_dirs:
+            for cand_name in (target_fn, alt_fn):
+                cand_local = s_dir / cand_name
+                if cand_local.exists() and cand_local.is_file():
+                    shutil.copy2(cand_local, dest_path)
+                    return dest_path
 
     # Itch.io 지연 업로드 다운로드 링크(#itchio_upload_id=...) 처리
     if "#itchio_upload_id=" in url:
@@ -136,11 +144,14 @@ def verify_downloaded_mod_file(
             ]
             mod_files = [
                 n for n in names
-                if Path(n).suffix.lower() in (".package", ".ts4script")
+                if Path(n).suffix.lower() in (
+                    ".package", ".ts4script",
+                    ".trayitem", ".blueprint", ".bpi", ".householdbinary", ".hhi", ".sgi", ".rmi", ".room",
+                )
             ]
             if not mod_files:
                 raise ValueError(
-                    f"압축 파일('{file_path.name}') 내부에 심즈 4 모드 파일(.package / .ts4script)이 포함되어 있지 않아 설치를 중단했습니다."
+                    f"압축 파일('{file_path.name}') 내부에 심즈 4 모드/부지·심 파일(.package / .ts4script / Tray 파일)이 포함되어 있지 않아 설치를 중단했습니다."
                 )
 
 
@@ -198,8 +209,16 @@ def extract_zip(
                     m for m in members
                     if Path(m.filename.replace("\\", "/")).name.lower() in existing_names_lower
                 ]
-                if installed_matches and len(members) > len(installed_matches) and len(members) > 4:
+                has_choose_one = any("choose" in m.filename.lower() for m in members)
+                if installed_matches and len(members) > len(installed_matches) and (len(members) > 4 or has_choose_one):
                     members = installed_matches
+                elif not installed_matches and target_filename and (len(members) > 4 or has_choose_one):
+                    exact_m = [
+                        m for m in members
+                        if Path(m.filename.replace("\\", "/")).name.lower() == target_filename.lower()
+                    ]
+                    if exact_m:
+                        members = exact_m
 
             for member in members:
                 base_name = Path(member.filename.replace("\\", "/")).name
