@@ -1487,8 +1487,15 @@ def _compare_local_and_remote_version(local_ver: str, remote_ver_label: str, res
         m_ra = re.match(r"^(\d+(?:\.\d+)*)([a-zA-Z]?)$", r_norm)
         if m_la and m_ra:
             try:
-                lv_num = version.parse(m_la.group(1))
-                rv_num = version.parse(m_ra.group(1))
+                l_num_s, r_num_s = m_la.group(1), m_ra.group(1)
+                if re.match(r"^\d+\.\d{2,3}$", l_num_s) and re.match(r"^\d+\.\d{2,3}$", r_num_s):
+                    l_maj, l_min = l_num_s.split(".")
+                    r_maj, r_min = r_num_s.split(".")
+                    lv_num = (int(l_maj), int(l_min.ljust(3, "0")))
+                    rv_num = (int(r_maj), int(r_min.ljust(3, "0")))
+                else:
+                    lv_num = version.parse(l_num_s)
+                    rv_num = version.parse(r_num_s)
                 if rv_num > lv_num:
                     return ("update_needed", "[bold yellow]🔄 업데이트 필요[/bold yellow]", "업데이트 필요")
                 if rv_num < lv_num:

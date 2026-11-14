@@ -599,8 +599,14 @@ class ModUpdater:
 
             def _is_remote_newer_or_equal(loc_v: str, rem_v: str) -> bool:
                 try:
-                    lv = version.parse(loc_v.lstrip("vV"))
-                    rv = version.parse(rem_v.lstrip("vV"))
+                    l_s = loc_v.lstrip("vV")
+                    r_s = rem_v.lstrip("vV")
+                    if re.match(r"^\d+\.\d{2,3}$", l_s) and re.match(r"^\d+\.\d{2,3}$", r_s):
+                        l_maj, l_min = l_s.split(".")
+                        r_maj, r_min = r_s.split(".")
+                        return (int(r_maj), int(r_min.ljust(3, "0"))) >= (int(l_maj), int(l_min.ljust(3, "0")))
+                    lv = version.parse(l_s)
+                    rv = version.parse(r_s)
                     return rv >= lv
                 except Exception:
                     return True
@@ -699,8 +705,10 @@ class ModUpdater:
                     return "KemZima"
                 if "pandasama.com" in u_low:
                     return "Pandasama"
-                if "lot51.cc" in u_low:
-                    return "Lot 51"
+                if "lot51.cc" in u_low or "lot51_core" in (target_name or "").lower():
+                    return "제작자 공식 사이트"
+                if "sims4ai.virtualconscious.com" in u_low:
+                    return "제작자 공식 사이트"
                 if "twistedmexi.com" in u_low:
                     return "TwistedMexi"
                 return "Patreon"
@@ -717,8 +725,11 @@ class ModUpdater:
                 else:
                     meta_ver = (f"v{meta_ver_raw.lstrip('vV')}" if meta_ver_raw else "")
                 folder_low = (folder_name or "").strip().lower()
-                if "ai chat" in folder_low or "aichat" in folder_low:
+                t_name_low = (target_name or "").strip().lower()
+                if "byok" in t_name_low:
                     return "v2.4.3"
+                if ("ai chat" in folder_low or "aichat" in folder_low or "sims4_ai_chat" in t_name_low or "sims 4 ai chat" in t_name_low) and "byok" not in t_name_low:
+                    return rem_ver or "v2.5.0"
                 if "volleyball" in folder_low or "volleyball" in (target_name or "").lower():
                     return "v0.2.4"
                 if "twister" in folder_low or "twister" in (target_name or "").lower():

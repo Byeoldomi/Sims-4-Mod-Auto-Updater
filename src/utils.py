@@ -210,7 +210,8 @@ def extract_zip(
                     if Path(m.filename.replace("\\", "/")).name.lower() in existing_names_lower
                 ]
                 has_choose_one = any("choose" in m.filename.lower() for m in members)
-                if installed_matches and len(members) > len(installed_matches) and (len(members) > 4 or has_choose_one):
+                is_all_aichat = all("sims4_ai_chat" in Path(m.filename.replace("\\", "/")).name.lower() for m in members)
+                if not is_all_aichat and installed_matches and len(members) > len(installed_matches) and (len(members) > 4 or has_choose_one):
                     members = installed_matches
                 elif not installed_matches and target_filename and (len(members) > 4 or has_choose_one):
                     exact_m = [

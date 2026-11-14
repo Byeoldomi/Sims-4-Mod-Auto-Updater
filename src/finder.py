@@ -337,13 +337,13 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["sims4_ai_chat", "sims 4 ai chat", "sims4aichat"],
+        "keywords": ["sims4_ai_chat.ts4script", "sims4_ai_chat", "sims 4 ai chat", "sims4aichat", "mod ai chat"],
         "name": "Sims 4 AI Chat",
         "creator": "VirtualConsciousnessLabs",
         "mod_title": "Sims 4 AI Chat",
-        "version": "2.4.3",
+        "version": "2.5.0",
         "links": [
-            ("Patreon (공식)", "Sims 4 AI Chat v2.4.3 | Virtual Consciousness Labs", "https://www.patreon.com/VirtualConsciousnessLabs/posts/sims-4-ai-chat-4-174642480"),
+            ("제작자 공식 사이트", "Sims 4 AI Chat v2.5.0 | Virtual Consciousness Labs", "https://sims4ai.virtualconscious.com/#install"),
             ("Patreon 채널", "Virtual Consciousness Labs Official Patreon", "https://www.patreon.com/VirtualConsciousnessLabs")
         ]
     },
@@ -405,6 +405,17 @@ KNOWN_CATALOG = [
         "version": "2.0.12.0",
         "links": [
             ("Itch.io (공식)", "Fitness Controls | roBurky", "https://roburky.itch.io/sims4-fitness")
+        ]
+    },
+    {
+        "keywords": ["lot51_core.ts4script", "lot51_core", "lot 51 core library", "lot51 core library"],
+        "name": "Lot 51 Core Library",
+        "creator": "Lot 51",
+        "mod_title": "Lot 51 Core Library",
+        "version": "1.43.1",
+        "links": [
+            ("제작자 공식 사이트", "Lot 51 Core Library | Lot 51", "https://lot51.cc/core"),
+            ("CurseForge (공식)", "Lot 51 Core Library - CurseForge", "https://www.curseforge.com/sims4/mods/lot-51-core-library")
         ]
     },
     {
@@ -923,7 +934,7 @@ KNOWN_CATALOG = [
         "name": "Child Birth",
         "creator": "Pandasama",
         "mod_title": "Child Birth",
-        "version": "1.972",
+        "version": "1.98",
         "links": [
             ("Pandasama Official (공식)", "Child Birth Mod | Pandasama", "https://www.pandasama.com/child-birth-mod/#downloads")
         ]
@@ -4093,6 +4104,13 @@ def inspect_remote_mod_page(
                 direct_files.sort(key=lambda x: x[0], reverse=True)
                 best_fn, best_dl = direct_files[0][1], direct_files[0][2]
                 fn_ver = extract_version_from_filename(best_fn)
+                if not fn_ver:
+                    m_sw_ver = (
+                        re.search(r'"softwareVersion"\s*:\s*"v?([0-9]+\.[0-9]+(?:\.[0-9]+)*[a-z0-9]*)"', r_web.text, flags=re.IGNORECASE)
+                        or re.search(r'id=["\']version-badge["\'][^>]*>\s*v?([0-9]+\.[0-9]+(?:\.[0-9]+)*[a-z0-9]*)', r_web.text, flags=re.IGNORECASE)
+                    )
+                    if m_sw_ver:
+                        fn_ver = f"v{m_sw_ver.group(1)}"
                 return {
                     "status": "free_direct",
                     "title": best_fn,
