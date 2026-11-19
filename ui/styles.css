@@ -1,0 +1,1253 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css");
+@import url("https://hangeul.pstatic.net/hangeul_static/css/nanum-square-round.css");
+
+/* ==========================================================================
+   Sims 4 Mod Auto Updater v0.1.5 - The Sims 4 Homage Design System
+   - 밝고 쾌활하며 아기자기한 캐주얼 시뮬레이션 게임 UI
+   - 플럼밥 그린 / 영감 블루 / 불편 오렌지 / 분노 레드 무드렛 컬러 시스템
+   ========================================================================== */
+
+:root {
+  --font-sans: "NanumSquareRound", "Pretendard", -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
+
+  /* 심즈4 무드렛 컬러 팔레트 */
+  --plumbob-green: #43B02A;
+  --plumbob-green-hover: #52C936;
+  --plumbob-green-soft: rgba(67, 176, 42, 0.14);
+
+  --inspired-blue: #00A9E0;
+  --inspired-blue-hover: #14B8EE;
+  --inspired-blue-soft: rgba(0, 169, 224, 0.14);
+
+  --uncomfortable-orange: #FF8200;
+  --uncomfortable-orange-hover: #FF941F;
+  --uncomfortable-orange-soft: rgba(255, 130, 0, 0.15);
+
+  --enraged-red: #E4002B;
+  --enraged-red-soft: rgba(228, 0, 43, 0.14);
+
+  /* 배경 및 글래스모피즘 카드 UI */
+  --bg-gradient: linear-gradient(135deg, #EBF5FA 0%, #F4F9F4 100%);
+  --card-bg: rgba(255, 255, 255, 0.85);
+  --card-sub-bg: rgba(255, 255, 255, 0.82);
+  --card-border: rgba(255, 255, 255, 0.92);
+  --line-soft: rgba(0, 169, 224, 0.14);
+  --card-shadow: 0 12px 32px rgba(0, 88, 124, 0.1), 0 4px 12px rgba(67, 176, 42, 0.06);
+  --subcard-shadow: 0 6px 18px rgba(0, 88, 124, 0.06);
+
+  /* 텍스트 및 비활성화 컬러 */
+  --text-primary: #1B2A32;
+  --text-secondary: #526773;
+  --text-muted: #7F95A1;
+  --btn-disabled-bg: #CFDCE2;
+
+  /* 둥근 모서리 & 스프링 탄성 인터랙션 */
+  --radius-card: 24px;
+  --radius-box: 18px;
+  --radius-pill: 50px;
+  --spring-easing: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-gradient);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 19px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ==========================================================================
+   글래스모피즘 카드 & 알약형 스프링 버튼
+   ========================================================================== */
+
+.sim-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
+}
+
+.sim-subcard {
+  background: var(--card-sub-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 169, 224, 0.18);
+  border-radius: var(--radius-box);
+  box-shadow: var(--subcard-shadow);
+}
+
+button,
+.btn,
+.sim-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 18px;
+  border-radius: var(--radius-pill);
+  transition:
+    transform 0.34s var(--spring-easing),
+    background-color 0.2s ease,
+    box-shadow 0.25s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.sim-btn:hover:not(:disabled):not(.is-disabled) {
+  transform: translateY(-2px) scale(1.03);
+}
+
+.sim-btn:active:not(:disabled):not(.is-disabled) {
+  transform: translateY(1px) scale(0.95);
+}
+
+/* 메인 실행 버튼 (플럼밥 그린) */
+.btn-primary {
+  background-color: var(--plumbob-green);
+  color: #FFFFFF;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(67, 176, 42, 0.32);
+}
+
+.btn-primary:hover:not(:disabled):not(.is-disabled) {
+  background-color: var(--plumbob-green-hover);
+  color: #FFFFFF;
+  box-shadow: 0 8px 22px rgba(82, 201, 54, 0.44);
+}
+
+.btn-primary:disabled,
+.btn-primary.is-disabled {
+  background-color: var(--btn-disabled-bg);
+  color: #FFFFFF;
+  box-shadow: none;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* 모드 폴더 백업 버튼 (영감 블루 포인트) */
+.btn-backup {
+  height: 32px;
+  padding: 0 13px;
+  background-color: var(--inspired-blue);
+  color: #FFFFFF;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 169, 224, 0.28);
+}
+
+.btn-backup:hover:not(:disabled) {
+  background-color: var(--inspired-blue-hover);
+  box-shadow: 0 6px 16px rgba(0, 169, 224, 0.38);
+}
+
+.btn-backup:disabled {
+  background-color: var(--btn-disabled-bg);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* 보조 버튼 (새로고침 등) */
+.btn-secondary {
+  height: 32px;
+  padding: 0 12px;
+  background-color: rgba(255, 255, 255, 0.94);
+  color: var(--text-primary);
+  border: 1.5px solid rgba(0, 169, 224, 0.26);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(0, 169, 224, 0.08);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #FFFFFF;
+  border-color: var(--inspired-blue);
+  color: var(--inspired-blue);
+  box-shadow: 0 5px 14px rgba(0, 169, 224, 0.18);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 폴더 변경 버튼 (플럼밥 그린 아웃라인/소프트 스타일) */
+.btn-change-folder {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 13px;
+  background-color: #FFFFFF;
+  color: var(--plumbob-green);
+  border: 1.5px solid rgba(67, 176, 42, 0.42);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(67, 176, 42, 0.1);
+}
+
+.btn-change-folder:hover:not(:disabled) {
+  background-color: var(--plumbob-green);
+  border-color: var(--plumbob-green);
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(67, 176, 42, 0.28);
+}
+
+.btn-change-folder:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   상단 헤더 영역 (심즈4 다이아몬드 로고 타이틀 + 액션 버튼 + 모드 폴더 경로 바)
+   ========================================================================== */
+
+.header-section {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 11px 15px;
+}
+
+.header-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.plumbob-emblem {
+  width: 36px;
+  height: 36px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, rgba(67, 176, 42, 0.16) 0%, rgba(0, 169, 224, 0.16) 100%);
+  border: 1px solid rgba(67, 176, 42, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.9);
+}
+
+.plumbob-gem {
+  position: relative;
+  width: 15px;
+  height: 24px;
+  display: inline-block;
+  background: linear-gradient(135deg, #9BF875 0%, var(--plumbob-green) 55%, #277915 100%);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  filter: drop-shadow(0 0 6px rgba(67, 176, 42, 0.65));
+  animation: plumbobFloat 2.4s ease-in-out infinite;
+}
+
+.plumbob-gem::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(50% 8%, 82% 50%, 50% 92%, 18% 50%);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 70%);
+}
+
+.brand-text-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.brand-eyebrow {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--inspired-blue);
+  line-height: 12px;
+}
+
+.brand-title-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.header-path-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 5px 4px 9px;
+  background: rgba(235, 245, 250, 0.72);
+  border: 1px solid rgba(0, 169, 224, 0.18);
+  border-radius: var(--radius-pill);
+}
+
+.path-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--inspired-blue);
+  background-color: rgba(255, 255, 255, 0.92);
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(0, 169, 224, 0.18);
+}
+
+.path-box {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 4px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==========================================================================
+   상태 요약 대시보드 (심즈4 무드렛 카드 4종)
+   ========================================================================== */
+
+.dashboard-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.moodlet-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.moodlet-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 9px 11px 8px;
+  min-height: 56px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 18px;
+  border: 1.5px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 14px rgba(0, 88, 124, 0.06);
+  cursor: pointer;
+  overflow: hidden;
+  text-align: left;
+  transition:
+    transform 0.34s var(--spring-easing),
+    box-shadow 0.25s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.moodlet-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--moodlet-color, var(--inspired-blue));
+}
+
+.moodlet-card:hover {
+  transform: translateY(-3px) scale(1.02);
+}
+
+.moodlet-card:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+.moodlet-total {
+  --moodlet-color: #4A6572;
+  --moodlet-soft: rgba(74, 101, 114, 0.12);
+}
+
+.moodlet-update {
+  --moodlet-color: var(--inspired-blue);
+  --moodlet-soft: var(--inspired-blue-soft);
+}
+
+.moodlet-conflict {
+  --moodlet-color: var(--enraged-red);
+  --moodlet-soft: var(--enraged-red-soft);
+}
+
+.moodlet-latest {
+  --moodlet-color: var(--plumbob-green);
+  --moodlet-soft: var(--plumbob-green-soft);
+}
+
+.moodlet-card.is-active {
+  border-color: var(--moodlet-color);
+  background: #FFFFFF;
+  box-shadow: 0 6px 18px var(--moodlet-soft);
+}
+
+.moodlet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.moodlet-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.moodlet-body {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.moodlet-count {
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 22px;
+  color: var(--moodlet-color);
+}
+
+.moodlet-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  line-height: 15px;
+}
+
+/* ==========================================================================
+   회전/발광 다이아몬드 플럼밥 로더 (CSS clip-path)
+   ========================================================================== */
+
+.loader-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--plumbob-green-soft);
+  color: var(--plumbob-green);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.loader-indicator.is-hidden {
+  display: none;
+}
+
+.plumbob-loader {
+  position: relative;
+  width: 14px;
+  height: 22px;
+  display: inline-block;
+  filter: drop-shadow(0 0 8px rgba(67, 176, 42, 0.85));
+  animation: plumbobFloat 1.6s ease-in-out infinite;
+}
+
+.plumbob-loader::before,
+.plumbob-loader::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+
+.plumbob-loader::before {
+  background: linear-gradient(135deg, #98F772 0%, var(--plumbob-green) 55%, #277915 100%);
+  animation: plumbobSpin 1.2s var(--spring-easing) infinite;
+}
+
+.plumbob-loader::after {
+  clip-path: polygon(50% 10%, 82% 50%, 50% 90%, 18% 50%);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0) 70%);
+  animation: plumbobSpin 1.2s var(--spring-easing) infinite;
+}
+
+@keyframes plumbobSpin {
+  0% {
+    transform: scaleX(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scaleX(0.22);
+    filter: brightness(1.35);
+  }
+  100% {
+    transform: scaleX(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes plumbobFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* ==========================================================================
+   타이포그래피 & 무드렛 상태 배지 컬러
+   ========================================================================== */
+
+.app-title {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 22px;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.section-subtitle {
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 19px;
+  color: var(--text-primary);
+}
+
+.mod-name {
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 18px;
+  color: var(--text-primary);
+}
+
+.log-text,
+.path-text,
+.version-text,
+.version-badge,
+.app-version,
+.footer-status,
+.mod-status {
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.version-text,
+.version-badge,
+.version-num,
+.app-version,
+.status-summary {
+  font-variant-numeric: tabular-nums;
+}
+
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--plumbob-green-soft);
+  color: var(--plumbob-green);
+  border-radius: var(--radius-pill);
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.mod-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  font-weight: 800;
+}
+
+/* 업데이트 가능 / 조회 대기: 영감 블루 (#00A9E0) */
+.status-update,
+.status-checking,
+.status-progress,
+.status-info {
+  color: var(--inspired-blue);
+  background-color: var(--inspired-blue-soft);
+}
+
+/* 최신 버전 / 완료: 플럼밥 그린 (#43B02A) */
+.status-latest,
+.status-complete,
+.status-success {
+  color: var(--plumbob-green);
+  background-color: var(--plumbob-green-soft);
+}
+
+/* 수동 확인 / 구버전 경고: 불편 오렌지 (#FF8200) */
+.status-manual,
+.status-outdated,
+.status-warning {
+  color: var(--uncomfortable-orange);
+  background-color: var(--uncomfortable-orange-soft);
+}
+
+/* 링크 오류 / 모드 충돌: 분노 레드 (#E4002B) */
+.status-error,
+.status-conflict,
+.status-danger {
+  color: var(--enraged-red);
+  background-color: var(--enraged-red-soft);
+}
+
+/* ==========================================================================
+   레이아웃 & 심즈4 갤러리 카드 모드 리스트 영역
+   ========================================================================== */
+
+.app-container {
+  width: 620px;
+  height: 680px;
+  min-width: 620px;
+  max-width: 620px;
+  min-height: 680px;
+  max-height: 680px;
+  padding: 15px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.app-section {
+  width: 100%;
+}
+
+.header-section,
+.dashboard-section,
+.mod-list-area,
+.footer-section {
+  flex-shrink: 0;
+}
+
+.mod-list-area {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mod-list-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 20px;
+}
+
+.gallery-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.select-all-pill {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 13px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 169, 224, 0.22);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 2px 8px rgba(0, 88, 124, 0.04);
+  transition: transform 0.28s var(--spring-easing), border-color 0.2s ease;
+}
+
+.select-all-pill:hover {
+  transform: translateY(-1px);
+  border-color: var(--inspired-blue);
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.search-box-wrapper {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(0, 169, 224, 0.22);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 2px 8px rgba(0, 88, 124, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-box-wrapper:focus-within {
+  background: #FFFFFF;
+  border-color: var(--inspired-blue);
+  box-shadow: 0 0 0 3px rgba(0, 169, 224, 0.14);
+}
+
+.search-icon {
+  font-size: 12px;
+  margin-right: 7px;
+  flex-shrink: 0;
+}
+
+.mod-search-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-weight: 700;
+  user-select: text;
+}
+
+.mod-search-input::placeholder {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.btn-clear-search {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(127, 149, 161, 0.18);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.btn-clear-search:hover {
+  background: var(--enraged-red-soft);
+  color: var(--enraged-red);
+}
+
+.btn-clear-search.is-hidden {
+  display: none;
+}
+
+.mod-list-container {
+  height: 234px;
+  min-height: 234px;
+  max-height: 234px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 2px 4px 4px 2px;
+}
+
+.mod-list-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mod-list-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mod-list-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 169, 224, 0.28);
+  border-radius: var(--radius-pill);
+}
+
+.mod-list-container::-webkit-scrollbar-thumb:hover {
+  background-color: var(--inspired-blue);
+}
+
+.gallery-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.mod-gallery-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px 11px 16px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(255, 255, 255, 0.96);
+  border-radius: var(--radius-box);
+  box-shadow: 0 4px 14px rgba(0, 88, 124, 0.06);
+  overflow: hidden;
+  transition:
+    transform 0.32s var(--spring-easing),
+    box-shadow 0.25s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.mod-gallery-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 5px;
+  background: var(--card-accent, var(--inspired-blue));
+}
+
+.mod-gallery-card[data-status="update"],
+.mod-gallery-card[data-status="checking"] {
+  --card-accent: var(--inspired-blue);
+}
+
+.mod-gallery-card[data-status="latest"] {
+  --card-accent: var(--plumbob-green);
+}
+
+.mod-gallery-card[data-status="manual"],
+.mod-gallery-card[data-status="outdated"] {
+  --card-accent: var(--uncomfortable-orange);
+}
+
+.mod-gallery-card[data-status="error"],
+.mod-gallery-card[data-status="conflict"] {
+  --card-accent: var(--enraged-red);
+}
+
+.mod-gallery-card:hover:not(.is-disabled) {
+  transform: translateY(-2px);
+  background: #FFFFFF;
+  border-color: rgba(0, 169, 224, 0.28);
+  box-shadow: 0 7px 18px rgba(0, 88, 124, 0.1);
+}
+
+.mod-gallery-card.is-disabled {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.mod-card-left {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.mod-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.mod-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.mod-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.mod-author-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(235, 245, 250, 0.9);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mod-card-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mod-version {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(74, 101, 114, 0.08);
+  color: var(--text-secondary);
+}
+
+.mod-card-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-item-update {
+  height: 30px;
+  padding: 0 12px;
+  font-size: 11.5px;
+  font-weight: 800;
+  border-radius: var(--radius-pill);
+  border: none;
+  cursor: pointer;
+}
+
+.btn-item-update.is-updatable {
+  background-color: var(--plumbob-green);
+  color: #FFFFFF;
+  box-shadow: 0 3px 10px rgba(67, 176, 42, 0.28);
+}
+
+.btn-item-update.is-updatable:hover:not(:disabled) {
+  background-color: var(--plumbob-green-hover);
+  box-shadow: 0 5px 14px rgba(82, 201, 54, 0.38);
+}
+
+/* 수동 확인 모드: 페이지 열기 버튼 (오렌지) */
+.btn-item-update.is-manual {
+  background-color: var(--uncomfortable-orange);
+  color: #FFFFFF;
+  box-shadow: 0 3px 10px rgba(255, 130, 0, 0.28);
+}
+
+.btn-item-update.is-manual:hover:not(:disabled) {
+  background-color: var(--uncomfortable-orange-hover);
+  box-shadow: 0 5px 14px rgba(255, 130, 0, 0.38);
+}
+
+/* 충돌/중복 모드: 폴더 열기 버튼 (분노 레드 아웃라인) */
+.btn-item-update.is-conflict {
+  background-color: #FFFFFF;
+  color: var(--enraged-red);
+  border: 1.5px solid rgba(228, 0, 43, 0.4);
+  box-shadow: 0 2px 8px rgba(228, 0, 43, 0.12);
+}
+
+.btn-item-update.is-conflict:hover:not(:disabled) {
+  background-color: var(--enraged-red);
+  color: #FFFFFF;
+}
+
+.btn-item-update.is-latest {
+  background-color: rgba(67, 176, 42, 0.12);
+  color: var(--plumbob-green);
+  cursor: default;
+}
+
+.btn-item-update.is-checking {
+  background-color: rgba(0, 169, 224, 0.12);
+  color: var(--inspired-blue);
+  cursor: wait;
+}
+
+.btn-item-update.is-error {
+  background-color: rgba(228, 0, 43, 0.1);
+  color: var(--enraged-red);
+  cursor: not-allowed;
+}
+
+.btn-item-update:disabled:is(.is-updatable, .is-manual, .is-conflict) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mod-checkbox {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--plumbob-green);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.25s var(--spring-easing);
+}
+
+.mod-checkbox:hover:not(:disabled) {
+  transform: scale(1.15);
+}
+
+.mod-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.empty-filter-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 180px;
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: var(--radius-box);
+  border: 1px dashed rgba(0, 169, 224, 0.28);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   하단 플로팅 액션 바 (Floating Action Bar & Giant Green Circular Play Button)
+   ========================================================================== */
+
+.floating-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 14px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1.5px solid rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 26px rgba(0, 88, 124, 0.12);
+}
+
+.floating-bar-left {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.progress-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.status-summary {
+  flex-shrink: 0;
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+.auto-launch-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: rgba(67, 176, 42, 0.1);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.auto-launch-checkbox {
+  width: 13px;
+  height: 13px;
+}
+
+.footer-bottom-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.witty-quote {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--inspired-blue);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.25s ease, transform 0.25s var(--spring-easing), color 0.2s ease;
+}
+
+.witty-quote.is-complete {
+  color: var(--plumbob-green);
+}
+
+.witty-quote.is-error {
+  color: var(--enraged-red);
+}
+
+.witty-quote.is-rolling {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.progress-track {
+  width: 100%;
+  height: 7px;
+  background-color: rgba(0, 169, 224, 0.14);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--inspired-blue) 0%, var(--plumbob-green) 100%);
+  border-radius: var(--radius-pill);
+  transition: width 0.35s var(--spring-easing);
+}
+
+.log-box {
+  width: 100%;
+  height: 26px;
+  line-height: 24px;
+  padding: 0 11px;
+  background-color: rgba(235, 245, 250, 0.72);
+  border: 1px solid rgba(0, 169, 224, 0.16);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.floating-bar-right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 심즈4 메인 화면 상징 '거대한 초록색 원형' 모두 업데이트 / 심즈4 바로 실행 버튼 */
+.sim-play-orb {
+  position: relative;
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  background: radial-gradient(circle at 30% 25%, #7DF056 0%, var(--plumbob-green) 58%, #2C8818 100%);
+  border: 3px solid #FFFFFF;
+  box-shadow:
+    0 8px 22px rgba(67, 176, 42, 0.42),
+    0 0 0 3px rgba(67, 176, 42, 0.22),
+    inset 0 2px 6px rgba(255, 255, 255, 0.55);
+  color: #FFFFFF;
+  text-align: center;
+  cursor: pointer;
+}
+
+.sim-play-orb:hover:not(:disabled):not(.is-disabled) {
+  transform: translateY(-3px) scale(1.06);
+  background: radial-gradient(circle at 30% 25%, #92FA6E 0%, var(--plumbob-green-hover) 58%, #349B1E 100%);
+  box-shadow:
+    0 12px 28px rgba(82, 201, 54, 0.52),
+    0 0 0 4px rgba(82, 201, 54, 0.32),
+    inset 0 2px 8px rgba(255, 255, 255, 0.65);
+}
+
+.sim-play-orb:active:not(:disabled):not(.is-disabled) {
+  transform: translateY(1px) scale(0.94);
+}
+
+.sim-play-orb:disabled,
+.sim-play-orb.is-disabled {
+  background: radial-gradient(circle at 30% 25%, #E2ECEF 0%, #CFDCE2 70%, #B8C8D0 100%);
+  box-shadow: 0 4px 10px rgba(82, 103, 115, 0.14);
+}
+
+.orb-Count-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--inspired-blue);
+  color: #FFFFFF;
+  border: 2px solid #FFFFFF;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  box-shadow: 0 3px 8px rgba(0, 169, 224, 0.35);
+}
+
+.orb-Count-badge.is-launch-mode {
+  background: var(--plumbob-green);
+  box-shadow: 0 3px 8px rgba(67, 176, 42, 0.38);
+}
+
+.orb-play-icon {
+  font-size: 18px;
+  line-height: 1;
+  margin-bottom: 1px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.18));
+}
+
+.orb-main-text {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 13px;
+  letter-spacing: -0.03em;
+}
+
+.orb-sub-text {
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 12px;
+  opacity: 0.92;
+  letter-spacing: -0.03em;
+}

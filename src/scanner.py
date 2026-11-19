@@ -27,6 +27,7 @@ AUX_SUBFOLDER_NAMES = {
     "ww cc", "cc", "optional", "options", "addons", "add-ons", "addon",
     "extras", "extras & overrides", "cum layer sets", "presets",
     "core", "merged", "modules", "backup", "backups", "old",
+    "vfx_and_soundeffect", "martial arts uniforms",
     "옵션", "선택", "선택사항", "추가", "백업", "구버전",
 }
 
@@ -112,7 +113,7 @@ class ModScanner:
         f_low = f.name.lower()
         if f_low.startswith("mc_woohoo"):
             return "mccc:mc_woohoo"
-        if f_low.startswith("mc_"):
+        if f_low.startswith("mc_") and not f_low.startswith(("mc_yf", "mc_ym", "mc_cf", "mc_cm", "mc_tf", "mc_tm", "mc_ef", "mc_em", "mc_pf", "mc_pm", "mc_uf", "mc_um")):
             return "mccc:mc_cmd_center"
 
         try:
@@ -143,7 +144,7 @@ class ModScanner:
                 "littlemssam", "lumpinou", "natethel0ser", "polarbearsims",
                 "pandasama", "spinningplumbobs", "turbodriver", "weerbesu", "roburky", "lotharihoe",
                 "simmattically", "simkatu", "simplyanjuta", "sims4me",
-                "chingyu", "kiarasims", "adeepindigo", "lot51",
+                "chingyu", "kiarasims", "adeepindigo", "lot51", "frequentlybasic", "ilkavelle",
             ):
                 return f"creator_mod:{p0}_{p1}"
 

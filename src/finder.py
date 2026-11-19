@@ -6,13 +6,22 @@ XML Tuning 식별자, Python 바이트코드 내장 URL, 제작자 태그 등)�
 import html
 import re
 import struct
+import time
 import urllib.parse
 import zipfile
 import zlib
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
-import requests
 from bs4 import BeautifulSoup
+
+from src.utils import (
+    NetworkSecurityError,
+    SafeHttpsSession,
+    is_valid_https_url,
+    log_security_warning,
+    safe_https_get,
+    validate_https_url,
+)
 
 try:
     import warnings
@@ -119,13 +128,158 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["passionate gifts", "passionate_gifts", "passionategifts", "passionate gift"],
-        "name": "[UTOPYA] Passionate Gifts MOD",
+        "keywords": [
+            "[utopya] wave-n-grind mod a0.5.package",
+            "[utopya] wave-n-grind mod",
+            "[utopya] wave-n-grind",
+            "wave-n-grind mod",
+            "wave-n-grind",
+            "wave_n_grind",
+            "wave n grind",
+            "wave and grind",
+            "wave_and_grind",
+            "waveandgrind",
+        ],
+        "name": "Wave and Grind",
         "creator": "UTOPYA",
-        "mod_title": "Passionate Gifts MOD",
+        "mod_title": "Wave and Grind",
+        "override_mod_title": True,
+        "version": "a0.5",
+        "links": [
+            ("Patreon (공식)", "Wave and Grind a0.5 | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/kiss-and-grind-115299392"),
+            ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
+        ]
+    },
+    {
+        "keywords": [
+            "[utopya] passionate gifts mod 0.8.package",
+            "[utopya] passionate gifts mod",
+            "[utopya] passionate gifts",
+            "[utopya] passionate gift",
+            "utopya_passionate_gifts",
+            "utopya_passionate_gift",
+            "passionate gifts mod",
+            "passionate gift mod",
+            "passionate gifts",
+            "passionate_gifts",
+            "passionategifts",
+            "passionate gift",
+            "passionate_gift",
+            "passionategift",
+        ],
+        "name": "Passionate Gift",
+        "creator": "UTOPYA",
+        "mod_title": "Passionate Gift",
+        "override_mod_title": True,
         "version": "0.8",
         "links": [
             ("Patreon (공식)", "Passionate Gift 0.8 | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/passionate-gift-151330104"),
+            ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
+        ]
+    },
+    {
+        "keywords": [
+            "[utopya] passionate affection mod 0.1.package",
+            "[utopya] passionate affection mod",
+            "[utopya] passionate affection",
+            "utopya_passionate_affection",
+            "passionate affection mod",
+            "passionate affection",
+            "passionate_affection",
+            "passionateaffection",
+        ],
+        "name": "Passionate Affection",
+        "creator": "UTOPYA",
+        "mod_title": "Passionate Affection",
+        "override_mod_title": True,
+        "version": "0.1",
+        "links": [
+            ("Patreon (공식)", "Passionate Affection 0.1 | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/passionate-gift-151330104"),
+            ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
+        ]
+    },
+    {
+        "keywords": [
+            "[utopya] functional handbag mod 0.2.2.package",
+            "[utopya] functional handbag mod",
+            "[utopya] functional handbag",
+            "utopya_functional_handbag",
+            "functional handbag mod",
+            "functional handbag",
+            "functional_handbag",
+            "functionalhandbag",
+        ],
+        "name": "Functional Handbag",
+        "creator": "UTOPYA",
+        "mod_title": "Functional Handbag",
+        "override_mod_title": True,
+        "version": "0.2.2",
+        "links": [
+            ("Patreon (공식)", "Functional Handbag 0.2.2 | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/functional-mod-108516027"),
+            ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
+        ]
+    },
+    {
+        "keywords": [
+            "[utopya] romantic complaints v1.0.1.package",
+            "[utopya] romantic complaints",
+            "utopya_romantic_complaints",
+            "romantic complaints",
+            "romantic_complaints",
+            "romanticcomplaints",
+        ],
+        "name": "Romantic Complaints",
+        "creator": "UTOPYA",
+        "mod_title": "Romantic Complaints",
+        "override_mod_title": True,
+        "version": "1.0.1",
+        "links": [
+            ("Patreon (공식)", "Romantic Complaints v1.0.1 | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/romantic-sims-4-128656481"),
+            ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
+        ]
+    },
+    {
+        "keywords": [
+            "[utopya] mistletoe kiss mod v0.1.package",
+            "[utopya] mistletoe kiss mod",
+            "[utopya] mistletoe kiss",
+            "utopya_mistletoe_kiss",
+            "mistletoe kiss mod",
+            "mistletoe_kiss_mod",
+            "mistletoekissmod",
+            "mistletoe kiss",
+            "mistletoe_kiss",
+        ],
+        "name": "Mistletoe Kiss Mod",
+        "creator": "UTOPYA",
+        "mod_title": "Mistletoe Kiss Mod",
+        "override_mod_title": True,
+        "version": "0.1",
+        "links": [
+            ("Patreon (공식)", "Mistletoe Kiss Mod v0.1 | UTOPYA", "https://www.patreon.com/posts/mistletoe-kiss-118908490"),
+            ("Patreon (공식)", "Mistletoe Kiss Mod v0.1 | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/mistletoe-kiss-118908490"),
+            ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
+        ]
+    },
+    {
+        "keywords": [
+            "[utopya] together on a laptop 0.5.package",
+            "[utopya] together on a laptop",
+            "together on a laptop",
+            "together_on_a_laptop",
+            "[utopya] use laptop together",
+            "utopya_use_laptop_together",
+            "use laptop together",
+            "use_laptop_together",
+            "uselaptoptogether",
+        ],
+        "name": "Use Laptop Together",
+        "creator": "UTOPYA",
+        "mod_title": "Use Laptop Together",
+        "override_mod_title": True,
+        "version": "0.5",
+        "links": [
+            ("Patreon (공식)", "Use Laptop Together v0.5 | UTOPYA", "https://www.patreon.com/UTOPYA_cc/posts/use-laptop-0-5-117834485"),
             ("Patreon 채널", "UTOPYA Official Patreon", "https://www.patreon.com/UTOPYA_cc")
         ]
     },
@@ -275,6 +429,134 @@ KNOWN_CATALOG = [
     },
     {
         "keywords": [
+            "littlemssam_betterbutler.package",
+            "littlemssam_betterbutler_cannotdie.package",
+            "littlemssam_betterbutler_costfix.package",
+            "littlemssam_betterbutler_gotosleep.package",
+            "littlemssam_betterbutler_hiremorebutlers.package",
+            "littlemssam_betterbutler_lockedstats_bladder.package",
+            "littlemssam_betterbutler_lockedstats_energy.package",
+            "littlemssam_betterbutler_lockedstats_fun.package",
+            "littlemssam_betterbutler_lockedstats_hunger.package",
+            "littlemssam_betterbutler_lockedstats_hygiene.package",
+            "littlemssam_betterbutler_lockedstats_social.package",
+            "littlemssam_betterbutler_noautocooking.package",
+            "littlemssam_betterbutler_noautoputaway.package",
+            "littlemssam_betterbutler_nogardening.package",
+            "littlemssam_betterbutler",
+            "better butler (and hire more butler)",
+            "better-butler-and-hire-more-butler",
+        ],
+        "name": "Better Butler (and Hire more Butler)",
+        "creator": "LittleMsSam",
+        "mod_title": "Better Butler (and Hire more Butler)",
+        "override_mod_title": True,
+        "version": "2026.02.04",
+        "links": [
+            ("CurseForge (공식)", "Better Butler (and Hire more Butler) | LittleMsSam", "https://www.curseforge.com/sims4/mods/better-butler-and-hire-more-butler")
+        ]
+    },
+    {
+        "keywords": [
+            "littlemssam_fooddelivery.package",
+            "littlemssam_fooddelivery_addon_higherpricesbasedonhouseholdfunds.package",
+            "littlemssam_fooddelivery",
+            "food delivery service",
+            "food-delivery-service",
+        ],
+        "name": "Food Delivery Service",
+        "creator": "LittleMsSam",
+        "mod_title": "Food Delivery Service",
+        "override_mod_title": True,
+        "version": "2026.05.08",
+        "links": [
+            ("CurseForge (공식)", "Food Delivery Service | LittleMsSam", "https://www.curseforge.com/sims4/mods/food-delivery-service")
+        ]
+    },
+    {
+        "keywords": [
+            "littlemssam_rsm_bg_wakeupoverhaul.package",
+            "littlemssam_rsm_bg_wakeupoverhaul",
+            "wakeupoverhaul",
+            "wake_up_overhaul",
+            "rsm - wake up animation overhaul",
+            "wake up animation overhaul",
+            "rsm-wake-up-animation-overhaul",
+        ],
+        "name": "RSM - Wake Up Animation Overhaul",
+        "creator": "LittleMsSam",
+        "mod_title": "RSM - Wake Up Animation Overhaul",
+        "override_mod_title": True,
+        "version": "2025.07.08",
+        "links": [
+            ("CurseForge (공식)", "RSM - Wake Up Animation Overhaul | LittleMsSam", "https://www.curseforge.com/sims4/mods/rsm-wake-up-animation-overhaul")
+        ]
+    },
+    {
+        "keywords": [
+            "littlemssam_betternanny.package",
+            "littlemssam_betternanny_age_adult-elder.package",
+            "littlemssam_betternanny_behaviourdoesnotaffecthousehold.package",
+            "littlemssam_betternanny_nocooking.package",
+            "littlemssam_betternanny_nocooking.ts4script",
+            "littlemssam_betternanny_regular_and_secondnanny_mainmod.package",
+            "littlemssam_betternanny_regular_and_secondnanny_workingtime_8am-8pm_plusweekend.package",
+            "littlemssam_betternanny",
+            "better nanny (second nanny & more)",
+            "better-nanny-second-nanny-more",
+        ],
+        "name": "Better Nanny (Second Nanny & more)",
+        "creator": "LittleMsSam",
+        "mod_title": "Better Nanny (Second Nanny & more)",
+        "override_mod_title": True,
+        "version": "2026.09.23",
+        "links": [
+            ("CurseForge (공식)", "Better Nanny (Second Nanny & more) | LittleMsSam", "https://www.curseforge.com/sims4/mods/better-nanny-second-nanny-more")
+        ]
+    },
+    {
+        "keywords": [
+            "littlemssam_letfriendsageup.ts4script",
+            "littlemssam_letfriendsageup.package",
+            "littlemssam_letfriendsageup",
+            "letfriendsageup",
+            "let_friends_age_up",
+            "let friends age up",
+            "let-friends-age-up",
+        ],
+        "name": "Let Friends Age Up",
+        "creator": "LittleMsSam",
+        "mod_title": "Let Friends Age Up",
+        "override_mod_title": True,
+        "version": "2026.11.07",
+        "links": [
+            ("CurseForge (공식)", "Let Friends Age Up | LittleMsSam", "https://www.curseforge.com/sims4/mods/let-friends-age-up")
+        ]
+    },
+    {
+        "keywords": [
+            "littlemssam_rsm_bg_autobushteethafterpuking.ts4script",
+            "littlemssam_rsm_bg_autobrushteethafterpuking.ts4script",
+            "littlemssam_rsm_bg_autobrushteethafterpuking.package",
+            "littlemssam_rsm_bg_autobrushteethafterpuking_addon_aftereatingtoo.package",
+            "littlemssam_rsm_bg_autobrushteethafterpuking",
+            "autobrushteethafterpuking",
+            "auto_brush_teeth_after_puking",
+            "rsm - auto brush teeth after puking",
+            "auto brush teeth after puking",
+            "rsm-auto-brush-teeth",
+        ],
+        "name": "RSM - Auto Brush Teeth after Puking",
+        "creator": "LittleMsSam",
+        "mod_title": "RSM - Auto Brush Teeth after Puking",
+        "override_mod_title": True,
+        "version": "2026.08.09",
+        "links": [
+            ("CurseForge (공식)", "RSM - Auto Brush Teeth after Puking | LittleMsSam", "https://www.curseforge.com/sims4/mods/rsm-auto-brush-teeth")
+        ]
+    },
+    {
+        "keywords": [
             "frequentlybasic_flavoredmemories",
             "flavoredmemories",
             "flavored_memories",
@@ -288,6 +570,201 @@ KNOWN_CATALOG = [
         "version": "2026.10.19",
         "links": [
             ("CurseForge (공식)", "Flavored Memories | FrequentlyBasic", "https://www.curseforge.com/sims4/mods/flavored-memories")
+        ]
+    },
+    {
+        "keywords": [
+            "frequentlybasic_captainwhitaker_thejoyfulghostdog.package",
+            "frequentlybasic_captainwhitaker_thejoyfulghostdog",
+            "captainwhitaker_thejoyfulghostdog",
+            "thejoyfulghostdog",
+            "the_joyful_ghost_dog",
+            "captain whitaker - the joyful ghost dog",
+            "captain whitaker the joyful ghost dog",
+            "captain-whitaker-the-joyful-ghost-dog",
+        ],
+        "name": "Captain Whitaker - The Joyful Ghost Dog",
+        "creator": "FrequentlyBasic",
+        "mod_title": "Captain Whitaker - The Joyful Ghost Dog",
+        "override_mod_title": True,
+        "version": "2025.07.27",
+        "links": [
+            ("CurseForge (공식)", "Captain Whitaker - The Joyful Ghost Dog | FrequentlyBasic", "https://www.curseforge.com/sims4/mods/captain-whitaker-the-joyful-ghost-dog")
+        ]
+    },
+    {
+        "keywords": [
+            "frequentlybasic_captainwhitaker_thegoodluckpup.package",
+            "frequentlybasic_captainwhitaker_thegoodluckpup",
+            "captainwhitaker_thegoodluckpup",
+            "thegoodluckpup",
+            "the_good_luck_pup",
+            "captain whitaker - the good luck pup",
+            "captain whitaker the good luck pup",
+            "captain-whitaker-the-good-luck-pup",
+        ],
+        "name": "Captain Whitaker - The Good Luck Pup",
+        "creator": "FrequentlyBasic",
+        "mod_title": "Captain Whitaker - The Good Luck Pup",
+        "override_mod_title": True,
+        "version": "2026.05.14",
+        "links": [
+            ("CurseForge (공식)", "Captain Whitaker - The Good Luck Pup | FrequentlyBasic", "https://www.curseforge.com/sims4/mods/captain-whitaker-the-good-luck-pup")
+        ]
+    },
+    {
+        "keywords": [
+            "frequentlybasic_captainwhitaker_theailmentdogtor.package",
+            "frequentlybasic_captainwhitaker_theailmentdogtor",
+            "captainwhitaker_theailmentdogtor",
+            "theailmentdogtor",
+            "the_ailment_dogtor",
+            "captain whitaker - the ailment dogtor",
+            "captain whitaker the ailment dogtor",
+            "captain-whitaker-the-ailment-dogtor",
+        ],
+        "name": "Captain Whitaker - The Ailment Dogtor",
+        "creator": "FrequentlyBasic",
+        "mod_title": "Captain Whitaker - The Ailment Dogtor",
+        "override_mod_title": True,
+        "version": "2025.07.27",
+        "links": [
+            ("CurseForge (공식)", "Captain Whitaker - The Ailment Dogtor | FrequentlyBasic", "https://www.curseforge.com/sims4/mods/captain-whitaker-the-ailment-dogtor")
+        ]
+    },
+    {
+        "keywords": [
+            "frequentlybasic_captainwhitaker_theghostdogscurse.package",
+            "frequentlybasic_captainwhitaker_theghostdogscurse",
+            "captainwhitaker_theghostdogscurse",
+            "theghostdogscurse",
+            "the_ghost_dogs_curse",
+            "captain whitaker - the ghost dog's curse",
+            "captain whitaker - the ghost dogs curse",
+            "captain whitaker the ghost dog's curse",
+            "captain whitaker the ghost dogs curse",
+            "captain-whitaker-the-ghost-dogs-curse",
+        ],
+        "name": "Captain Whitaker - The Ghost Dog's Curse",
+        "creator": "FrequentlyBasic",
+        "mod_title": "Captain Whitaker - The Ghost Dog's Curse",
+        "override_mod_title": True,
+        "version": "2026.05.14",
+        "links": [
+            ("CurseForge (공식)", "Captain Whitaker - The Ghost Dog's Curse | FrequentlyBasic", "https://www.curseforge.com/sims4/mods/captain-whitaker-the-ghost-dogs-curse")
+        ]
+    },
+    {
+        "keywords": [
+            "frequentlybasic_captainwhitakerfix.package",
+            "frequentlybasic_captainwhitakerfix.ts4script",
+            "frequentlybasic_captainwhitakerfix",
+            "captainwhitakerfix",
+            "captain_whitaker_fix",
+            "captain whitaker fix",
+            "captain-whitaker-fix",
+        ],
+        "name": "Captain Whitaker Fix",
+        "creator": "FrequentlyBasic",
+        "mod_title": "Captain Whitaker Fix",
+        "override_mod_title": True,
+        "version": "2026.05.14",
+        "links": [
+            ("CurseForge (공식)", "Captain Whitaker Fix | FrequentlyBasic", "https://www.curseforge.com/sims4/mods/captain-whitaker-fix")
+        ]
+    },
+    {
+        "keywords": [
+            "mercuryfoam_trma_tags.ts4script",
+            "mercuryfoam_trma",
+            "trma_martialarts",
+            "martialartsgi",
+            "vo_mfspar_",
+            "martial arts mod",
+            "martial_arts_mod",
+            "tankyfix",
+        ],
+        "name": "Martial Arts Mod",
+        "creator": "Tanky",
+        "mod_title": "Martial Arts Mod",
+        "override_mod_title": True,
+        "version": "2026.06.24",
+        "links": [
+            ("Patreon (공식)", "Martial Arts Mod | Tanky", "https://www.patreon.com/TankyFix/posts/martial-arts-mod-124737889"),
+            ("Patreon 채널", "Tanky Official Patreon", "https://www.patreon.com/TankyFix")
+        ]
+    },
+    {
+        "keywords": [
+            "ilkavelle_lettertofatherwinter.package",
+            "ilkavelle_lettertofatherwinter.zip",
+            "ilkavelle_lettertofatherwinter",
+            "lettertofatherwinter",
+            "letter_to_father_winter",
+            "letter to father winter",
+            "letter-to-father-winter",
+        ],
+        "name": "Letter to Father Winter",
+        "creator": "IlkaVelle",
+        "mod_title": "Letter to Father Winter",
+        "override_mod_title": True,
+        "version": "2025.01.23",
+        "links": [
+            ("Patreon (공식)", "Letter to Father Winter | IlkaVelle", "https://www.patreon.com/ilkavelle/posts/letter-to-father-118562777"),
+            ("Patreon 채널", "IlkaVelle Official Patreon", "https://www.patreon.com/ilkavelle")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_extended_phone_calls.package",
+            "simkatu_extended_phone_calls",
+            "extended_phone_calls",
+            "extended phone calls",
+        ],
+        "name": "Extended Phone Calls",
+        "creator": "simkatu",
+        "mod_title": "Extended Phone Calls",
+        "override_mod_title": True,
+        "version": "2026.07.03",
+        "links": [
+            ("Patreon (공식)", "extended phone calls | simkatu", "https://www.patreon.com/simkatu/posts/extended-phone-117285790"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simplyanjuta_nomakeupnoacc_onrandomizedsims.package",
+            "simplyanjuta_nomakeupnoacc_onrandomizedsims",
+            "nomakeupnoacc_onrandomizedsims",
+            "no make-up & no accessories on randomized sims",
+            "no make-up no accessories on randomized sims",
+        ],
+        "name": "No Make-Up & No Accessories on Randomized Sims",
+        "creator": "SimplyAnjuta",
+        "mod_title": "No Make-Up & No Accessories on Randomized Sims",
+        "override_mod_title": True,
+        "version": "2026.05.13",
+        "links": [
+            ("Tumblr (공식)", "CAS Mod - No Make-Up & No Accessories on Randomized Sims | SimplyAnjuta", "https://www.tumblr.com/simplyanjuta/669037700728373248/cas-mod-no-make-up-no-accessories-on"),
+            ("CurseForge (공식)", "No Make-Up & No Accessories on Randomized Sims | SimplyAnjuta", "https://www.curseforge.com/sims4/mods/no-make-up-no-accessories-on-randomized-sims")
+        ]
+    },
+    {
+        "keywords": [
+            "turbodriver_simulationtimelineunclogger.ts4script",
+            "turbodriver_simulationtimelineunclogger",
+            "simulationtimelineunclogger",
+            "simulation_timeline_unclogger",
+            "simulation timeline unclogger",
+            "simulation unclogger",
+        ],
+        "name": "Simulation Unclogger",
+        "creator": "TURBODRIVER",
+        "mod_title": "Simulation Unclogger",
+        "override_mod_title": True,
+        "version": "2022.09.10",
+        "links": [
+            ("CurseForge (공식)", "Simulation Unclogger | TURBODRIVER", "https://www.curseforge.com/sims4/mods/simulation-unclogger")
         ]
     },
     {
@@ -434,9 +911,12 @@ KNOWN_CATALOG = [
         "name": "Relationship & Pregnancy Overhaul (RPO Collection)",
         "creator": "Lumpinou",
         "mod_title": "Relationship & Pregnancy Overhaul (RPO Collection)",
-        "version": "2.986",
+        "version": "3",
+        "is_early_access": True,
+        "release_notes": "얼리 액세스(선배포) 버전 · Patreon 수동 다운로드 안내 (RPO v3)",
         "links": [
-            ("Patreon (공식)", "[Mod] Relationship & Pregnancy Overhaul, ALL-FILES-IN-ONE-CLICK - Sims 4", "https://www.patreon.com/lumpinou/posts/mod-relationship-75983577")
+            ("Patreon (선배포)", "[Early Access] RPO v3 - Debuting \"Extra Opinions\" & Heavy Duty background changes | Lumpinou", "https://www.patreon.com/lumpinou/posts/early-access-rpo-174694816"),
+            ("Patreon 채널", "Lumpinou Official Patreon", "https://www.patreon.com/lumpinou")
         ]
     },
     {
@@ -647,6 +1127,30 @@ KNOWN_CATALOG = [
         ]
     },
     {
+        "keywords": [
+            "natethel0ser_chatpackv2_lifestages.package",
+            "natethel0ser_chatpackv2_babiesfamily.package",
+            "natethel0ser_chatpackv2_lifestages",
+            "natethel0ser_chatpackv2_babiesfamily",
+            "natethel0ser_chatpackv2",
+            "natethel0ser_chatpack",
+            "chatpackv2_lifestages",
+            "chatpackv2_babiesfamily",
+            "chatpackv2",
+            "chat pack v2",
+            "chat pack.zip",
+            "chat pack - more social interactions",
+            "chat pack",
+        ],
+        "name": "Chat Pack",
+        "creator": "NateTheL0ser",
+        "mod_title": "Chat Pack - More Social Interactions for Your Sims",
+        "version": "2",
+        "links": [
+            ("ModTheSims (공식)", "Chat Pack - More Social Interactions for Your Sims V2.0 | NateTheL0ser", "https://modthesims.info/d/627991/chat-pack-more-social-interactions-for-your-sims-v2-0-now-requires-xmlinjector.html")
+        ]
+    },
+    {
         "keywords": ["lotharihoe_simspawnoverhaul", "simspawnoverhaul"],
         "name": "Sim Spawn Overhaul",
         "creator": "lotharihoe",
@@ -660,10 +1164,108 @@ KNOWN_CATALOG = [
         "keywords": ["cas tuning add-on", "cas tuning base", "controlled position mod"],
         "name": "Controlled Position Mod (CAS Tuning)",
         "creator": "NORTHERN SIBERIA WINDS",
-        "mod_title": "",
+        "mod_title": "Controlled Position Mod (CAS Tuning)",
+        "override_mod_title": True,
         "version": "2.3",
         "links": [
             ("Patreon (공식)", "CONTROLLED POSITION MOD | NORTHERN SIBERIA WINDS", "https://www.patreon.com/northernsiberiawinds/posts/controlled-mod-103628223")
+        ]
+    },
+    {
+        "keywords": [
+            "!!!!![northern siberia winds] even better in-game lighting mod v1.1 average.package",
+            "!!!!![northern siberia winds] even better in-game lighting mod v1.1 bright.package",
+            "!!!!![northern siberia winds] even better in-game lighting mod v1.1 dark.package",
+            "[northern siberia winds] even better in-game lighting mod v1.1 average",
+            "[northern siberia winds] even better in-game lighting mod v1.1 bright",
+            "[northern siberia winds] even better in-game lighting mod v1.1 dark",
+            "[northern siberia winds] even better in-game lighting mod",
+            "even better in-game lighting mod",
+            "even_better_in-game_lighting_mod",
+            "even better in game lighting mod",
+        ],
+        "name": "Even Better In-Game Lighting Mod",
+        "creator": "NORTHERN SIBERIA WINDS",
+        "mod_title": "Even Better In-Game Lighting Mod",
+        "override_mod_title": True,
+        "version": "1.1",
+        "links": [
+            ("Patreon (공식)", "EVEN BETTER IN-GAME LIGHTING MOD | NORTHERN SIBERIA WINDS", "https://www.patreon.com/northernsiberiawinds/posts/even-better-in-107494052")
+        ]
+    },
+    {
+        "keywords": [
+            "!!![northern siberia winds] better in-game lighting mod v1.1 average base light rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 average pale light rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 average saturated light rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 bright base light rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 bright pale light rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 bright saturated light rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 dark base light rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 dark pale light rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 dark saturated light rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 extra dark saturated light rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 average base dark rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 average pale dark rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 average saturated dark rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 bright base dark rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 bright pale dark rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 bright saturated dark rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 dark base dark rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 dark pale dark rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 dark saturated dark rooms.package",
+            "!!![northern siberia winds] better in-game lighting mod v1.1 extra dark saturated dark rooms.package",
+            "[northern siberia winds] better in-game lighting mod v1.1 average base light rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 average pale light rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 average saturated light rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 bright base light rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 bright pale light rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 bright saturated light rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 dark base light rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 dark pale light rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 dark saturated light rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 extra dark saturated light rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 average base dark rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 average pale dark rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 average saturated dark rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 bright base dark rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 bright pale dark rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 bright saturated dark rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 dark base dark rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 dark pale dark rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 dark saturated dark rooms",
+            "[northern siberia winds] better in-game lighting mod v1.1 extra dark saturated dark rooms",
+            "[northern siberia winds] better in-game lighting mod",
+            "better in-game lighting mod",
+            "better_in-game_lighting_mod",
+            "better in game lighting mod",
+        ],
+        "name": "Better In-Game Lighting Mod",
+        "creator": "NORTHERN SIBERIA WINDS",
+        "mod_title": "Better In-Game Lighting Mod",
+        "override_mod_title": True,
+        "version": "1.1",
+        "links": [
+            ("Patreon (공식)", "BETTER IN-GAME LIGHTING MOD v1.1 | NORTHERN SIBERIA WINDS", "https://www.patreon.com/northernsiberiawinds/posts/better-in-game-1-79174144")
+        ]
+    },
+    {
+        "keywords": [
+            "[northern siberia winds] gentle cas lighting.package",
+            "[northern siberia winds] gentle cas lighting",
+            "northern_siberia_winds_gentle_cas_lighting",
+            "gentle cas lighting mod",
+            "gentle cas lighting",
+            "gentle_cas_lighting",
+        ],
+        "name": "Gentle CAS Lighting",
+        "creator": "NORTHERN SIBERIA WINDS",
+        "mod_title": "Gentle CAS Lighting",
+        "override_mod_title": True,
+        "version": "2023.07.25",
+        "links": [
+            ("Patreon (공식)", "GENTLE CAS LIGHTING MOD | NORTHERN SIBERIA WINDS", "https://www.patreon.com/northernsiberiawinds/posts/gentle-cas-mod-61063863"),
+            ("CurseForge (공식)", "Gentle CAS Lighting | NORTHERN SIBERIA WINDS", "https://www.curseforge.com/sims4/mods/gentle-cas-lighting")
         ]
     },
     {
@@ -1448,8 +2050,8 @@ def _clean_pyc_url(raw_bytes: bytes, match: re.Match) -> str:
 
 
 def _is_valid_internal_url(url: str, file_name: str) -> bool:
-    """파일 내부에서 추출한 URL이 유효한 모드 배포처 URL인지 판별합니다."""
-    if len(url) < 14 or not url.startswith(("http://", "https://")):
+    """파일 내부에서 추출한 URL이 유효한 HTTPS 모드 배포처 URL인지 판별합니다 (일반 HTTP 차단)."""
+    if len(url) < 14 or not is_valid_https_url(url):
         return False
     u_lower = url.lower()
     if any(u_lower.startswith(prefix) for prefix in IGNORED_INTERNAL_URL_PREFIXES):
@@ -1479,9 +2081,13 @@ def _extract_from_single_ts4script(path: Path) -> Dict[str, Any]:
         return info
 
     try:
+        MAX_TS4SCRIPT_ENTRY_BYTES = 32 * 1024 * 1024  # 단일 엔트리 최대 32MB (압축 폭탄 메모리 고갈 방지)
         with zipfile.ZipFile(path, "r") as z:
-            for entry_name in z.namelist():
-                parts = [p for p in entry_name.split("/") if p]
+            for z_info in z.infolist():
+                entry_name = z_info.filename
+                if z_info.is_dir():
+                    continue
+                parts = [p for p in entry_name.replace("\\", "/").split("/") if p]
                 if parts:
                     top_stem = re.sub(r"\.(pyc|py|txt|yml|yaml|json|cfg|log)$", "", parts[0], flags=re.IGNORECASE)
                     if (
@@ -1492,8 +2098,11 @@ def _extract_from_single_ts4script(path: Path) -> Dict[str, Any]:
                     ):
                         info["modules"].append(top_stem)
 
+                if z_info.file_size < 0 or z_info.file_size > MAX_TS4SCRIPT_ENTRY_BYTES:
+                    continue
+
                 try:
-                    data = z.read(entry_name)
+                    data = z.read(z_info)
                 except Exception:
                     continue
 
@@ -2362,15 +2971,17 @@ def search_and_rank_distribution_links(tokens: Dict[str, Any], timeout: int = 8)
         url_groups: Dict[str, Dict[str, Any]] = {}
         search_url = f"https://search.naver.com/search.naver?query={urllib.parse.quote(query)}"
         try:
-            r = requests.get(search_url, headers=headers, timeout=timeout)
+            r = safe_https_get(search_url, headers=headers, timeout=timeout)
             if r.status_code == 200:
                 soup = BeautifulSoup(r.text, "html.parser")
                 for a in soup.find_all("a", href=True):
                     href = a["href"].strip()
-                    if not href.startswith(("http://", "https://")):
+                    if not is_valid_https_url(href):
                         continue
 
                     norm_href = normalize_distribution_url(href)
+                    if not is_valid_https_url(norm_href):
+                        continue
                     if norm_href.lower() in IGNORED_ROOT_URLS or norm_href in seen_norm_urls:
                         continue
 
@@ -2392,13 +3003,15 @@ def search_and_rank_distribution_links(tokens: Dict[str, Any], timeout: int = 8)
                         }
                     if text and text not in url_groups[norm_href]["texts"]:
                         url_groups[norm_href]["texts"].append(text)
+        except NetworkSecurityError:
+            raise
         except Exception:
             pass
 
         # 디시인사이드 심즈 갤러리(id=sims, thesims, sims4 등) 게시글 검색 연동
         try:
             dc_q = urllib.parse.quote(query)
-            r_dc = requests.get(f"https://search.dcinside.com/post/q/{dc_q}", headers=headers, timeout=timeout)
+            r_dc = safe_https_get(f"https://search.dcinside.com/post/q/{dc_q}", headers=headers, timeout=timeout)
             if r_dc.status_code == 200:
                 soup_dc = BeautifulSoup(r_dc.text, "html.parser")
                 for li in soup_dc.select("ul.sch_result_list > li"):
@@ -2406,13 +3019,15 @@ def search_and_rank_distribution_links(tokens: Dict[str, Any], timeout: int = 8)
                     if not a_tit:
                         continue
                     dc_href = a_tit["href"].strip()
+                    if not is_valid_https_url(dc_href):
+                        continue
                     if "gall.dcinside.com" not in dc_href or "board/view" not in dc_href:
                         continue
                     # 심즈 관련 갤러리(id=sims, thesims, sims4 등) 게시글만 선별
                     if not any(g in dc_href.lower() for g in ("id=sims", "id=thesims", "id=sims4", "id=game_sims")):
                         continue
                     norm_dc = normalize_distribution_url(dc_href)
-                    if norm_dc in seen_norm_urls:
+                    if not is_valid_https_url(norm_dc) or norm_dc in seen_norm_urls:
                         continue
                     tit_text = a_tit.get_text(" ", strip=True)
                     dsc_el = li.select_one("p.link_dsc_txt")
@@ -2427,8 +3042,69 @@ def search_and_rank_distribution_links(tokens: Dict[str, Any], timeout: int = 8)
                         url_groups[norm_dc]["texts"].append(tit_text)
                     if dsc_text:
                         url_groups[norm_dc]["texts"].append(dsc_text)
+        except NetworkSecurityError:
+            raise
         except Exception:
             pass
+
+        # ModTheSims (MTS) 자체 검색(browse.php) 폴백 연동 (네이버/디시에 색인되지 않은 영문 모드 대응)
+        if not has_korean:
+            try:
+                base_prefix_str = " ".join(base_parts).strip()
+                query_tail = query[len(base_prefix_str):].strip() if query.startswith(base_prefix_str) else ""
+                mts_tag_candidates: List[str] = []
+                if query_tail:
+                    mts_tag_candidates.append(query_tail)
+                if len(title_words) >= 2:
+                    two_w = " ".join(title_words[:2]).strip()
+                    if two_w and two_w not in mts_tag_candidates:
+                        mts_tag_candidates.append(two_w)
+                if not mts_tag_candidates and tokens.get("creator"):
+                    mts_tag_candidates.append(tokens["creator"])
+
+                for mts_tag in mts_tag_candidates:
+                    mts_search_url = (
+                        f"https://modthesims.info/browse.php?gs=4&f=38&showType=1&tag={urllib.parse.quote(mts_tag)}"
+                    )
+                    r_mts = safe_https_get(mts_search_url, headers=headers, timeout=timeout)
+                    if r_mts.status_code == 200:
+                        soup_mts = BeautifulSoup(r_mts.text, "html.parser")
+                        cards = soup_mts.select("li.smol-card-component")
+                        for card in cards:
+                            a_dl = card.select_one("p.downloadtitle a[href]") or card.select_one("a[href*='/d/']")
+                            if not a_dl:
+                                continue
+                            raw_mts_href = urllib.parse.urljoin("https://modthesims.info", a_dl["href"].strip())
+                            if not is_valid_https_url(raw_mts_href) or "/d/" not in raw_mts_href.lower():
+                                continue
+                            norm_mts = normalize_distribution_url(raw_mts_href)
+                            if not is_valid_https_url(norm_mts) or norm_mts in seen_norm_urls:
+                                continue
+                            tit_text = a_dl.get_text(" ", strip=True)
+                            creator_el = card.select_one("span.downloadcreatorname")
+                            creator_text = creator_el.get_text(" ", strip=True) if creator_el else ""
+                            prev_el = card.select_one("p.downloadPreview")
+                            prev_text = prev_el.get_text(" ", strip=True) if prev_el else ""
+                            if norm_mts not in url_groups:
+                                url_groups[norm_mts] = {
+                                    "label": "ModTheSims",
+                                    "url": norm_mts,
+                                    "texts": [],
+                                }
+                            if tit_text and tit_text not in url_groups[norm_mts]["texts"]:
+                                url_groups[norm_mts]["texts"].append(tit_text)
+                            if creator_text:
+                                c_tag = f"by {creator_text}"
+                                if c_tag not in url_groups[norm_mts]["texts"]:
+                                    url_groups[norm_mts]["texts"].append(c_tag)
+                            if prev_text and prev_text not in url_groups[norm_mts]["texts"]:
+                                url_groups[norm_mts]["texts"].append(prev_text)
+                        if cards:
+                            break
+            except NetworkSecurityError:
+                raise
+            except Exception:
+                pass
 
         for norm_href, group in url_groups.items():
             raw_candidate_count += 1
@@ -2621,6 +3297,14 @@ def _match_score_mod_name(target: str, candidate: str) -> int:
         score += 10
     if ("trailer" in cand_low or "lot&sims" in cand_low) and "trailer" not in t_low and "lot" not in t_low:
         score -= 40
+    if "_test" in cand_low and "test" not in t_low:
+        score -= 60
+    if "gift" in t_low and "gift" in cand_low:
+        score += 25
+    if "affection" in t_low and "affection" in cand_low:
+        score += 25
+    if "handbag" in t_low.replace(" ", "") and "handbag" in cand_low.replace(" ", ""):
+        score += 40
     if "cas tuning add-on" in t_low and "hands close up" not in t_low and "stand still constructor" in cand_low:
         score += 150
     return score
@@ -2632,8 +3316,8 @@ def _inspect_curseforge_mod_page(
     headers: Dict[str, str],
     timeout: int = 10,
 ) -> Optional[Dict[str, Any]]:
-    """CurseForge 심즈 4 모드 페이지에서 cfwidget API 및 ForgeCDN을 통해 직접 다운로드 URL을 추출합니다."""
-    import time
+    """CurseForge 심즈 4 모드 페이지에서 cfwidget API 및 ForgeCDN(HTTPS 전용)을 통해 직접 다운로드 URL을 추출합니다."""
+    validate_https_url(url, allow_fragment=True, purpose="CurseForge 카탈로그 조회")
 
     # URL에 /files/<file_id>가 포함되어 있으면 파일 ID 보존
     m_url_fid = re.search(r"/files/(\d+)", url)
@@ -2643,11 +3327,12 @@ def _inspect_curseforge_mod_page(
         return None
 
     api_url = f"https://api.cfwidget.com/{path}"
+    validate_https_url(api_url, allow_fragment=False, purpose="cfwidget 원격 카탈로그 API 조회")
     try:
-        r = requests.get(api_url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+        r = safe_https_get(api_url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
         if r.status_code == 202:
             time.sleep(1.5)
-            r = requests.get(api_url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+            r = safe_https_get(api_url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
         if r.status_code == 200:
             data = r.json()
             title = data.get("title") or ""
@@ -2680,6 +3365,7 @@ def _inspect_curseforge_mod_page(
                     part2 = s_id[4:].lstrip("0") or "0"
 
                 cdn_url = f"https://edge.forgecdn.net/files/{part1}/{part2}/{urllib.parse.quote(best_fn)}"
+                validate_https_url(cdn_url, allow_fragment=False, purpose="ForgeCDN 다운로드 URL 검증")
                 fn_ver = (
                     extract_version_from_filename(best_fn)
                     or extract_version_from_filename(best_disp)
@@ -2695,6 +3381,8 @@ def _inspect_curseforge_mod_page(
                     "download_url": cdn_url,
                     "page_url": url,
                 }
+    except NetworkSecurityError:
+        raise
     except Exception:
         pass
 
@@ -2718,10 +3406,14 @@ def _inspect_curseforge_mod_page(
         part1 = s_id if len(s_id) <= 4 else s_id[:4]
         part2 = "0" if len(s_id) <= 4 else (s_id[4:].lstrip("0") or "0")
         cdn_url = f"https://edge.forgecdn.net/files/{part1}/{part2}/{urllib.parse.quote(fallback_fn)}"
+        validate_https_url(cdn_url, allow_fragment=False, purpose="ForgeCDN 폴백 다운로드 URL 검증")
         try:
-            r_cdn = requests.get(cdn_url, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=timeout)
-            r_cdn.close()
-            if r_cdn.status_code == 200:
+            r_cdn = safe_https_get(cdn_url, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=timeout)
+            try:
+                status_ok = r_cdn.status_code == 200
+            finally:
+                r_cdn.close()
+            if status_ok:
                 fn_ver = extract_version_from_filename(fallback_fn)
                 return {
                     "status": "free_direct",
@@ -2731,6 +3423,8 @@ def _inspect_curseforge_mod_page(
                     "download_url": cdn_url,
                     "page_url": url,
                 }
+        except NetworkSecurityError:
+            raise
         except Exception:
             pass
 
@@ -2743,142 +3437,150 @@ def _inspect_itchio_mod_page(
     headers: Dict[str, str],
     timeout: int = 10,
 ) -> Optional[Dict[str, Any]]:
-    """Itch.io 모드 배포 페이지에서 csrf_token 기반 2단계 API를 통해 무료 다운로드 파일 URL 및 최신 버전을 추출합니다."""
+    """Itch.io 모드 배포 페이지에서 csrf_token 기반 2단계 API(HTTPS 전용)를 통해 무료 다운로드 파일 URL 및 최신 버전을 추출합니다."""
     base_url = url.split("?")[0].rstrip("/")
+    validate_https_url(base_url, allow_fragment=False, purpose="Itch.io 배포 페이지 조회")
     req_timeout = max(timeout, 12)
     try:
-        sess = requests.Session()
-        sess.headers.update({"User-Agent": headers["User-Agent"]})
-        r1 = sess.get(base_url, timeout=req_timeout)
-        if r1.status_code != 200:
-            return None
+        with SafeHttpsSession() as sess:
+            sess.headers.update({"User-Agent": headers["User-Agent"]})
+            r1 = sess.get(base_url, timeout=req_timeout)
+            if r1.status_code != 200:
+                return None
 
-        m_page_ver = (
-            re.search(r"Last updated:\s*(v?[0-9]+\.[0-9]+(?:\.[0-9]+)*[a-z0-9]*)", r1.text, flags=re.IGNORECASE)
-            or re.search(r">\s*(v[0-9]+\.[0-9]+(?:\.[0-9]+)*[a-z0-9]*)\s*[-–:]", r1.text, flags=re.IGNORECASE)
-        )
-        page_ver = m_page_ver.group(1).lstrip("vV") if m_page_ver else ""
+            m_page_ver = (
+                re.search(r"Last updated:\s*(v?[0-9]+\.[0-9]+(?:\.[0-9]+)*[a-z0-9]*)", r1.text, flags=re.IGNORECASE)
+                or re.search(r">\s*(v[0-9]+\.[0-9]+(?:\.[0-9]+)*[a-z0-9]*)\s*[-–:]", r1.text, flags=re.IGNORECASE)
+            )
+            page_ver = m_page_ver.group(1).lstrip("vV") if m_page_ver else ""
 
-        csrf1 = re.search(r'name=["\']csrf_token["\']\s+value=["\']([^"\']+)["\']', r1.text)
-        if not csrf1:
-            return {"status": "browser_required", "version": page_ver, "page_url": base_url} if page_ver else None
+            csrf1 = re.search(r'name=["\']csrf_token["\']\s+value=["\']([^"\']+)["\']', r1.text)
+            if not csrf1:
+                return {"status": "browser_required", "version": page_ver, "page_url": base_url} if page_ver else None
 
-        r2 = sess.post(f"{base_url}/download_url", data={"csrf_token": csrf1.group(1)}, timeout=req_timeout)
-        if r2.status_code != 200:
-            return {"status": "browser_required", "version": page_ver, "page_url": base_url} if page_ver else None
-        dl_page_url = r2.json().get("url")
-        if not dl_page_url:
-            return {"status": "browser_required", "version": page_ver, "page_url": base_url} if page_ver else None
+            r2 = sess.post(f"{base_url}/download_url", data={"csrf_token": csrf1.group(1)}, timeout=req_timeout)
+            if r2.status_code != 200:
+                return {"status": "browser_required", "version": page_ver, "page_url": base_url} if page_ver else None
+            dl_page_url = r2.json().get("url")
+            if not dl_page_url:
+                return {"status": "browser_required", "version": page_ver, "page_url": base_url} if page_ver else None
+            validate_https_url(dl_page_url, allow_fragment=True, purpose="Itch.io 다운로드 페이지 URL")
 
-        r3 = sess.get(dl_page_url, timeout=req_timeout)
-        if r3.status_code != 200:
-            return {"status": "browser_required", "version": page_ver, "page_url": base_url} if page_ver else None
+            r3 = sess.get(dl_page_url, timeout=req_timeout)
+            if r3.status_code != 200:
+                return {"status": "browser_required", "version": page_ver, "page_url": base_url} if page_ver else None
 
-        csrf2 = re.search(r'name=["\']csrf_token["\']\s+value=["\']([^"\']+)["\']', r3.text) or csrf1
+            csrf2 = re.search(r'name=["\']csrf_token["\']\s+value=["\']([^"\']+)["\']', r3.text) or csrf1
 
-        # 업로드 항목별 파일명 및 upload_id 매칭
-        soup = BeautifulSoup(r3.text, "html.parser")
-        upload_candidates: List[Tuple[int, str, str]] = []
-        raw_upload_list: List[Tuple[str, str]] = []
-        t_mod_low = (target_mod_name or "").lower()
-        for up_div in soup.find_all("div", class_="upload"):
-            btn = up_div.find("a", attrs={"data-upload_id": True})
-            name_el = up_div.find(class_="name")
-            if btn and name_el:
-                uid = str(btn["data-upload_id"])
-                fname = name_el.get("title") or name_el.get_text(strip=True)
-                raw_upload_list.append((fname, uid))
-                score = _match_score_mod_name(target_mod_name, fname)
-                if t_mod_low and fname.lower() == t_mod_low:
-                    score += 300
-                elif "limits" in fname.lower() and "limits" in t_mod_low:
-                    score += 40
-                # 변형 옵션(Limits, OPTIONAL 등) 파일이 아닌 본체 파일인 경우 가산점
-                if "limits" not in fname.lower() and "limits" not in t_mod_low:
-                    score += 20
-                if "optional" not in fname.lower() and "optional" not in t_mod_low:
-                    score += 20
-                upload_candidates.append((score, fname, uid))
+            # 업로드 항목별 파일명 및 upload_id 매칭
+            soup = BeautifulSoup(r3.text, "html.parser")
+            upload_candidates: List[Tuple[int, str, str]] = []
+            raw_upload_list: List[Tuple[str, str]] = []
+            t_mod_low = (target_mod_name or "").lower()
+            for up_div in soup.find_all("div", class_="upload"):
+                btn = up_div.find("a", attrs={"data-upload_id": True})
+                name_el = up_div.find(class_="name")
+                if btn and name_el:
+                    uid = str(btn["data-upload_id"])
+                    fname = name_el.get("title") or name_el.get_text(strip=True)
+                    raw_upload_list.append((fname, uid))
+                    score = _match_score_mod_name(target_mod_name, fname)
+                    if t_mod_low and fname.lower() == t_mod_low:
+                        score += 300
+                    elif "limits" in fname.lower() and "limits" in t_mod_low:
+                        score += 40
+                    if "limits" not in fname.lower() and "limits" not in t_mod_low:
+                        score += 20
+                    if "optional" not in fname.lower() and "optional" not in t_mod_low:
+                        score += 20
+                    upload_candidates.append((score, fname, uid))
 
-        if not upload_candidates:
-            raw_uids = re.findall(r'data-upload_id="(\d+)"', r3.text)
-            raw_names = re.findall(r'class="name"[^>]*>([^<]+)<', r3.text)
-            for idx, uid in enumerate(raw_uids):
-                fname = raw_names[idx] if idx < len(raw_names) else f"{target_mod_name}.zip"
-                raw_upload_list.append((fname, uid))
-                score = _match_score_mod_name(target_mod_name, fname)
-                upload_candidates.append((score, fname, uid))
+            if not upload_candidates:
+                raw_uids = re.findall(r'data-upload_id="(\d+)"', r3.text)
+                raw_names = re.findall(r'class="name"[^>]*>([^<]+)<', r3.text)
+                for idx, uid in enumerate(raw_uids):
+                    fname = raw_names[idx] if idx < len(raw_names) else f"{target_mod_name}.zip"
+                    raw_upload_list.append((fname, uid))
+                    score = _match_score_mod_name(target_mod_name, fname)
+                    upload_candidates.append((score, fname, uid))
 
-        if not upload_candidates:
-            return {"status": "browser_required", "version": page_ver, "page_url": base_url} if page_ver else None
+            if not upload_candidates:
+                return {"status": "browser_required", "version": page_ver, "page_url": base_url} if page_ver else None
 
-        upload_candidates.sort(key=lambda x: x[0], reverse=True)
-        _, best_fn, best_uid = upload_candidates[0]
+            upload_candidates.sort(key=lambda x: x[0], reverse=True)
+            _, best_fn, best_uid = upload_candidates[0]
 
-        r4 = sess.post(
-            f"{base_url}/file/{best_uid}?source=game_download",
-            data={"csrf_token": csrf2.group(1)},
-            timeout=req_timeout,
-        )
-        if r4.status_code == 200:
-            direct_dl = r4.json().get("url")
-            if direct_dl:
-                disp_title = best_fn
-                fn_ver = extract_version_from_filename(best_fn)
-                if not best_fn.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
-                    try:
-                        r_cd = sess.get(direct_dl, stream=True, timeout=6)
-                        cd_hdr = r_cd.headers.get("Content-Disposition") or ""
-                        r_cd.close()
-                        m_cd = re.search(r'filename\*?=(?:UTF-8\'\')?["\']?([^"\';\r\n]+)', cd_hdr, flags=re.IGNORECASE)
-                        if m_cd:
-                            real_fn = urllib.parse.unquote(m_cd.group(1).strip())
-                            if real_fn:
-                                best_fn = real_fn
-                                fn_ver = fn_ver or extract_version_from_filename(best_fn)
-                    except Exception:
-                        pass
+            r4 = sess.post(
+                f"{base_url}/file/{best_uid}?source=game_download",
+                data={"csrf_token": csrf2.group(1)},
+                timeout=req_timeout,
+            )
+            if r4.status_code == 200:
+                direct_dl = r4.json().get("url")
+                if direct_dl:
+                    validate_https_url(direct_dl, allow_fragment=True, purpose="Itch.io 직접 다운로드 URL")
+                    disp_title = best_fn
+                    fn_ver = extract_version_from_filename(best_fn)
                     if not best_fn.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
-                        best_fn = re.sub(r'[<>:"/\\|?*]+', "_", best_fn).strip() + ".zip"
-                ver_str = page_ver or (fn_ver.lstrip("vV") if fn_ver else "")
-                variant_choices: List[Dict[str, str]] = []
-                if "limits" in t_mod_low:
-                    for cand_fn, cand_uid in raw_upload_list:
-                        c_low = cand_fn.lower()
-                        if "limits" not in c_low:
-                            continue
-                        if "1.75x" in c_low or "increased" in c_low:
-                            v_lbl = "Limits 1.75x Increased (체형 한계치 1.75배 확장 애드온 - 택1)"
-                        elif "3.00x" in c_low or "exaggerated" in c_low:
-                            v_lbl = "Limits 3.00x Exaggerated (체형 한계치 3.00배 확장 애드온 - 택1)"
-                        elif "5.00x" in c_low or "extreme" in c_low:
-                            v_lbl = "Limits 5.00x Extreme (체형 한계치 5.00배 확장 애드온 - 택1)"
-                        else:
-                            v_lbl = "Fitness Controls Limits Addon (택1)"
-                        v_dl = (
-                            direct_dl
-                            if cand_uid == best_uid
-                            else f"{base_url}#itchio_upload_id={cand_uid}&file_name={urllib.parse.quote(cand_fn)}"
-                        )
-                        variant_choices.append({
-                            "file_name": cand_fn,
-                            "download_url": v_dl,
-                            "label": v_lbl,
-                        })
+                        try:
+                            r_cd = sess.get(direct_dl, stream=True, timeout=6)
+                            try:
+                                cd_hdr = r_cd.headers.get("Content-Disposition") or ""
+                            finally:
+                                r_cd.close()
+                            m_cd = re.search(r'filename\*?=(?:UTF-8\'\')?["\']?([^"\';\r\n]+)', cd_hdr, flags=re.IGNORECASE)
+                            if m_cd:
+                                real_fn = urllib.parse.unquote(m_cd.group(1).strip())
+                                if real_fn:
+                                    best_fn = real_fn
+                                    fn_ver = fn_ver or extract_version_from_filename(best_fn)
+                        except NetworkSecurityError:
+                            raise
+                        except Exception:
+                            pass
+                        if not best_fn.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
+                            best_fn = re.sub(r'[<>:"/\\|?*]+', "_", best_fn).strip() + ".zip"
+                    ver_str = page_ver or (fn_ver.lstrip("vV") if fn_ver else "")
+                    variant_choices: List[Dict[str, str]] = []
+                    if "limits" in t_mod_low:
+                        for cand_fn, cand_uid in raw_upload_list:
+                            c_low = cand_fn.lower()
+                            if "limits" not in c_low:
+                                continue
+                            if "1.75x" in c_low or "increased" in c_low:
+                                v_lbl = "Limits 1.75x Increased (체형 한계치 1.75배 확장 애드온 - 택1)"
+                            elif "3.00x" in c_low or "exaggerated" in c_low:
+                                v_lbl = "Limits 3.00x Exaggerated (체형 한계치 3.00배 확장 애드온 - 택1)"
+                            elif "5.00x" in c_low or "extreme" in c_low:
+                                v_lbl = "Limits 5.00x Extreme (체형 한계치 5.00배 확장 애드온 - 택1)"
+                            else:
+                                v_lbl = "Fitness Controls Limits Addon (택1)"
+                            v_dl = (
+                                direct_dl
+                                if cand_uid == best_uid
+                                else f"{base_url}#itchio_upload_id={cand_uid}&file_name={urllib.parse.quote(cand_fn)}"
+                            )
+                            variant_choices.append({
+                                "file_name": cand_fn,
+                                "download_url": v_dl,
+                                "label": v_lbl,
+                            })
 
-                all_files_list: List[Tuple[str, str]] = [(best_fn, direct_dl)]
-                return {
-                    "status": "free_direct",
-                    "title": disp_title,
-                    "version": ver_str,
-                    "file_name": best_fn,
-                    "download_url": direct_dl,
-                    "page_url": base_url,
-                    "all_files": all_files_list,
-                    "variant_choices": variant_choices if len(variant_choices) > 1 else [],
-                }
-        if page_ver:
-            return {"status": "browser_required", "version": page_ver, "page_url": base_url}
+                    all_files_list: List[Tuple[str, str]] = [(best_fn, direct_dl)]
+                    return {
+                        "status": "free_direct",
+                        "title": disp_title,
+                        "version": ver_str,
+                        "file_name": best_fn,
+                        "download_url": direct_dl,
+                        "page_url": base_url,
+                        "all_files": all_files_list,
+                        "variant_choices": variant_choices if len(variant_choices) > 1 else [],
+                    }
+            if page_ver:
+                return {"status": "browser_required", "version": page_ver, "page_url": base_url}
+    except NetworkSecurityError:
+        raise
     except Exception:
         pass
     return None
@@ -2890,9 +3592,10 @@ def _inspect_modthesims_page(
     headers: Dict[str, str],
     timeout: int = 10,
 ) -> Optional[Dict[str, Any]]:
-    """ModTheSims(modthesims.info) 배포 페이지에서 getfile.php 다운로드 링크와 파일명을 추출합니다."""
+    """ModTheSims(modthesims.info) 배포 페이지에서 getfile.php HTTPS 다운로드 링크와 파일명을 추출합니다."""
+    validate_https_url(url, allow_fragment=True, purpose="ModTheSims 배포 페이지 조회")
     try:
-        r = requests.get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+        r = safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
         if r.status_code != 200:
             return None
 
@@ -2905,6 +3608,9 @@ def _inspect_modthesims_page(
             if "getfile.php" not in href:
                 continue
             full_dl = urllib.parse.urljoin(url, href)
+            if not is_valid_https_url(full_dl):
+                log_security_warning(f"ModTheSims 내 비-HTTPS 다운로드 링크 제외: {full_dl!r}")
+                continue
             if full_dl in seen_urls:
                 continue
             text = a.get_text(" ", strip=True)
@@ -2916,11 +3622,12 @@ def _inspect_modthesims_page(
                 candidates.append((score, text, full_dl))
 
         if not candidates:
-            # 앵커 텍스트에 확장자가 없는 경우 getfile.php 링크 자체를 추출
             for a in soup.find_all("a", href=True):
                 href = a["href"].strip()
                 if "getfile.php" in href:
                     full_dl = urllib.parse.urljoin(url, href)
+                    if not is_valid_https_url(full_dl):
+                        continue
                     stem = Path(target_mod_name).stem or "ModTheSims_Download"
                     candidates.append((10, f"{stem}.zip", full_dl))
                     break
@@ -2930,16 +3637,53 @@ def _inspect_modthesims_page(
 
         candidates.sort(key=lambda x: x[0], reverse=True)
         _, best_fn, best_dl = candidates[0]
-        fn_ver = extract_version_from_filename(best_fn) or extract_version_from_filename(url)
+        validate_https_url(best_dl, allow_fragment=True, purpose="ModTheSims 다운로드 URL 검증")
+
+        raw_page_title = soup.title.get_text(" ", strip=True) if soup.title else ""
+        page_title = re.sub(r"^Mod\s+The\s+Sims\s*[-–:]\s*", "", raw_page_title, flags=re.IGNORECASE).strip()
+
+        fn_ver = (
+            extract_version_from_filename(best_fn)
+            or extract_version_from_filename(page_title)
+            or extract_version_from_filename(url)
+        )
         ver_str = fn_ver.lstrip("vV") if fn_ver else ""
+        target_ver = extract_version_from_filename(target_mod_name or "").lstrip("vV")
+        if ver_str.endswith(".0") and target_ver and ver_str[:-2] == target_ver:
+            ver_str = target_ver
+
+        if not ver_str:
+            month_map = {
+                "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+                "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+            }
+            mts_dates: List[str] = []
+            plain_text = soup.get_text(" ", strip=True)
+            for m_dt in re.finditer(
+                r"\b(\d{1,2})(?:st|nd|rd|th)?[\s\xa0]+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\xa0,]+(20\d{2})\b",
+                plain_text,
+                flags=re.IGNORECASE,
+            ):
+                day_i = int(m_dt.group(1))
+                mon_i = month_map.get(m_dt.group(2)[:3].lower(), 0)
+                yr_i = int(m_dt.group(3))
+                if 1 <= day_i <= 31 and 1 <= mon_i <= 12:
+                    mts_dates.append(f"{yr_i:04d}.{mon_i:02d}.{day_i:02d}")
+            if mts_dates:
+                ver_str = max(mts_dates)
+
+        all_files_list = [(fn, dl) for _, fn, dl in candidates]
         return {
             "status": "free_direct",
-            "title": best_fn,
+            "title": page_title or best_fn,
             "version": ver_str,
             "file_name": best_fn,
             "download_url": best_dl,
             "page_url": url,
+            "all_files": all_files_list,
         }
+    except NetworkSecurityError:
+        raise
     except Exception:
         return None
 
@@ -2950,11 +3694,12 @@ def _inspect_simfileshare_page(
     headers: Dict[str, str],
     timeout: int = 10,
 ) -> Optional[Dict[str, Any]]:
-    """SimFileShare(simfileshare.net/download/ID 또는 /folder/ID) 링크를 직접 다운로드 URL(?dl)로 변환하고 실제 파일명을 추출합니다."""
+    """SimFileShare(simfileshare.net/download/ID 또는 /folder/ID) 링크를 HTTPS 직접 다운로드 URL(?dl)로 변환하고 실제 파일명을 추출합니다."""
+    validate_https_url(url, allow_fragment=True, purpose="SimFileShare 페이지 조회")
     # 1) SimFileShare 폴더 공유 링크(/folder/ID)인 경우 내부 파일 목록에서 대상 모드와 가장 일치하는 파일 선택
     if "/folder/" in url.lower():
         try:
-            r_f = requests.get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+            r_f = safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
             if r_f.status_code == 200:
                 soup_f = BeautifulSoup(r_f.text, "html.parser")
                 f_cands: List[Tuple[int, str, str]] = []
@@ -2969,6 +3714,8 @@ def _inspect_simfileshare_page(
                     f_cands.sort(key=lambda x: x[0], reverse=True)
                     _, best_fn_txt, best_fid = f_cands[0]
                     url = f"https://www.simfileshare.net/download/{best_fid}/"
+        except NetworkSecurityError:
+            raise
         except Exception:
             pass
 
@@ -2978,12 +3725,16 @@ def _inspect_simfileshare_page(
     sfs_id = m_id.group(1)
     cdn_dl = f"https://simfileshare.net/download/{sfs_id}/?dl"
     try:
-        r = requests.get(cdn_dl, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=timeout)
-        cd_hdr = r.headers.get("Content-Disposition") or ""
-        final_dl = r.url or cdn_dl
-        r.close()
-        if r.status_code != 200:
+        r = safe_https_get(cdn_dl, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=timeout)
+        try:
+            status_code = r.status_code
+            cd_hdr = r.headers.get("Content-Disposition") or ""
+            final_dl = r.url or cdn_dl
+        finally:
+            r.close()
+        if status_code != 200:
             return None
+        validate_https_url(final_dl, allow_fragment=True, purpose="SimFileShare 최종 다운로드 URL")
         fname = ""
         m_cd = re.search(r'filename\*?=(?:UTF-8\'\')?["\']?([^"\';\r\n]+)', cd_hdr, flags=re.IGNORECASE)
         if m_cd:
@@ -2999,6 +3750,8 @@ def _inspect_simfileshare_page(
             "download_url": final_dl,
             "page_url": f"https://www.simfileshare.net/download/{sfs_id}/",
         }
+    except NetworkSecurityError:
+        raise
     except Exception:
         return None
 
@@ -3009,52 +3762,68 @@ def _inspect_mediafire_page(
     headers: Dict[str, str],
     timeout: int = 10,
 ) -> Optional[Dict[str, Any]]:
-    """MediaFire 파일 공유 페이지(mediafire.com/file/... 및 /file_premium/...)에서 직접 다운로드 링크와 파일명을 추출합니다."""
+    """MediaFire 파일 공유 페이지(mediafire.com/file/... 및 /file_premium/...)에서 HTTPS 직접 다운로드 링크와 파일명을 추출합니다."""
+    validate_https_url(url, allow_fragment=True, purpose="MediaFire 페이지 조회")
     try:
-        r = requests.get(url, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=timeout)
-        if r.status_code != 200:
-            r.close()
-            return None
+        r = safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=timeout)
+        try:
+            if r.status_code != 200:
+                return None
 
-        ctype = (r.headers.get("Content-Type") or "").lower()
-        cd_hdr = r.headers.get("Content-Disposition") or ""
-        final_u = r.url or url
+            ctype = (r.headers.get("Content-Type") or "").lower()
+            cd_hdr = r.headers.get("Content-Disposition") or ""
+            final_u = r.url or url
+            validate_https_url(final_u, allow_fragment=True, purpose="MediaFire 응답 URL 검증")
 
-        # 1) file_premium 링크 등 이미 직접 다운로드 스트림(download*.mediafire.com)으로 리다이렉트된 경우
-        if "text/html" not in ctype or "download" in urllib.parse.urlparse(final_u).netloc.lower() or "attachment" in cd_hdr.lower():
-            r.close()
-            fname = ""
-            m_cd = re.search(r'filename\*?=(?:UTF-8\'\')?["\']?([^"\';\r\n]+)', cd_hdr, flags=re.IGNORECASE)
-            if m_cd:
-                fname = urllib.parse.unquote(m_cd.group(1).strip())
-            if not fname or "." not in fname:
-                for cand_u in (final_u, url):
-                    parts = [p for p in urllib.parse.unquote(urllib.parse.urlparse(cand_u).path).split("/") if p and p.lower() != "file"]
-                    if parts and "." in parts[-1]:
-                        fname = parts[-1]
+            # 1) file_premium 링크 등 이미 직접 다운로드 스트림(download*.mediafire.com)으로 리다이렉트된 경우
+            if "text/html" not in ctype or "download" in urllib.parse.urlparse(final_u).netloc.lower() or "attachment" in cd_hdr.lower():
+                fname = ""
+                m_cd = re.search(r'filename\*?=(?:UTF-8\'\')?["\']?([^"\';\r\n]+)', cd_hdr, flags=re.IGNORECASE)
+                if m_cd:
+                    fname = urllib.parse.unquote(m_cd.group(1).strip())
+                if not fname or "." not in fname:
+                    for cand_u in (final_u, url):
+                        parts = [p for p in urllib.parse.unquote(urllib.parse.urlparse(cand_u).path).split("/") if p and p.lower() != "file"]
+                        if parts and "." in parts[-1]:
+                            fname = parts[-1]
+                            break
+                if not fname or "." not in fname:
+                    fname = target_mod_name if "." in target_mod_name else "mediafire_mod.zip"
+                fn_ver = extract_version_from_filename(fname) or (
+                    f"v{re.search(r'(\d+_\d+_\d+)', fname).group(1).replace('_', '.')}"
+                    if re.search(r"(\d+_\d+_\d+)", fname)
+                    else ""
+                )
+                return {
+                    "status": "free_direct",
+                    "title": fname,
+                    "version": fn_ver.lstrip("vV") if fn_ver else "",
+                    "file_name": fname,
+                    "download_url": final_u,
+                    "page_url": url,
+                }
+
+            # 2) HTML 페이지인 경우 최대 2MB 및 경과 시간 제한 내에서 본문 읽기
+            html_chunks: List[bytes] = []
+            read_bytes = 0
+            started_at = time.monotonic()
+            for chunk in r.iter_content(chunk_size=16384):
+                if time.monotonic() - started_at > 15.0:
+                    raise TimeoutError("MediaFire 페이지 본문 수신 시간 초과")
+                if chunk:
+                    html_chunks.append(chunk)
+                    read_bytes += len(chunk)
+                    if read_bytes >= 2 * 1024 * 1024:
                         break
-            if not fname or "." not in fname:
-                fname = target_mod_name if "." in target_mod_name else "mediafire_mod.zip"
-            fn_ver = extract_version_from_filename(fname) or (
-                f"v{re.search(r'(\d+_\d+_\d+)', fname).group(1).replace('_', '.')}"
-                if re.search(r"(\d+_\d+_\d+)", fname)
-                else ""
-            )
-            return {
-                "status": "free_direct",
-                "title": fname,
-                "version": fn_ver.lstrip("vV") if fn_ver else "",
-                "file_name": fname,
-                "download_url": final_u,
-                "page_url": url,
-            }
+            html_text = b"".join(html_chunks).decode(r.encoding or "utf-8", errors="ignore")
+        finally:
+            r.close()
 
-        html_text = r.text
-        r.close()
         m_dl = re.search(r'href=["\'](https?://download\d*\.mediafire\.com/[^"\']+)["\']', html_text)
         if not m_dl:
             return None
-        direct_dl = m_dl.group(1)
+        direct_dl = m_dl.group(1).strip()
+        validate_https_url(direct_dl, allow_fragment=True, purpose="MediaFire 직접 다운로드 링크")
         fname = urllib.parse.unquote(direct_dl.split("/")[-1].split("?")[0])
         if not fname or "." not in fname:
             fname = target_mod_name if "." in target_mod_name else "mediafire_mod.zip"
@@ -3067,6 +3836,8 @@ def _inspect_mediafire_page(
             "download_url": direct_dl,
             "page_url": url,
         }
+    except NetworkSecurityError:
+        raise
     except Exception:
         return None
 
@@ -3077,17 +3848,21 @@ def _inspect_google_drive_page(
     headers: Dict[str, str],
     timeout: int = 10,
 ) -> Optional[Dict[str, Any]]:
-    """Google Drive 파일 공유 링크(drive.google.com/file/d/ID 등)를 직접 다운로드 URL로 변환하고 실제 파일명을 추출합니다."""
+    """Google Drive 파일 공유 링크(drive.google.com/file/d/ID 등)를 HTTPS 직접 다운로드 URL로 변환하고 실제 파일명을 추출합니다."""
+    validate_https_url(url, allow_fragment=True, purpose="Google Drive 페이지 조회")
     m_id = re.search(r"/file/d/([a-zA-Z0-9_-]+)", url) or re.search(r"[?&]id=([a-zA-Z0-9_-]+)", url)
     if not m_id:
         return None
     file_id = m_id.group(1)
     direct_dl = f"https://drive.google.com/uc?export=download&id={file_id}"
     try:
-        r = requests.get(direct_dl, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=timeout)
-        cd_hdr = r.headers.get("Content-Disposition") or ""
-        r.close()
-        if r.status_code != 200:
+        r = safe_https_get(direct_dl, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=timeout)
+        try:
+            status_code = r.status_code
+            cd_hdr = r.headers.get("Content-Disposition") or ""
+        finally:
+            r.close()
+        if status_code != 200:
             return None
         fname = ""
         m_cd = re.search(r'filename\*?=(?:UTF-8\'\')?["\']?([^"\';\r\n]+)', cd_hdr, flags=re.IGNORECASE)
@@ -3104,6 +3879,8 @@ def _inspect_google_drive_page(
             "download_url": direct_dl,
             "page_url": url,
         }
+    except NetworkSecurityError:
+        raise
     except Exception:
         return None
 
@@ -3114,7 +3891,8 @@ def _inspect_dropbox_page(
     headers: Dict[str, str],
     timeout: int = 10,
 ) -> Optional[Dict[str, Any]]:
-    """Dropbox 파일 공유 링크(dropbox.com/scl/fi/... 등)에서 dl=1 직접 다운로드 URL과 실제 파일명을 추출합니다."""
+    """Dropbox 파일 공유 링크(dropbox.com/scl/fi/... 등)에서 HTTPS dl=1 직접 다운로드 URL과 실제 파일명을 추출합니다."""
+    validate_https_url(url, allow_fragment=True, purpose="Dropbox 페이지 조회")
     try:
         if "dl=0" in url:
             direct_dl = url.replace("dl=0", "dl=1")
@@ -3123,15 +3901,19 @@ def _inspect_dropbox_page(
         elif "?" in url:
             direct_dl = f"{url}&dl=1"
         else:
-            direct_dl = f"{url}?dl=1"
+            direct_dl = f"{url}&dl=1"
+        validate_https_url(direct_dl, allow_fragment=True, purpose="Dropbox 직접 다운로드 URL")
 
         path_part = urllib.parse.unquote(urllib.parse.urlparse(url).path.split("/")[-1])
         fname = path_part if "." in path_part else ""
 
-        r = requests.get(direct_dl, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=timeout)
-        cd_hdr = r.headers.get("Content-Disposition") or ""
-        r.close()
-        if r.status_code != 200:
+        r = safe_https_get(direct_dl, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=timeout)
+        try:
+            status_code = r.status_code
+            cd_hdr = r.headers.get("Content-Disposition") or ""
+        finally:
+            r.close()
+        if status_code != 200:
             return None
         m_cd = re.search(r'filename\*?=(?:UTF-8\'\')?["\']?([^"\';\r\n]+)', cd_hdr, flags=re.IGNORECASE)
         if m_cd:
@@ -3149,6 +3931,8 @@ def _inspect_dropbox_page(
             "download_url": direct_dl,
             "page_url": url,
         }
+    except NetworkSecurityError:
+        raise
     except Exception:
         return None
 
@@ -3159,43 +3943,49 @@ def _inspect_wickedcc_page(
     headers: Dict[str, str],
     timeout: int = 10,
 ) -> Optional[Dict[str, Any]]:
-    """Wicked.cc 모드 배포 페이지(wicked.cc/mods/...)에서 세션 및 Referer를 유지하여 직접 다운로드 URL(files.wicked.cc)과 파일명을 추출합니다."""
+    """Wicked.cc 모드 배포 페이지(wicked.cc/mods/...)에서 보안 HTTPS 세션 및 Referer를 유지하여 직접 다운로드 URL(files.wicked.cc)과 파일명을 추출합니다."""
+    validate_https_url(url, allow_fragment=True, purpose="Wicked.cc 페이지 조회")
     try:
-        sess = requests.Session()
-        sess.headers.update({"User-Agent": headers["User-Agent"]})
-        r1 = sess.get(url, timeout=timeout)
-        if r1.status_code != 200:
-            return None
-        soup = BeautifulSoup(r1.text, "html.parser")
-        title_str = soup.title.get_text(" ", strip=True) if soup.title else ""
-        dl_href = ""
-        for a in soup.find_all("a", href=True):
-            href = urllib.parse.urljoin(url, a["href"].strip())
-            if "/download/" in href.lower():
-                dl_href = href
-                break
-        if not dl_href:
-            return None
+        with SafeHttpsSession() as sess:
+            sess.headers.update({"User-Agent": headers["User-Agent"]})
+            r1 = sess.get(url, timeout=timeout)
+            if r1.status_code != 200:
+                return None
+            soup = BeautifulSoup(r1.text, "html.parser")
+            title_str = soup.title.get_text(" ", strip=True) if soup.title else ""
+            dl_href = ""
+            for a in soup.find_all("a", href=True):
+                href = urllib.parse.urljoin(url, a["href"].strip())
+                if "/download/" in href.lower() and is_valid_https_url(href):
+                    dl_href = href
+                    break
+            if not dl_href:
+                return None
 
-        r2 = sess.get(dl_href, headers={"Referer": url}, stream=True, timeout=timeout)
-        final_dl = r2.url
-        r2.close()
-        if not final_dl or final_dl.rstrip("/") == "https://wicked.cc":
-            return None
+            r2 = sess.get(dl_href, headers={"Referer": url}, stream=True, timeout=timeout)
+            try:
+                final_dl = r2.url
+            finally:
+                r2.close()
+            if not final_dl or final_dl.rstrip("/") == "https://wicked.cc":
+                return None
+            validate_https_url(final_dl, allow_fragment=True, purpose="Wicked.cc 최종 다운로드 URL")
 
-        fname = urllib.parse.unquote_plus(urllib.parse.urlparse(final_dl).path.split("/")[-1])
-        fname = re.sub(r"\s+", " ", fname).strip()
-        if not fname or "." not in fname:
-            fname = f"{Path(target_mod_name).stem or 'wickedcc_mod'}.zip"
-        fn_ver = extract_version_from_filename(fname) or extract_version_from_filename(title_str)
-        return {
-            "status": "free_direct",
-            "title": title_str or fname,
-            "version": fn_ver.lstrip("vV") if fn_ver else "",
-            "file_name": fname,
-            "download_url": final_dl,
-            "page_url": url,
-        }
+            fname = urllib.parse.unquote_plus(urllib.parse.urlparse(final_dl).path.split("/")[-1])
+            fname = re.sub(r"\s+", " ", fname).strip()
+            if not fname or "." not in fname:
+                fname = f"{Path(target_mod_name).stem or 'wickedcc_mod'}.zip"
+            fn_ver = extract_version_from_filename(fname) or extract_version_from_filename(title_str)
+            return {
+                "status": "free_direct",
+                "title": title_str or fname,
+                "version": fn_ver.lstrip("vV") if fn_ver else "",
+                "file_name": fname,
+                "download_url": final_dl,
+                "page_url": url,
+            }
+    except NetworkSecurityError:
+        raise
     except Exception:
         return None
 
@@ -3206,9 +3996,10 @@ def _inspect_dcinside_page(
     headers: Dict[str, str],
     timeout: int = 10,
 ) -> Optional[Dict[str, Any]]:
-    """디시인사이드(gall.dcinside.com) 게시글에서 첨부된 모드/압축 파일 또는 본문 내 배포 링크(Google Drive, SimFileShare, MediaFire, Patreon 등)를 추출합니다."""
+    """디시인사이드(gall.dcinside.com) 게시글에서 첨부된 모드/압축 파일 또는 본문 내 HTTPS 배포 링크를 추출합니다."""
+    validate_https_url(url, allow_fragment=True, purpose="디시인사이드 게시글 조회")
     try:
-        r = requests.get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+        r = safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
         if r.status_code != 200:
             return None
         soup = BeautifulSoup(r.text, "html.parser")
@@ -3218,9 +4009,11 @@ def _inspect_dcinside_page(
 
         candidates: List[Tuple[int, str, str, str]] = []
 
-        # 1) 게시글 자체 첨부파일 박스(.appending_file) 내 모드/압축 파일 확인
+        # 1) 게시글 자체 첨부파일 박스(.appending_file) 내 모드/압축 파일 확인 (HTTPS 전용)
         for a_file in soup.select(".appending_file a[href]"):
-            f_href = a_file["href"].strip()
+            f_href = urllib.parse.urljoin(url, a_file["href"].strip())
+            if not is_valid_https_url(f_href):
+                continue
             f_name = a_file.get_text(" ", strip=True)
             if not f_name:
                 parsed_q = urllib.parse.parse_qs(urllib.parse.urlparse(f_href).query)
@@ -3230,24 +4023,23 @@ def _inspect_dcinside_page(
                 score = _match_score_mod_name(target_mod_name, f_name) + 35
                 candidates.append((score, f_name, f_href, f_ver.lstrip("vV") if f_ver else ""))
 
-        # 2) 게시글 본문(.write_div) 내 외부 공유 링크(Google Drive, SimFileShare, MediaFire, Box, Patreon 등) 확인
+        # 2) 게시글 본문(.write_div) 내 외부 공유 HTTPS 링크 확인
         write_div = soup.select_one(".write_div") or soup
         seen_ext: set[str] = set()
         ext_links: List[str] = []
         for a_ext in write_div.find_all("a", href=True):
             eh = a_ext["href"].strip()
-            if eh.startswith(("http://", "https://")) and "dcinside.com" not in eh.lower() and eh not in seen_ext:
+            if is_valid_https_url(eh) and "dcinside.com" not in eh.lower() and eh not in seen_ext:
                 seen_ext.add(eh)
                 ext_links.append(eh)
 
         body_text = write_div.get_text(" ", strip=True)
-        for m_raw_u in re.finditer(r'https?://[^\s"\'<>]+', body_text):
+        for m_raw_u in re.finditer(r'https://[^\s"\'<>]+', body_text):
             ru = m_raw_u.group(0).rstrip(".,;'\")>]")
-            if "dcinside.com" not in ru.lower() and ru not in seen_ext:
+            if is_valid_https_url(ru) and "dcinside.com" not in ru.lower() and ru not in seen_ext:
                 seen_ext.add(ru)
                 ext_links.append(ru)
 
-        # 한국어 번역/배포 파일에 주로 쓰이는 직접 공유 호스트(Google Drive, SimFileShare, MediaFire, Box)를 우선 검사
         ext_links.sort(
             key=lambda u: 0
             if any(h in u.lower() for h in ("drive.google.com", "simfileshare.net", "mediafire.com", "app.box.com", "dropbox.com"))
@@ -3255,8 +4047,11 @@ def _inspect_dcinside_page(
         )
 
         for ext_u in ext_links[:5]:
-            sub_res = inspect_remote_mod_page(ext_u, target_mod_name=target_mod_name, timeout=timeout, _depth=1)
-            if sub_res.get("status") == "free_direct" and sub_res.get("download_url"):
+            try:
+                sub_res = inspect_remote_mod_page(ext_u, target_mod_name=target_mod_name, timeout=timeout, _depth=1)
+            except NetworkSecurityError:
+                continue
+            if sub_res.get("status") == "free_direct" and sub_res.get("download_url") and is_valid_https_url(sub_res["download_url"]):
                 s_fn = sub_res.get("file_name") or ""
                 s_ver = sub_res.get("version") or (title_ver.lstrip("vV") if title_ver else "")
                 s_score = _match_score_mod_name(target_mod_name, s_fn) + 25
@@ -3267,6 +4062,7 @@ def _inspect_dcinside_page(
         if candidates:
             candidates.sort(key=lambda x: x[0], reverse=True)
             _, best_fn, best_dl, best_ver = candidates[0]
+            validate_https_url(best_dl, allow_fragment=True, purpose="디시인사이드 첨부/공유 다운로드 URL")
             return {
                 "status": "free_direct",
                 "title": post_title or best_fn,
@@ -3275,6 +4071,8 @@ def _inspect_dcinside_page(
                 "download_url": best_dl,
                 "page_url": url,
             }
+    except NetworkSecurityError:
+        raise
     except Exception:
         pass
     return None
@@ -3286,7 +4084,8 @@ def _inspect_naver_blog_page(
     headers: Dict[str, str],
     timeout: int = 10,
 ) -> Optional[Dict[str, Any]]:
-    """네이버 블로그(blog.naver.com) 포스트에서 PostView 본문 내 첨부된 모드/압축 파일(download.blog.naver.com) 또는 외부 배포 링크를 추출합니다."""
+    """네이버 블로그(blog.naver.com) 포스트에서 PostView 본문 내 첨부된 모드/압축 파일(download.blog.naver.com) 또는 외부 HTTPS 배포 링크를 추출합니다."""
+    validate_https_url(url, allow_fragment=True, purpose="네이버 블로그 포스트 조회")
     try:
         fetch_url = url
         m_nb = re.search(r"blog\.naver\.com/([a-zA-Z0-9_-]+)/(\d+)", url)
@@ -3294,7 +4093,7 @@ def _inspect_naver_blog_page(
             blog_id, log_no = m_nb.group(1), m_nb.group(2)
             fetch_url = f"https://blog.naver.com/PostView.naver?blogId={blog_id}&logNo={log_no}"
 
-        r = requests.get(fetch_url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+        r = safe_https_get(fetch_url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
         if r.status_code != 200:
             return None
 
@@ -3325,6 +4124,8 @@ def _inspect_naver_blog_page(
                 raw_dl_urls.append(u_val)
 
         for dl_u in raw_dl_urls:
+            if not is_valid_https_url(dl_u):
+                continue
             fn = urllib.parse.unquote(dl_u.split("/")[-1].split("?")[0]).strip()
             fn_low = fn.lower()
             if not fn_low.endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
@@ -3343,8 +4144,7 @@ def _inspect_naver_blog_page(
         if candidates:
             candidates.sort(key=lambda x: x[0], reverse=True)
             _, best_fn, best_dl, best_ver = candidates[0]
-            # 로컬 파일명과 정확히 일치하거나, 동일 변형 계열(예: !WAMTIK-...-FF vs 기본 !WAMTIK-..., FriedGil 4종 택1)인 경우
-            # 다른 변형 파일까지 다중 번들로 중복 설치되지 않도록 선택된 1개 변형만 전달
+            validate_https_url(best_dl, allow_fragment=True, purpose="네이버 블로그 첨부파일 다운로드 URL")
             if (target_base_low and (best_fn.lower() == target_base_low or best_fn.lower().lstrip("!_~ ") == target_base_norm)) or "wamtik" in best_fn.lower():
                 matched_all_files = [(best_fn, best_dl)]
             else:
@@ -3359,22 +4159,27 @@ def _inspect_naver_blog_page(
                 "all_files": matched_all_files,
             }
 
-        # 2) 본문 내 외부 배포 링크(Google Drive, SimFileShare, MediaFire, Dropbox 등) 보조 탐색
+        # 2) 본문 내 외부 배포 HTTPS 링크(Google Drive, SimFileShare, MediaFire, Dropbox 등) 보조 탐색
         ext_links: List[str] = []
         for m_ext in re.finditer(
-            r'https?://(?:drive\.google\.com/file/d/[^\s"\'<>\\]+|simfileshare\.net/(?:download|folder)/\d+/?|(?:www\.)?mediafire\.com/file/[^\s"\'<>\\]+|(?:www\.)?dropbox\.com/[^\s"\'<>\\]+)',
+            r'https://(?:drive\.google\.com/file/d/[^\s"\'<>\\]+|simfileshare\.net/(?:download|folder)/\d+/?|(?:www\.)?mediafire\.com/file/[^\s"\'<>\\]+|(?:www\.)?dropbox\.com/[^\s"\'<>\\]+)',
             r.text,
             flags=re.IGNORECASE,
         ):
             ext_u = html.unescape(m_ext.group(0)).rstrip(".,;'\")>]")
-            if ext_u not in ext_links:
+            if is_valid_https_url(ext_u) and ext_u not in ext_links:
                 ext_links.append(ext_u)
 
         for ext_u in ext_links[:4]:
-            sub_res = inspect_remote_mod_page(ext_u, target_mod_name=target_mod_name, timeout=timeout, _depth=1)
-            if sub_res.get("status") == "free_direct" and sub_res.get("download_url"):
+            try:
+                sub_res = inspect_remote_mod_page(ext_u, target_mod_name=target_mod_name, timeout=timeout, _depth=1)
+            except NetworkSecurityError:
+                continue
+            if sub_res.get("status") == "free_direct" and sub_res.get("download_url") and is_valid_https_url(sub_res["download_url"]):
                 sub_res["page_url"] = url
                 return sub_res
+    except NetworkSecurityError:
+        raise
     except Exception:
         pass
     return None
@@ -3386,9 +4191,10 @@ def _inspect_postype_page(
     headers: Dict[str, str],
     timeout: int = 10,
 ) -> Optional[Dict[str, Any]]:
-    """포스타입(postype.com) 포스트에서 첨부된 모드/압축 파일 또는 무료 공개 애드온 메타데이터를 추출합니다."""
+    """포스타입(postype.com) 포스트에서 첨부된 모드/압축 파일 또는 무료 공개 애드온 메타데이터(HTTPS 전용)를 추출합니다."""
+    validate_https_url(url, allow_fragment=True, purpose="포스타입 포스트 조회")
     try:
-        r = requests.get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+        r = safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
         if r.status_code != 200:
             return None
 
@@ -3419,9 +4225,11 @@ def _inspect_postype_page(
         candidates: List[Tuple[int, str, str, str]] = []
         seen_filenames: set[str] = set()
 
-        # 1) 본문 내 직접 첨부파일 링크 탐색
+        # 1) 본문 내 직접 첨부파일 HTTPS 링크 탐색
         for a in soup.find_all("a", href=True):
             href = urllib.parse.urljoin(url, a["href"].strip())
+            if not is_valid_https_url(href):
+                continue
             txt = a.get_text(" ", strip=True)
             fn_cand = a.get("download") or txt or urllib.parse.unquote(urllib.parse.urlparse(href).path.split("/")[-1])
             fn_cand = str(fn_cand).strip()
@@ -3445,6 +4253,7 @@ def _inspect_postype_page(
         if candidates:
             candidates.sort(key=lambda x: x[0], reverse=True)
             _, best_fn, best_dl, best_ver = candidates[0]
+            validate_https_url(best_dl, allow_fragment=True, purpose="포스타입 첨부파일 다운로드 URL")
             return {
                 "status": "free_direct",
                 "title": post_title or best_fn,
@@ -3455,20 +4264,23 @@ def _inspect_postype_page(
                 "all_files": [(best_fn, best_dl)],
             }
 
-        # 2) 본문 내 외부 배포 링크(Google Drive, SimFileShare, MediaFire, Dropbox 등) 탐색
+        # 2) 본문 내 외부 배포 HTTPS 링크 탐색
         ext_links: List[str] = []
         for m_ext in re.finditer(
-            r'https?://(?:drive\.google\.com/file/d/[^\s"\'<>\\]+|simfileshare\.net/(?:download|folder)/\d+/?|(?:www\.)?mediafire\.com/file/[^\s"\'<>\\]+|(?:www\.)?dropbox\.com/[^\s"\'<>\\]+)',
+            r'https://(?:drive\.google\.com/file/d/[^\s"\'<>\\]+|simfileshare\.net/(?:download|folder)/\d+/?|(?:www\.)?mediafire\.com/file/[^\s"\'<>\\]+|(?:www\.)?dropbox\.com/[^\s"\'<>\\]+)',
             r.text,
             flags=re.IGNORECASE,
         ):
             ext_u = html.unescape(m_ext.group(0)).rstrip(".,;'\")>]")
-            if ext_u not in ext_links:
+            if is_valid_https_url(ext_u) and ext_u not in ext_links:
                 ext_links.append(ext_u)
 
         for ext_u in ext_links[:4]:
-            sub_res = inspect_remote_mod_page(ext_u, target_mod_name=target_mod_name, timeout=timeout, _depth=1)
-            if sub_res.get("status") == "free_direct" and sub_res.get("download_url"):
+            try:
+                sub_res = inspect_remote_mod_page(ext_u, target_mod_name=target_mod_name, timeout=timeout, _depth=1)
+            except NetworkSecurityError:
+                continue
+            if sub_res.get("status") == "free_direct" and sub_res.get("download_url") and is_valid_https_url(sub_res["download_url"]):
                 sub_res["page_url"] = url
                 return sub_res
 
@@ -3499,6 +4311,8 @@ def _inspect_postype_page(
                 "page_url": url,
                 "all_files": [(best_p_fn, best_p_dl)],
             }
+    except NetworkSecurityError:
+        raise
     except Exception:
         pass
     return None
@@ -3522,9 +4336,10 @@ def inspect_remote_mod_page(
         "Accept-Language": "en-US,en;q=0.9,ko;q=0.8",
     }
 
-    if not url or not url.startswith(("http://", "https://")) or "google.com/search" in url:
+    if not url or "google.com/search" in url:
         return {"status": "browser_required", "page_url": url}
 
+    url = validate_https_url(url, allow_fragment=True, purpose="원격 모드 배포 페이지 조회")
     u_lower = url.lower()
 
     # ==========================================================================
@@ -3560,7 +4375,7 @@ def inspect_remote_mod_page(
     if "deaderpool-mccc.com" in u_lower:
         dl_page = "https://deaderpool-mccc.com/downloads.html"
         try:
-            r_dp = requests.get(dl_page, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+            r_dp = safe_https_get(dl_page, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
             if r_dp.status_code == 200:
                 soup_dp = BeautifulSoup(r_dp.text, "html.parser")
                 is_woohoo = "woohoo" in (target_mod_name or "").lower()
@@ -3570,12 +4385,14 @@ def inspect_remote_mod_page(
                 for a in soup_dp.find_all("a", href=True):
                     txt = a.get_text(" ", strip=True)
                     href = a["href"].strip()
+                    if href.startswith("//"):
+                        href = "https:" + href
                     if is_woohoo:
                         if not ver_str:
                             mv = re.search(r"MC\s+Woohoo\s+(\d+\.\d+(?:\.\d+)?)", txt, re.IGNORECASE)
                             if mv:
                                 ver_str = mv.group(1)
-                        if "mediafire.com" in href.lower() and "mcwoohoo" in href.lower():
+                        if "mediafire.com" in href.lower() and "mcwoohoo" in href.lower() and is_valid_https_url(href):
                             mf_url = href
                             mfn = re.search(r"(MCWoohoo_[^/?#]+\.zip)", href, re.IGNORECASE)
                             fn_str = mfn.group(1) if mfn else f"MCWoohoo_ScriptAndPackage_{ver_str.replace('.', '_')}.zip"
@@ -3585,7 +4402,7 @@ def inspect_remote_mod_page(
                             mv = re.search(r"MC Command Center\s+(\d+\.\d+(?:\.\d+)?)", txt, re.IGNORECASE)
                             if mv and "legacy" not in txt.lower():
                                 ver_str = mv.group(1)
-                        if "mediafire.com" in href.lower() and "mccmdcenter" in href.lower():
+                        if "mediafire.com" in href.lower() and "mccmdcenter" in href.lower() and is_valid_https_url(href):
                             mf_url = href
                             mfn = re.search(r"(McCmdCenter_[^/?#]+\.zip)", href, re.IGNORECASE)
                             fn_str = mfn.group(1) if mfn else f"McCmdCenter_AllModules_{ver_str.replace('.', '_')}.zip"
@@ -3599,6 +4416,8 @@ def inspect_remote_mod_page(
                         "download_url": mf_url,
                         "page_url": dl_page,
                     }
+        except NetworkSecurityError:
+            raise
         except Exception:
             pass
         return {"status": "browser_required", "page_url": dl_page}
@@ -3648,14 +4467,16 @@ def inspect_remote_mod_page(
     if "kemzimamods.com/" in u_lower:
         kz_timeout = max(timeout, 15)
         try:
-            r_kz = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=kz_timeout)
+            r_kz = safe_https_get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=kz_timeout)
             if r_kz.status_code == 200:
                 soup_kz = BeautifulSoup(r_kz.text, "html.parser")
                 sdm_links: List[Tuple[int, str, str]] = []
                 t_low = (target_mod_name or "").lower()
                 want_fictional = "fictional" in t_low
                 for a in soup_kz.find_all("a", href=True):
-                    href = html.unescape(a["href"].strip())
+                    href = urllib.parse.urljoin(url, html.unescape(a["href"].strip()))
+                    if not is_valid_https_url(href):
+                        continue
                     txt = a.get_text(" ", strip=True).lower()
                     if "sdm_process_download=1" in href or "/wp-content/uploads/" in href:
                         sc = 10
@@ -3703,6 +4524,8 @@ def inspect_remote_mod_page(
                         "page_url": url,
                         "variant_choices": variant_choices if len(variant_choices) > 1 else [],
                     }
+        except NetworkSecurityError:
+            raise
         except Exception:
             pass
         return {"status": "browser_required", "version": "8.1", "page_url": url}
@@ -3717,13 +4540,14 @@ def inspect_remote_mod_page(
             post_id = m_post.group(1)
             api_url = f"https://www.patreon.com/api/posts/{post_id}"
             try:
-                r = requests.get(api_url, headers=headers, timeout=timeout)
+                r = safe_https_get(api_url, headers=headers, timeout=timeout)
                 if r.status_code == 200:
                     data = r.json()
                     attrs = data.get("data", {}).get("attributes", {})
                     title = attrs.get("title") or ""
                     can_view = bool(attrs.get("current_user_can_view"))
-                    post_url = attrs.get("url") or url
+                    raw_post_url = attrs.get("url") or url
+                    post_url = raw_post_url if is_valid_https_url(raw_post_url) else url
                     title_ver = extract_version_from_filename(title)
                     ver_str = title_ver.lstrip("vV") if title_ver else ""
                     cjs_raw = str(attrs.get("content_json_string") or "")
@@ -3759,7 +4583,12 @@ def inspect_remote_mod_page(
                     # 얼리 액세스 / 유료 멤버십 전용으로 잠겨 있는 경우 (무료 멤버십 공개 포스트는 첨부 프리뷰 메타데이터로 자동 감지)
                     if not can_view:
                         cat_ea = check_known_catalog(target_mod_name)
-                        force_ea = bool((cat_ea and cat_ea.get("is_early_access")) or "164160544" in str(post_id))
+                        force_ea = bool(
+                            (cat_ea and cat_ea.get("is_early_access"))
+                            or str(post_id) in ("164160544", "174694816")
+                            or "early access" in title.lower()
+                            or "early-access" in post_url.lower()
+                        )
                         is_free_post = (
                             not force_ea
                             and attrs.get("is_paid") is False
@@ -3773,6 +4602,8 @@ def inspect_remote_mod_page(
                                 p_sz = pm.get("size_bytes") or 0
                                 if p_fn.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
                                     p_dl = f"{post_url}#free_member_file={urllib.parse.quote(p_fn)}&size={p_sz}"
+                                    if not is_valid_https_url(p_dl):
+                                        continue
                                     p_low = p_fn.lower()
                                     exact_bonus = 300 if (target_base_low and (p_low == target_base_low or (target_base_norm and p_low.lstrip("!_~ ") == target_base_norm))) else 0
                                     preview_files.append((_match_score_mod_name(target_mod_name, p_fn) + 20 + exact_bonus, p_fn, p_dl))
@@ -3805,7 +4636,7 @@ def inspect_remote_mod_page(
                             ia = inc.get("attributes", {})
                             fn = ia.get("file_name") or ""
                             dl = ia.get("download_url") or ia.get("url") or ""
-                            if fn.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")) and dl:
+                            if fn.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")) and dl and is_valid_https_url(dl):
                                 fn_low = fn.lower()
                                 exact_bonus = 300 if (target_base_low and (fn_low == target_base_low or (target_base_norm and fn_low.lstrip("!_~ ") == target_base_norm))) else 0
                                 files.append((_match_score_mod_name(target_mod_name, fn) + 20 + exact_bonus, fn, dl))
@@ -3816,14 +4647,18 @@ def inspect_remote_mod_page(
                         # Box / SimFileShare 등 외부 스토리지 링크인 경우 Content-Disposition 헤더에서 실제 최신 파일명(예: _v4) 확인
                         if any(d in best_dl.lower() for d in ("app.box.com", "simfileshare.net")):
                             try:
-                                r_cd = requests.get(best_dl, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=6)
-                                cd_hdr = r_cd.headers.get("Content-Disposition") or ""
-                                r_cd.close()
+                                r_cd = safe_https_get(best_dl, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=6)
+                                try:
+                                    cd_hdr = r_cd.headers.get("Content-Disposition") or ""
+                                finally:
+                                    r_cd.close()
                                 m_cd = re.search(r'filename\*?=(?:UTF-8\'\')?["\']?([^"\';\r\n]+)', cd_hdr, flags=re.IGNORECASE)
                                 if m_cd:
                                     real_fn = urllib.parse.unquote(m_cd.group(1).strip())
                                     if real_fn:
                                         best_fn = real_fn
+                            except NetworkSecurityError:
+                                raise
                             except Exception:
                                 pass
                         fn_ver = extract_version_from_filename(best_fn)
@@ -3835,10 +4670,12 @@ def inspect_remote_mod_page(
                             ver_str = "0.2.3"
                         elif str(post_id) == "142863954" and "ride together" in best_fn.lower():
                             ver_str = "a0.5"
+                        elif str(post_id) == "115299392" and "wave" in best_fn.lower():
+                            ver_str = "a0.5"
                         if (
                             ((target_base_low and best_fn.lower() == target_base_low) and str(post_id) not in ("166618081", "158968693", "142863954"))
                             or "wamtik" in best_fn.lower()
-                            or str(post_id) == "69121597"
+                            or str(post_id) in ("69121597", "115299392", "151330104", "108516027")
                             or (str(post_id) == "142863954" and "ride together" not in best_fn.lower())
                         ):
                             matched_patreon_files = [(best_fn, best_dl)]
@@ -3858,10 +4695,12 @@ def inspect_remote_mod_page(
                     # JSON 리치 텍스트 내 [링크 주소 + 표시 텍스트(파일명)] 쌍 우선 추출 (예: Box 공유 링크에 실제 파일명이 적힌 경우)
                     target_ext = Path(target_mod_name).suffix.lower() if "." in target_mod_name else ""
                     for m_jl in re.finditer(
-                        r'"href"\s*:\s*"(https?://[^"]+)"[^]]*\}\s*\]\s*,\s*"text"\s*:\s*"([^"]+)"',
+                        r'"href"\s*:\s*"(https://[^"]+)"[^]]*\}\s*\]\s*,\s*"text"\s*:\s*"([^"]+)"',
                         cjs_raw,
                     ):
                         l_href, l_text = m_jl.group(1).strip(), m_jl.group(2).strip()
+                        if not is_valid_https_url(l_href):
+                            continue
                         if l_href.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")) or l_text.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
                             fn_label = (
                                 l_text
@@ -3875,16 +4714,21 @@ def inspect_remote_mod_page(
                             files.append((_match_score_mod_name(target_mod_name, fn_label) + 30 + ext_bonus, fn_label, l_href))
 
                     if _depth < 1 and not any(f[0] >= 40 for f in files):
-                        linked_urls = re.findall(r'https?://[^\s"\'\\<>]+', body_combined)
+                        linked_urls = re.findall(r'https://[^\s"\'\\<>]+', body_combined)
                         for lu in linked_urls:
                             lu_clean = lu.rstrip(".,;'\")>]")
+                            if not is_valid_https_url(lu_clean):
+                                continue
                             lu_low = lu_clean.lower()
                             if (
                                 ("patreon.com/posts/" in lu_low and post_id not in lu_low and "40486381" not in lu_low)
                                 or ".itch.io/" in lu_low
                                 or "curseforge.com/sims4/mods/" in lu_low
                             ):
-                                sub_res = inspect_remote_mod_page(lu_clean, target_mod_name=target_mod_name, timeout=timeout, _depth=_depth + 1)
+                                try:
+                                    sub_res = inspect_remote_mod_page(lu_clean, target_mod_name=target_mod_name, timeout=timeout, _depth=_depth + 1)
+                                except NetworkSecurityError:
+                                    continue
                                 if sub_res.get("status") == "free_direct":
                                     sub_match = _match_score_mod_name(
                                         target_mod_name,
@@ -3893,8 +4737,10 @@ def inspect_remote_mod_page(
                                     if sub_match >= 15:
                                         return sub_res
 
-                    for m_dl in re.finditer(r'https?://[^\s"\'\\<>]+?\.(?:package|ts4script|zip|rar|7z)', body_combined, flags=re.IGNORECASE):
+                    for m_dl in re.finditer(r'https://[^\s"\'\\<>]+?\.(?:package|ts4script|zip|rar|7z)', body_combined, flags=re.IGNORECASE):
                         direct_u = m_dl.group(0)
+                        if not is_valid_https_url(direct_u):
+                            continue
                         if "patreonusercontent.com" in direct_u and ("/1.png" in direct_u or "/1.jpg" in direct_u):
                             continue
                         if any(existing_dl == direct_u for _, _, existing_dl in files):
@@ -3908,14 +4754,18 @@ def inspect_remote_mod_page(
                         # Box / SimFileShare 등 외부 스토리지 링크인 경우 Content-Disposition 헤더에서 실제 최신 파일명(예: _v4) 확인
                         if any(d in best_dl.lower() for d in ("app.box.com", "simfileshare.net")):
                             try:
-                                r_cd = requests.get(best_dl, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=6)
-                                cd_hdr = r_cd.headers.get("Content-Disposition") or ""
-                                r_cd.close()
+                                r_cd = safe_https_get(best_dl, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=6)
+                                try:
+                                    cd_hdr = r_cd.headers.get("Content-Disposition") or ""
+                                finally:
+                                    r_cd.close()
                                 m_cd = re.search(r'filename\*?=(?:UTF-8\'\')?["\']?([^"\';\r\n]+)', cd_hdr, flags=re.IGNORECASE)
                                 if m_cd:
                                     real_fn = urllib.parse.unquote(m_cd.group(1).strip())
                                     if real_fn:
                                         best_fn = real_fn
+                            except NetworkSecurityError:
+                                raise
                             except Exception:
                                 pass
                         fn_ver = extract_version_from_filename(best_fn)
@@ -3927,10 +4777,12 @@ def inspect_remote_mod_page(
                             ver_str = "0.2.3"
                         elif str(post_id) == "142863954" and "ride together" in best_fn.lower():
                             ver_str = "a0.5"
+                        elif str(post_id) == "115299392" and "wave" in best_fn.lower():
+                            ver_str = "a0.5"
                         if (
                             ((target_base_low and best_fn.lower() == target_base_low) and str(post_id) not in ("166618081", "158968693", "142863954"))
                             or "wamtik" in best_fn.lower()
-                            or str(post_id) == "69121597"
+                            or str(post_id) in ("69121597", "115299392", "151330104", "108516027")
                             or (str(post_id) == "142863954" and "ride together" not in best_fn.lower())
                         ):
                             matched_patreon_files = [(best_fn, best_dl)]
@@ -3947,12 +4799,14 @@ def inspect_remote_mod_page(
                         }
 
                     return {"status": "browser_required", "page_url": post_url}
+            except NetworkSecurityError:
+                raise
             except Exception:
                 pass
 
         # 2) 제작자 메인/캠페인 URL인 경우 (예: https://www.patreon.com/weerbesu, https://www.patreon.com/roburky)
         try:
-            r_page = requests.get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+            r_page = safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
             if r_page.status_code == 200:
                 m_camp = (
                     re.search(r"patreon-media/p/campaign/(\d+)/", r_page.text)
@@ -3965,7 +4819,7 @@ def inspect_remote_mod_page(
                         f"https://www.patreon.com/api/posts?filter[campaign_id]={camp_id}"
                         "&filter[is_draft]=false&sort=-published_at&page[count]=25"
                     )
-                    rp = requests.get(api_posts, headers=headers, timeout=timeout)
+                    rp = safe_https_get(api_posts, headers=headers, timeout=timeout)
                     if rp.status_code == 200:
                         pdata = rp.json()
                         media_map: Dict[str, Tuple[str, str]] = {}
@@ -3974,7 +4828,7 @@ def inspect_remote_mod_page(
                                 ia = inc.get("attributes", {})
                                 fn = ia.get("file_name") or ""
                                 dl = ia.get("download_url") or ia.get("url") or ""
-                                if fn.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")) and dl:
+                                if fn.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")) and dl and is_valid_https_url(dl):
                                     media_map[str(inc.get("id"))] = (fn, dl)
 
                         best_free_post = None
@@ -4014,7 +4868,8 @@ def inspect_remote_mod_page(
                         if best_free_post:
                             pa, post_files = best_free_post
                             ptitle = pa.get("title") or ""
-                            p_url = pa.get("url") or url
+                            raw_p_url = pa.get("url") or url
+                            p_url = raw_p_url if is_valid_https_url(raw_p_url) else url
                             t_ver = extract_version_from_filename(ptitle)
                             ver_str = t_ver.lstrip("vV") if t_ver else ""
                             if post_files:
@@ -4032,14 +4887,18 @@ def inspect_remote_mod_page(
                                     "page_url": p_url,
                                 }
                             # 공개 포스트인데 첨부파일 대신 본문 내 외부 다운로드 링크(Itch.io 등)를 둔 경우
-                            if _depth < 1 and p_url and p_url != url:
-                                sub_res = inspect_remote_mod_page(p_url, target_mod_name=target_mod_name, timeout=timeout, _depth=_depth + 1)
+                            if _depth < 1 and p_url and p_url != url and is_valid_https_url(p_url):
+                                try:
+                                    sub_res = inspect_remote_mod_page(p_url, target_mod_name=target_mod_name, timeout=timeout, _depth=_depth + 1)
+                                except NetworkSecurityError:
+                                    sub_res = {}
                                 if sub_res.get("status") == "free_direct":
                                     return sub_res
 
                         if best_ea_post:
                             ptitle = best_ea_post.get("title") or ""
-                            p_url = best_ea_post.get("url") or url
+                            raw_p_url = best_ea_post.get("url") or url
+                            p_url = raw_p_url if is_valid_https_url(raw_p_url) else url
                             t_ver = extract_version_from_filename(ptitle)
                             ver_str = t_ver.lstrip("vV") if t_ver else ""
                             return {
@@ -4048,6 +4907,8 @@ def inspect_remote_mod_page(
                                 "version": ver_str,
                                 "page_url": p_url,
                             }
+        except NetworkSecurityError:
+            raise
         except Exception:
             pass
 
@@ -4055,7 +4916,7 @@ def inspect_remote_mod_page(
     # D. 일반 공식 웹사이트 및 Tumblr 포스트 내 다운로드 파일/외부 스토리지 링크 감지
     # ==========================================================================
     try:
-        r_web = requests.get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+        r_web = safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
         if r_web.status_code == 200:
             soup = BeautifulSoup(r_web.text, "html.parser")
             direct_files: List[Tuple[int, str, str]] = []
@@ -4070,6 +4931,9 @@ def inspect_remote_mod_page(
                         href = parsed_q["z"][0]
                     elif "href.li/?" in href:
                         href = href.split("href.li/?", 1)[1]
+
+                if not is_valid_https_url(href):
+                    continue
 
                 h_low = href.lower()
                 path_part = urllib.parse.urlparse(href).path
@@ -4092,12 +4956,12 @@ def inspect_remote_mod_page(
 
             # 본문 텍스트에 노출된 SimFileShare / MediaFire URL도 추가 추출
             for m_ext in re.finditer(
-                r'https?://(?:www\.)?(?:simfileshare\.net/download/\d+/?|mediafire\.com/file/[^\s"\'<>]+)',
+                r'https://(?:www\.)?(?:simfileshare\.net/download/\d+/?|mediafire\.com/file/[^\s"\'<>]+)',
                 r_web.text,
                 flags=re.IGNORECASE,
             ):
                 ext_u = m_ext.group(0)
-                if ext_u not in external_host_links:
+                if is_valid_https_url(ext_u) and ext_u not in external_host_links:
                     external_host_links.append(ext_u)
 
             if direct_files:
@@ -4122,10 +4986,15 @@ def inspect_remote_mod_page(
 
             if _depth < 1 and external_host_links:
                 for ext_u in external_host_links[:4]:
-                    sub_res = inspect_remote_mod_page(ext_u, target_mod_name=target_mod_name, timeout=timeout, _depth=_depth + 1)
+                    try:
+                        sub_res = inspect_remote_mod_page(ext_u, target_mod_name=target_mod_name, timeout=timeout, _depth=_depth + 1)
+                    except NetworkSecurityError:
+                        continue
                     if sub_res.get("status") == "free_direct":
                         sub_res["page_url"] = url
                         return sub_res
+    except NetworkSecurityError:
+        raise
     except Exception:
         pass
 

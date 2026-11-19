@@ -6,7 +6,26 @@ from typing import Dict, Any, List, Optional
 import requests
 from packaging import version
 
-from src.utils import download_file, extract_zip, safe_remove, verify_downloaded_mod_file
+from src.utils import (
+    ALLOWED_MOD_WHITELIST_EXTENSIONS,
+    ArchiveSecurityError,
+    DangerousFileExtensionError,
+    InsecureUrlSecurityError,
+    NetworkSecurityError,
+    SslCertificateSecurityError,
+    ZipSlipSecurityError,
+    download_file,
+    extract_zip,
+    inspect_dangerous_extension,
+    is_safe_subpath,
+    is_valid_https_url,
+    is_whitelisted_mod_file,
+    log_security_warning,
+    safe_https_get,
+    safe_remove,
+    validate_https_url,
+    verify_downloaded_mod_file,
+)
 from src.backup import BackupManager
 
 class ModUpdater:
@@ -46,8 +65,11 @@ class ModUpdater:
             e_name = (entry.get("name") or "").strip().lower()
             e_local = (entry.get("local_file") or "").strip().lower()
             if t_low in (e_name, e_local) and e_name:
-                pinned = entry.get("pinned_page_url") or entry.get("homepage") or ""
-                if pinned.startswith(("http://", "https://")) and "google.com/search" not in pinned:
+                pinned = (entry.get("pinned_page_url") or entry.get("homepage") or "").strip()
+                if pinned.lower().startswith("http://"):
+                    log_security_warning(f"매니페스트 내 일반 HTTP 고정 URL 차단: '{pinned}'")
+                    return ""
+                if is_valid_https_url(pinned) and "google.com/search" not in pinned:
                     return pinned
         return ""
 
@@ -58,8 +80,10 @@ class ModUpdater:
         latest_ver: str = "",
         local_file_name: str = "",
     ) -> None:
-        """검증 완료된 모드의 공식 배포 페이지 URL을 파일명 기준으로 mods_manifest.json에 자동 기록(Pinning)합니다."""
-        if not page_url or not page_url.startswith(("http://", "https://")) or "google.com/search" in page_url:
+        """검증 완료된 모드의 공식 배포 페이지 URL(HTTPS 전용)을 파일명 기준으로 mods_manifest.json에 자동 기록(Pinning)합니다."""
+        if not page_url or not is_valid_https_url(page_url) or "google.com/search" in page_url:
+            if page_url and page_url.strip().lower().startswith("http://"):
+                log_security_warning(f"일반 HTTP 배포 URL 고정(Pinning) 시도 차단: '{page_url}'")
             return
         try:
             mods = self.load_manifest()
@@ -92,35 +116,50 @@ class ModUpdater:
             pass
 
     def check_github_update(self, repo: str, current_ver: str) -> Dict[str, Any]:
-        """GitHub Releases API를 통해 최신 버전을 조회합니다."""
-        api_url = f"https://api.github.com/repos/{repo}/releases/latest"
+        """GitHub Releases API(HTTPS 전용)를 통해 최신 버전을 조회합니다."""
+        repo_clean = (repo or "").strip().strip("/")
+        if (
+            not repo_clean
+            or ".." in repo_clean
+            or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo_clean)
+        ):
+            log_security_warning(f"비정상 GitHub 저장소 식별자 차단: repo={repo!r}")
+            raise InsecureUrlSecurityError(f"[보안 차단] 유효하지 않은 GitHub 저장소 경로입니다: {repo}")
+
+        api_url = f"https://api.github.com/repos/{repo_clean}/releases/latest"
+        validate_https_url(api_url, allow_fragment=False, purpose="GitHub 원격 카탈로그 조회")
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.4",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.5",
             "Accept": "application/vnd.github.v3+json"
         }
         try:
-            res = requests.get(api_url, headers=headers, timeout=15)
+            res = safe_https_get(api_url, headers=headers, timeout=(10, 15))
             if res.status_code == 404:
-                return {"error": f"저장소 '{repo}'를 찾을 수 없거나 공식 Release가 등록되어 있지 않습니다 (404 Not Found)."}
+                return {"error": f"저장소 '{repo_clean}'를 찾을 수 없거나 공식 Release가 등록되어 있지 않습니다 (404 Not Found)."}
             elif res.status_code == 403:
                 return {"error": "GitHub API 요청 한도를 초과했습니다 (잠시 후 다시 시도하세요)."}
             res.raise_for_status()
             data = res.json()
+        except NetworkSecurityError:
+            raise
         except requests.exceptions.RequestException as e:
             return {"error": f"네트워크 통신 오류: {e}"}
 
         latest_tag = data.get("tag_name", "").lstrip("v")
         assets = data.get("assets", [])
 
-        # 다운로드할 asset (주로 zip 또는 package)
+        # 다운로드할 asset (주로 zip 또는 package) — 반드시 HTTPS 다운로드 URL만 허용
         download_url = ""
         asset_name = ""
         for asset in assets:
             name_lower = asset.get("name", "").lower()
-            if name_lower.endswith(".zip") or name_lower.endswith(".package"):
-                download_url = asset.get("browser_download_url")
-                asset_name = asset.get("name")
-                break
+            if name_lower.endswith(".zip") or name_lower.endswith(".package") or name_lower.endswith(".ts4script"):
+                cand_dl = str(asset.get("browser_download_url") or "").strip()
+                if cand_dl:
+                    validate_https_url(cand_dl, allow_fragment=False, purpose="GitHub 릴리스 에셋 다운로드 URL")
+                    download_url = cand_dl
+                    asset_name = asset.get("name")
+                    break
 
         has_update = False
         try:
@@ -144,14 +183,17 @@ class ModUpdater:
         from bs4 import BeautifulSoup
 
         url = "https://deaderpool-mccc.com/downloads.html"
+        validate_https_url(url, allow_fragment=False, purpose="MCCC 공식 카탈로그 조회")
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.4"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.5"
         }
 
         try:
-            res = requests.get(url, headers=headers, timeout=15)
+            res = safe_https_get(url, headers=headers, timeout=(10, 15))
             res.raise_for_status()
             soup = BeautifulSoup(res.text, "html.parser")
+        except NetworkSecurityError:
+            raise
         except Exception as e:
             return {"error": f"MCCC 웹사이트 접속 실패: {e}"}
 
@@ -161,7 +203,7 @@ class ModUpdater:
         asset_name = ""
 
         if is_woohoo:
-            # 1) MC Woohoo 버전 텍스트 및 MC Woohoo MediaFire 링크 탐색
+            # 1) MC Woohoo 버전 텍스트 및 MC Woohoo MediaFire HTTPS 링크 탐색
             for a in soup.find_all("a", href=True):
                 text = a.get_text(" ", strip=True)
                 href = a["href"].strip()
@@ -170,6 +212,9 @@ class ModUpdater:
                     if m_ver:
                         latest_version = m_ver.group(1)
                 if "mediafire.com" in href.lower() and "mcwoohoo" in href.lower():
+                    if not is_valid_https_url(href):
+                        log_security_warning(f"MCCC 페이지 내 비-HTTPS 다운로드 링크 차단: {href!r}")
+                        continue
                     download_url = href
                     m_fn = re.search(r"(MCWoohoo_[^/?#]+\.zip)", href, re.IGNORECASE)
                     if m_fn:
@@ -183,7 +228,7 @@ class ModUpdater:
             if not asset_name and latest_version:
                 asset_name = f"MCWoohoo_ScriptAndPackage_{latest_version.replace('.', '_')}.zip"
         else:
-            # 2) MC Command Center 본체 버전 및 MediaFire / Google Drive 링크 탐색
+            # 2) MC Command Center 본체 버전 및 MediaFire / Google Drive HTTPS 링크 탐색
             fallback_drive_url = ""
             for a in soup.find_all("a", href=True):
                 text = a.get_text(" ", strip=True)
@@ -192,9 +237,12 @@ class ModUpdater:
                     match = re.search(r"MC Command Center\s+(\d+\.\d+(?:\.\d+)?)", text, re.IGNORECASE)
                     if match and "legacy" not in text.lower():
                         latest_version = match.group(1)
-                        if "drive.google.com" in href or "mediafire.com" in href:
+                        if ("drive.google.com" in href or "mediafire.com" in href) and is_valid_https_url(href):
                             fallback_drive_url = href
                 if "mediafire.com" in href.lower() and "mccmdcenter" in href.lower():
+                    if not is_valid_https_url(href):
+                        log_security_warning(f"MCCC 페이지 내 비-HTTPS 다운로드 링크 차단: {href!r}")
+                        continue
                     download_url = href
                     m_fn = re.search(r"(McCmdCenter_[^/?#]+\.zip)", href, re.IGNORECASE)
                     if m_fn:
@@ -217,7 +265,7 @@ class ModUpdater:
 
         label_prefix = "MC Woohoo" if is_woohoo else "MCCC"
         return {
-            "latest_version": f"Deaderpool (v{latest_version})",
+            "latest_version": f"제작자 자체 사이트 ({latest_version})",
             "has_update": has_update,
             "status_label": "🚀 최신 버전 배포 중",
             "direct_file_detected": True,
@@ -283,9 +331,9 @@ class ModUpdater:
         naver_url = "https://blog.naver.com/wwwindystar"
 
         cat_match = check_known_catalog(target_name) if target_name else None
-        if cat_match and not cat_match.get("is_early_access"):
+        if cat_match and cat_match.get("creator") == "바람별" and not cat_match.get("is_early_access"):
             direct_post_url = cat_match.get("primary_url", "")
-            if direct_post_url and (
+            if direct_post_url and is_valid_https_url(direct_post_url) and (
                 direct_post_url.startswith("https://blog.naver.com/wwwindystar/")
                 or "/posts/" in direct_post_url.lower()
                 or "/post/" in direct_post_url.lower()
@@ -337,7 +385,7 @@ class ModUpdater:
             latest_version = (cat_match.get("version") if cat_match else "") or "V98P8"
             post_link = "https://www.postype.com/@wwwindystar/post/9789832"
             try:
-                r = requests.get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+                r = safe_https_get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=(8, 10))
                 if r.status_code == 200:
                     m = re.search(r"통합한글화모음\s*(V\d+P\d+)", r.text)
                     if m:
@@ -345,6 +393,8 @@ class ModUpdater:
                     link_m = re.search(r'href="(/@wwwindystar/post/\d+)"[^>]*>[^<]*' + re.escape(latest_version), r.text)
                     if link_m:
                         post_link = f"https://www.postype.com{link_m.group(1)}"
+            except NetworkSecurityError:
+                raise
             except Exception:
                 pass
 
@@ -375,7 +425,7 @@ class ModUpdater:
             )
             post_link = f"{postype_url}/post/11103833"
             try:
-                r = requests.get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+                r = safe_https_get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=(8, 10))
                 if r.status_code == 200:
                     m = re.search(r"통합한글화모음\s*(V\d+B\d+)", r.text)
                     if m:
@@ -383,6 +433,8 @@ class ModUpdater:
                     link_m = re.search(r'href="(/@wwwindystar/post/\d+)"[^>]*>[^<]*' + re.escape(latest_version), r.text)
                     if link_m:
                         post_link = f"https://www.postype.com{link_m.group(1)}"
+            except NetworkSecurityError:
+                raise
             except Exception:
                 pass
 
@@ -408,7 +460,7 @@ class ModUpdater:
 
         # 포스타입에서 실시간 최신 광역/선배포 버전 검색
         try:
-            r = requests.get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+            r = safe_https_get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=(8, 10))
             if r.status_code == 200:
                 m = re.search(r"통합한글화모음\s*(V\d+G\d+)", r.text)
                 if m:
@@ -417,6 +469,8 @@ class ModUpdater:
                 link_m = re.search(r'href="(/@wwwindystar/post/\d+)"[^>]*>[^<]*' + re.escape(latest_version), r.text)
                 if link_m:
                     post_link = f"https://www.postype.com{link_m.group(1)}"
+        except NetworkSecurityError:
+            raise
         except Exception:
             pass
 
@@ -457,7 +511,7 @@ class ModUpdater:
                 "install_folder": folder_name,
                 "homepage": "https://wicked.cc/mods/TURBODRIVER/wickedwhims",
             }
-        elif "PRIO" in name_upper or "OVERRIDE" in name_upper or "WAMTIK" in name_upper or "한글" in folder_name or "바람별" in folder_name:
+        elif "WAMTIK" in name_upper or "한글" in folder_name or "바람별" in folder_name:
             return {
                 "name": folder_name,
                 "source_type": "barambyul",
@@ -481,6 +535,20 @@ class ModUpdater:
         """개별 모드의 업데이트 여부를 확인합니다."""
         source_type = mod.get("source_type", "github")
         current_ver = mod.get("current_version", "")
+
+        # PRIO / Overrides 폴더 내에 있는 일반 모드 파일([NORTHERN SIBERIA WINDS] 등)이
+        # 폴더명 때문에 source_type='barambyul'로 잘못 분류된 경우 자동으로 generic_web으로 전환하고 바람별 홈페이지 URL을 제거
+        t_name_low = (mod.get("name") or "").strip().lower()
+        is_barambyul_target = any(
+            k in t_name_low for k in ("wamtik", "바람별", "_kor_", "(kor)", "automaticpreferences")
+        )
+        if source_type == "barambyul" and t_name_low and not is_barambyul_target:
+            source_type = "generic_web"
+        if not is_barambyul_target:
+            if "windystar" in str(mod.get("homepage") or "").lower():
+                mod["homepage"] = ""
+            if "windystar" in str(mod.get("download_url") or "").lower():
+                mod["download_url"] = ""
 
         if source_type == "github":
             repo = mod.get("repo", "")
@@ -535,7 +603,12 @@ class ModUpdater:
             creator = mod.get("creator", "공식 배포처")
             matched_creator = ""
             finder_diagnostics: Dict[str, Any] = {}
-            url = mod.get("download_url") or mod.get("homepage", "")
+            raw_cfg_url = (mod.get("download_url") or mod.get("homepage", "") or "").strip()
+            if raw_cfg_url and not is_valid_https_url(raw_cfg_url):
+                log_security_warning(f"모드 설정 내 비-HTTPS 배포 URL 차단: {raw_cfg_url!r}")
+                url = ""
+            else:
+                url = raw_cfg_url
             candidate_links = mod.get("candidate_links", [])
             extracted_meta: Dict[str, Any] = {}
             latest_ver_label = "공식 배포처 최신본"
@@ -562,7 +635,12 @@ class ModUpdater:
                         file_path=file_path,
                         folder_name=folder_name,
                     )
-                    url = finder_res["primary_url"]
+                    cand_primary = (finder_res.get("primary_url") or "").strip()
+                    if cand_primary and not is_valid_https_url(cand_primary):
+                        log_security_warning(f"탐색된 비-HTTPS 배포 URL 차단: {cand_primary!r}")
+                        url = ""
+                    else:
+                        url = cand_primary
                     creator = finder_res["source_name"]
                     candidate_links = finder_res.get("candidate_links", [])
                     extracted_meta = finder_res.get("extracted_meta", {})
@@ -617,21 +695,30 @@ class ModUpdater:
             try:
                 from src.finder import inspect_remote_mod_page, is_safe_remote_file_match
                 search_mod_label = target_name or extracted_meta.get("manifest_name") or ""
-                # 0순위: mods_manifest.json에 이미 검증·고정(Pinning)되어 있는 공식 URL 우선 확인
+                # 0순위: mods_manifest.json에 이미 검증·고정(Pinning)되어 있는 공식 HTTPS URL 우선 확인
                 pinned_url = self.get_pinned_url(target_name, folder_name)
-                # 1순위 URL 및 후보 링크 중 Patreon/직접 배포 페이지 검사
+                # 1순위 URL 및 후보 링크 중 HTTPS 전용 배포 페이지만 선별 검사
                 urls_to_check: List[str] = []
-                if pinned_url:
+                if pinned_url and is_valid_https_url(pinned_url):
                     urls_to_check.append(pinned_url)
-                if url and url not in urls_to_check:
+                if url and is_valid_https_url(url) and url not in urls_to_check:
                     urls_to_check.append(url)
                 for item in candidate_links[:3]:
-                    c_url = item[2] if len(item) == 3 else item[1]
+                    c_url = (item[2] if len(item) == 3 else item[1]).strip()
+                    if not c_url:
+                        continue
+                    if not is_valid_https_url(c_url):
+                        log_security_warning(f"후보 링크 내 비-HTTPS URL 제외: {c_url!r}")
+                        continue
                     if c_url not in urls_to_check:
                         urls_to_check.append(c_url)
 
                 for check_u in urls_to_check:
-                    info_res = inspect_remote_mod_page(check_u, target_mod_name=search_mod_label)
+                    try:
+                        info_res = inspect_remote_mod_page(check_u, target_mod_name=search_mod_label)
+                    except NetworkSecurityError as net_sec_err:
+                        verification_note = f"보안 차단 ({net_sec_err})"
+                        continue
                     if info_res.get("status") == "free_direct":
                         # 원격 파일명·포스트가 로컬 모드와 실제로 일치하는지 유사도/메타데이터 검증 게이트 통과 확인
                         is_safe, _, match_reason = is_safe_remote_file_match(
@@ -694,7 +781,7 @@ class ModUpdater:
                 if "wicked.cc" in u_low:
                     return "Wicked.cc"
                 if "deaderpool-mccc.com" in u_low:
-                    return "Deaderpool"
+                    return "제작자 자체 사이트"
                 if "mediafire.com" in u_low:
                     return "MediaFire"
                 if "scumbumbomods.com" in u_low:
@@ -714,13 +801,15 @@ class ModUpdater:
                 return "Patreon"
 
             def _resolve_web_first_version(rem_info: Dict[str, Any], loc_ver: str) -> str:
+                raw_rem_v = str(rem_info.get("version") or "").strip()
                 rem_ver = (
-                    extract_version_from_filename(str(rem_info.get("version") or ""))
+                    extract_version_from_filename(raw_rem_v)
+                    or (f"v{raw_rem_v}" if re.match(r"^[0-9]+(?:\.[0-9]+)*[a-z]?$", raw_rem_v, flags=re.IGNORECASE) else "")
                     or extract_version_from_filename(str(rem_info.get("file_name") or ""))
                     or extract_version_from_filename(str(rem_info.get("title") or ""))
                 )
                 meta_ver_raw = str(extracted_meta.get("version") or "").strip()
-                if re.match(r"^(?:20\d{2}\.\d{2}\.\d{2}|[ab]\d+\.\d+(?:\.\d+)*)$", meta_ver_raw, flags=re.IGNORECASE):
+                if re.match(r"^(?:20\d{2}\.\d{1,2}\.\d{1,2}|[ab]\d+\.\d+(?:\.\d+)*)$", meta_ver_raw, flags=re.IGNORECASE):
                     meta_ver = meta_ver_raw
                 else:
                     meta_ver = (f"v{meta_ver_raw.lstrip('vV')}" if meta_ver_raw else "")
@@ -736,17 +825,27 @@ class ModUpdater:
                     return "v0.2.3"
                 if "ride together" in folder_low or "ride_together" in folder_low or "ride together" in (target_name or "").lower():
                     return "a0.5"
+                if "wave-n-grind" in t_name_low or "wave and grind" in t_name_low or "wave_and_grind" in t_name_low or "wave-n-grind" in folder_low or "wave and grind" in folder_low:
+                    return "a0.5"
                 if rem_ver and loc_ver:
-                    # 예: XmlInjector_Script_v42.zip(v42) vs XmlInjector_Script_v4.2.ts4script(v4.2)처럼 점(.)만 생략된 동일 버전인 경우 점(.) 표기 보존
+                    # 예: XmlInjector_Script_v42.zip(v42) vs XmlInjector_Script_v4.2.ts4script(v4.2)처럼 점(.)만 생략된 동일 버전이거나 v2 vs V2.0처럼 의미상 동일 버전인 경우 로컬 표기 보존
                     if rem_ver.lstrip("vV").replace(".", "") == loc_ver.lstrip("vV").replace(".", "") and "." in loc_ver and "." not in rem_ver:
                         return loc_ver
+                    try:
+                        if version.parse(rem_ver.lstrip("vV")) == version.parse(loc_ver.lstrip("vV")):
+                            return loc_ver
+                    except Exception:
+                        pass
                     return rem_ver if _is_remote_newer_or_equal(loc_ver, rem_ver) else loc_ver
                 return rem_ver or loc_ver or meta_ver
 
             def _format_latest_version_label(ver_candidate: str, page_u: str, is_direct: bool = False) -> str:
                 plat = _platform_short_label(page_u)
                 if ver_candidate:
-                    if re.match(r"^(?:20\d{2}\.\d{2}\.\d{2}|[ab]\d+\.\d+(?:\.\d+)*)$", ver_candidate, flags=re.IGNORECASE):
+                    v_clean_date = ver_candidate.lstrip("vV")
+                    if re.match(r"^20\d{2}\.\d{1,2}\.\d{1,2}$", v_clean_date):
+                        v_norm = v_clean_date
+                    elif re.match(r"^[ab]\d+\.\d+(?:\.\d+)*$", ver_candidate, flags=re.IGNORECASE):
                         v_norm = ver_candidate
                     else:
                         v_norm = ver_candidate if ver_candidate.lower().startswith("v") else f"v{ver_candidate}"
@@ -792,7 +891,12 @@ class ModUpdater:
             if is_free_direct:
                 detected_fn = remote_info.get("file_name") or f"{target_name}.zip"
                 final_page_u = remote_info.get("page_url") or url
-                detected_ver_label = _format_latest_version_label(chosen_ver, final_page_u, is_direct=True)
+                label_page_u = (
+                    url
+                    if (finder_diagnostics.get("match_stage") == "known_catalog" and "tumblr.com" in (url or "").lower())
+                    else final_page_u
+                )
+                detected_ver_label = _format_latest_version_label(chosen_ver, label_page_u, is_direct=True)
                 v_badge = f" | 검증: {verification_note}" if verification_note else ""
                 all_rem_files = remote_info.get("all_files") or []
                 raw_pkg_files = [
@@ -930,6 +1034,7 @@ class ModUpdater:
         update_info: Dict[str, Any],
         overwrite_mode: str = "all",
         skip_backup: bool = False,
+        progress_callback: Optional[ Any ] = None,
     ) -> List[str]:
         """모드를 다운로드하고 설치합니다.
         - overwrite_mode == 'single': 사용자가 지정한 단일 파일(selected_file_path)만 덮어씁니다.
@@ -939,9 +1044,17 @@ class ModUpdater:
         """
         import shutil
 
+        def _notify(stage: str, msg: str) -> None:
+            if callable(progress_callback):
+                try:
+                    progress_callback(stage, msg)
+                except Exception:
+                    pass
+
         download_url = update_info.get("download_url")
         if not download_url:
             raise ValueError("다운로드 URL이 유효하지 않습니다.")
+        validate_https_url(download_url, allow_fragment=True, purpose="모드 파일 다운로드")
 
         file_path_str = mod.get("file_path") or (
             mod["selected_file"].get("full_path") if isinstance(mod.get("selected_file"), dict) else None
@@ -952,15 +1065,36 @@ class ModUpdater:
             target_dir = selected_file_path.parent
         else:
             target_subfolder = mod.get("install_folder") or mod.get("folder_name") or ""
-            if target_subfolder and (self.mods_folder / target_subfolder).is_dir():
-                target_dir = self.mods_folder / target_subfolder
+            if target_subfolder:
+                candidate_sub = self.mods_folder / target_subfolder
+                if not is_safe_subpath(candidate_sub, self.mods_folder, allow_equal=True):
+                    log_security_warning(
+                        f"비정상 설치 하위 폴더 경로 차단: '{target_subfolder}' (기준 Mods 폴더='{self.mods_folder}')"
+                    )
+                    raise ZipSlipSecurityError(
+                        f"[보안 차단] 설치 대상 폴더('{target_subfolder}')가 Mods 폴더 범위를 벗어나 작업을 중단했습니다."
+                    )
+                if candidate_sub.is_dir():
+                    target_dir = candidate_sub
+                else:
+                    target_dir = self.mods_folder
             else:
                 target_dir = self.mods_folder
+
+        if str(self.mods_folder).strip() and self.mods_folder.exists():
+            if not is_safe_subpath(target_dir, self.mods_folder, allow_equal=True):
+                log_security_warning(
+                    f"설치 대상 경로가 Mods 폴더 바깥을 가리켜 차단됨: target_dir='{target_dir}', mods_folder='{self.mods_folder}'"
+                )
+                raise ZipSlipSecurityError(
+                    f"[보안 차단] 설치 대상 경로('{target_dir}')가 지정된 Mods 폴더 하위 경로가 아닙니다."
+                )
 
         # 1. 자동 백업 (사전 일괄 백업을 이미 수행한 경우 skip_backup=True로 중복 백업 생략)
         backup_session = None
         backed_up_paths: set[str] = set()
         if self.backup_manager and not skip_backup:
+            _notify("backup", "기존 파일 백업 중...")
             if selected_file_path and selected_file_path.exists():
                 backup_session = self.backup_manager.create_backup_session(label=selected_file_path.stem)
                 self.backup_manager.backup_item(selected_file_path, backup_session)
@@ -979,15 +1113,35 @@ class ModUpdater:
                     backed_up_paths.add(res_str)
 
         # 2. 임시 다운로드 및 설치
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            raw_asset_name = update_info.get("asset_name") or "download.zip"
-            asset_name = re.sub(r'[<>:"/\\|?*]+', "_", raw_asset_name).strip()
+        with tempfile.TemporaryDirectory(prefix="s4mod_upd_") as tmp_dir:
+            tmp_path = Path(tmp_dir).resolve()
+            temp_extract_dir = tmp_path / "extract_work"
+            temp_extract_dir.mkdir(parents=True, exist_ok=True)
+
+            raw_asset_name = Path(str(update_info.get("asset_name") or "download.zip").replace("\\", "/")).name
+            asset_name = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "_", raw_asset_name).strip(" .")
+            if not asset_name:
+                asset_name = "download.zip"
+            bad_asset_ext = inspect_dangerous_extension(asset_name)
+            if bad_asset_ext is not None:
+                log_security_warning(
+                    f"다운로드 요청 단계에서 위험 확장자('{bad_asset_ext}') 에셋 차단: '{asset_name}'"
+                )
+                raise DangerousFileExtensionError(
+                    f"[보안 차단] 실행/스크립트 계열 위험 확장자('{bad_asset_ext}') 파일은 다운로드할 수 없습니다: {asset_name}"
+                )
             if not asset_name.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
                 asset_name += ".zip"
             downloaded_file = tmp_path / asset_name
+            if not is_safe_subpath(downloaded_file, tmp_path):
+                log_security_warning(f"다운로드 임시 파일 경로 이탈 차단: '{downloaded_file}'")
+                raise ZipSlipSecurityError("[보안 차단] 다운로드 대상 파일명이 임시 폴더 경로를 벗어납니다.")
 
-            page_url_ref = update_info.get("page_url") or ""
+            page_url_ref = (update_info.get("page_url") or "").strip()
+            if page_url_ref and not is_valid_https_url(page_url_ref):
+                log_security_warning(f"모드 업데이트 참조 페이지 비-HTTPS URL 제거: {page_url_ref!r}")
+                page_url_ref = ""
+            _notify("download", f"다운로드 중 ({asset_name})...")
             download_file(
                 download_url,
                 downloaded_file,
@@ -996,11 +1150,13 @@ class ModUpdater:
                 target_mod_name=mod.get("name") or asset_name,
             )
 
-            # 2-1. 압축 해제 및 덮어쓰기 전 모드 파일 무결성 및 내부 파일 사전 검증 (오탐/HTML 응답/무관한 파일 덮어쓰기 차단)
+            # 2-1. 압축 해제 및 덮어쓰기 전 모드 파일 무결성 및 압축 엔트리 헤더 사전 보안 검증 (Zip Slip/HTML 응답/무관한 파일 덮어쓰기 차단)
+            _notify("verify", f"파일 안전 검증 중 ({asset_name})...")
             verify_downloaded_mod_file(
                 downloaded_file,
                 expected_target_name=mod.get("name"),
                 target_dir=target_dir,
+                temp_extract_dir=temp_extract_dir,
             )
 
             # 기존 설치 폴더 준비
@@ -1009,13 +1165,17 @@ class ModUpdater:
 
             # 3. 설치 (ZIP/RAR/7Z 압축 해제 또는 단일 파일 교체)
             if downloaded_file.suffix.lower() in (".zip", ".rar", ".7z"):
+                _notify("extract", f"압축 해제 및 설치 중 ({asset_name})...")
                 target_fn = selected_file_path.name if selected_file_path else None
                 extracted_paths = extract_zip(
                     downloaded_file,
                     target_dir,
                     target_filename=target_fn,
                     overwrite_mode=overwrite_mode,
+                    temp_work_dir=temp_extract_dir,
                 )
+                safe_remove(downloaded_file)
+                safe_remove(temp_extract_dir)
                 for ep in extracted_paths:
                     if ep.name not in installed_names:
                         installed_names.append(ep.name)
@@ -1056,7 +1216,16 @@ class ModUpdater:
                             mod["selected_file"]["name"] = same_ext_files[0].name
                             mod["selected_file"]["full_path"] = str(same_ext_files[0])
             else:
+                _notify("extract", f"모드 파일 설치 중 ({downloaded_file.name})...")
+                if not is_whitelisted_mod_file(downloaded_file, ALLOWED_MOD_WHITELIST_EXTENSIONS):
+                    safe_remove(downloaded_file)
+                    raise ValueError(
+                        f"화이트리스트에 허용되지 않은 확장자 파일('{downloaded_file.name}')이어서 Mods 폴더 반영을 차단했습니다."
+                    )
                 dest = target_dir / downloaded_file.name
+                if not is_safe_subpath(dest, target_dir):
+                    safe_remove(downloaded_file)
+                    raise ZipSlipSecurityError(f"[보안 차단] 설치 대상 경로('{dest}')가 Mods 폴더 범위를 벗어납니다.")
                 if (
                     selected_file_path
                     and selected_file_path.exists()
@@ -1065,7 +1234,7 @@ class ModUpdater:
                 ):
                     safe_remove(selected_file_path)
                 safe_remove(dest)
-                shutil.copy2(downloaded_file, dest)
+                shutil.move(str(downloaded_file), str(dest))
                 installed_names.append(dest.name)
                 mod["file_path"] = str(dest)
                 if isinstance(mod.get("selected_file"), dict):
@@ -1076,55 +1245,127 @@ class ModUpdater:
             is_multi_bundle = bool(update_info.get("is_multi_file_bundle"))
             if overwrite_mode == "all" or is_multi_bundle:
                 all_remote_files = update_info.get("all_remote_files") or []
-                for rem_fn, rem_dl in all_remote_files:
+                for idx_rem, (rem_fn, rem_dl) in enumerate(all_remote_files):
                     if not rem_fn or not rem_dl or rem_dl == download_url or rem_fn in installed_names:
                         continue
-                    rem_ext = Path(rem_fn).suffix.lower()
-                    if rem_ext in (".package", ".ts4script") and (is_multi_bundle or rem_fn.lower() in existing_names_map):
+                    safe_rem_base = Path(str(rem_fn).replace("\\", "/")).name
+                    clean_rem_fn = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "_", safe_rem_base).strip(" .")
+                    if not clean_rem_fn or clean_rem_fn in installed_names:
+                        continue
+                    bad_rem_ext = inspect_dangerous_extension(clean_rem_fn)
+                    if bad_rem_ext is not None:
+                        log_security_warning(
+                            f"부가 구성 파일 목록에서 위험 확장자('{bad_rem_ext}') 감지 및 작업 중단: '{clean_rem_fn}'"
+                        )
+                        raise DangerousFileExtensionError(
+                            f"[보안 차단] 부가 다운로드 항목에서 위험 확장자('{bad_rem_ext}')가 감지되어 중단했습니다: {clean_rem_fn}"
+                        )
+                    validate_https_url(rem_dl, allow_fragment=True, purpose="부가 모드 파일 다운로드")
+                    rem_ext = Path(clean_rem_fn).suffix.lower()
+                    if rem_ext in ALLOWED_MOD_WHITELIST_EXTENSIONS and (is_multi_bundle or clean_rem_fn.lower() in existing_names_map):
                         try:
-                            clean_rem_fn = re.sub(r'[<>:"/\\|?*]+', "_", str(rem_fn)).strip()
                             sub_dl = tmp_path / clean_rem_fn
+                            if not is_safe_subpath(sub_dl, tmp_path):
+                                raise ZipSlipSecurityError(f"부가 다운로드 파일 경로 이탈 감지: {rem_fn!r}")
                             download_file(rem_dl, sub_dl, page_url=page_url_ref, target_mod_name=clean_rem_fn)
-                            verify_downloaded_mod_file(sub_dl, expected_target_name=clean_rem_fn, target_dir=target_dir)
+                            verify_downloaded_mod_file(
+                                sub_dl,
+                                expected_target_name=clean_rem_fn,
+                                target_dir=target_dir,
+                                temp_extract_dir=temp_extract_dir,
+                            )
+                            if not is_whitelisted_mod_file(sub_dl, ALLOWED_MOD_WHITELIST_EXTENSIONS):
+                                safe_remove(sub_dl)
+                                continue
                             dest_sub = target_dir / clean_rem_fn
+                            if not is_safe_subpath(dest_sub, target_dir):
+                                raise ZipSlipSecurityError(f"부가 설치 파일 대상 경로 이탈 감지: {clean_rem_fn!r}")
                             _backup_if_exists(dest_sub)
                             safe_remove(dest_sub)
-                            shutil.copy2(sub_dl, dest_sub)
+                            shutil.move(str(sub_dl), str(dest_sub))
                             if clean_rem_fn not in installed_names:
                                 installed_names.append(clean_rem_fn)
+                        except (ArchiveSecurityError, NetworkSecurityError):
+                            raise
                         except Exception:
                             pass
                     elif rem_ext in (".zip", ".rar", ".7z"):
                         # 다중 옵션 아카이브(예: Limits 1.75x, 2.5x, 3.0x 등) 중 현재 폴더에 설치되지 않은 다른 변형 아카이브는 건너뜀
-                        rem_stem_low = Path(rem_fn).stem.lower()
+                        rem_stem_low = Path(clean_rem_fn).stem.lower()
                         if "limits" in rem_stem_low and not any(rem_stem_low in ex_n for ex_n in existing_names_map):
                             continue
+                        sub_extract_dir = tmp_path / f"extract_sub_{idx_rem}"
                         try:
-                            sub_dl = tmp_path / rem_fn
-                            download_file(rem_dl, sub_dl, page_url=page_url_ref, target_mod_name=rem_fn)
-                            verify_downloaded_mod_file(sub_dl, expected_target_name=rem_fn, target_dir=target_dir)
-                            sub_extracted = extract_zip(sub_dl, target_dir, overwrite_mode="all")
+                            sub_dl = tmp_path / clean_rem_fn
+                            if not is_safe_subpath(sub_dl, tmp_path):
+                                raise ZipSlipSecurityError(f"부가 아카이브 경로 이탈 감지: {rem_fn!r}")
+                            sub_extract_dir.mkdir(parents=True, exist_ok=True)
+                            download_file(rem_dl, sub_dl, page_url=page_url_ref, target_mod_name=clean_rem_fn)
+                            verify_downloaded_mod_file(
+                                sub_dl,
+                                expected_target_name=clean_rem_fn,
+                                target_dir=target_dir,
+                                temp_extract_dir=sub_extract_dir,
+                            )
+                            sub_extracted = extract_zip(
+                                sub_dl,
+                                target_dir,
+                                overwrite_mode="all",
+                                temp_work_dir=sub_extract_dir,
+                            )
+                            safe_remove(sub_dl)
                             for sep in sub_extracted:
                                 if sep.name not in installed_names:
                                     installed_names.append(sep.name)
+                        except (ArchiveSecurityError, NetworkSecurityError):
+                            raise
                         except Exception:
                             pass
+                        finally:
+                            safe_remove(sub_extract_dir)
 
         # 5. 버전 및 표시 파일명 갱신 + 검증된 배포 URL 자동 고정(Pinning)
+        # (.zip 아카이브 이름으로 mod["name"]이 덮어써져 카탈로그/매니페스트 매칭이 끊기지 않도록 실제 설치된 대표 모드 파일명을 유지)
         original_local_name = selected_file_path.name if selected_file_path else mod.get("name", "")
         if overwrite_mode == "single" and installed_names:
             mod["name"] = installed_names[0]
-        elif update_info.get("detected_filename"):
+        elif installed_names:
+            matched_orig = next(
+                (fn for fn in installed_names if fn.lower() == original_local_name.lower()),
+                None,
+            )
+            if matched_orig:
+                mod["name"] = matched_orig
+            else:
+                try:
+                    from src.scanner import ModScanner
+                    rep_path = ModScanner._select_primary_file([target_dir / fn for fn in installed_names])
+                    mod["name"] = rep_path.name
+                except Exception:
+                    mod["name"] = installed_names[0]
+        elif update_info.get("detected_filename") and str(update_info["detected_filename"]).lower().endswith((".package", ".ts4script")):
             mod["name"] = update_info["detected_filename"]
         mod["current_version"] = update_info.get("latest_version", "")
 
         verified_page = update_info.get("page_url") or ""
         if verified_page and installed_names:
-            self.pin_verified_url(
-                mod,
-                verified_page,
-                mod["current_version"],
-                local_file_name=original_local_name,
-            )
+            names_to_pin: List[str] = []
+            for cand_pin in [original_local_name] + list(installed_names):
+                c_clean = (cand_pin or "").strip()
+                if (
+                    c_clean
+                    and c_clean.lower().endswith((".package", ".ts4script"))
+                    and all(c_clean.lower() != existing.lower() for existing in names_to_pin)
+                ):
+                    names_to_pin.append(c_clean)
+            if not names_to_pin and original_local_name:
+                names_to_pin.append(original_local_name)
+            for pin_fn in names_to_pin:
+                self.pin_verified_url(
+                    mod,
+                    verified_page,
+                    mod["current_version"],
+                    local_file_name=pin_fn,
+                )
 
         return installed_names

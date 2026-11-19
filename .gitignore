@@ -7,3 +7,5 @@ build/
 dist/
 dist_tmp/
 *.spec
+*.log
+scan_cache.json

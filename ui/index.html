@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>심즈4 모드 자동 업데이터 v0.1.5</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main id="app-container" class="app-container sim-card">
+    <!-- 상단 헤더 영역 (심즈4 오마주 로고 타이틀 + 백업/새로고침 + 모드 폴더 경로 바) -->
+    <header id="header-section" class="app-section header-section sim-subcard">
+      <!-- 헤더 상단 줄: 플럼밥 다이아몬드 로고 타이틀 & 액션 버튼들 -->
+      <div class="header-top-row">
+        <div class="header-brand">
+          <div class="plumbob-emblem" aria-hidden="true">
+            <span class="plumbob-gem"></span>
+          </div>
+          <div class="brand-text-group">
+            <div class="brand-eyebrow">THE SIMS 4 MOD UTILITY</div>
+            <div class="brand-title-row">
+              <h1 class="app-title">심즈4 모드 자동 업데이터</h1>
+              <span class="version-badge app-version">v0.1.5</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button type="button" id="btn-backup" class="btn sim-btn btn-backup" title="CC 폴더를 제외한 핵심 모드 파일들을 빠르게 백업합니다">
+            <span class="btn-icon" aria-hidden="true">📦</span>
+            <span class="btn-label">모드 폴더 백업</span>
+          </button>
+          <button type="button" id="btn-refresh" class="btn sim-btn btn-secondary" title="모드 목록 새로고침">
+            <span class="btn-icon" aria-hidden="true">🔄</span>
+            <span class="btn-label">새로고침</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 헤더 하단 줄: 현재 모드 폴더 경로 표시 & 폴더 변경 버튼 -->
+      <div id="folder-path-section" class="header-path-bar" aria-label="모드 폴더 경로">
+        <span class="path-badge">📂 모드 폴더</span>
+        <div id="mod-folder-path" class="path-box path-text" title="C:\Users\User\Documents\Electronic Arts\The Sims 4\Mods">
+          C:\Users\User\Documents\Electronic Arts\The Sims 4\Mods
+        </div>
+        <button type="button" id="btn-change-folder" class="btn sim-btn btn-change-folder">
+          폴더 변경
+        </button>
+      </div>
+    </header>
+
+    <!-- 상태 요약 대시보드 (심즈4 무드렛 카드 4종 - 클릭 시 필터 연동) -->
+    <section id="dashboard-section" class="app-section dashboard-section" aria-label="상태 요약 대시보드">
+      <div id="moodlet-grid" class="moodlet-grid">
+        <!-- 1. 전체 설치된 모드 수 -->
+        <button type="button" class="moodlet-card moodlet-total is-active" data-filter="all">
+          <div class="moodlet-header">
+            <span class="moodlet-label">전체 설치 모드</span>
+            <span class="moodlet-icon" aria-hidden="true">🧩</span>
+          </div>
+          <div class="moodlet-body">
+            <span id="count-total" class="moodlet-count version-num">4</span>
+          </div>
+        </button>
+
+        <!-- 2. 업데이트 필요 수 (영감 블루) -->
+        <button type="button" class="moodlet-card moodlet-update" data-filter="update">
+          <div class="moodlet-header">
+            <span class="moodlet-label">업데이트 필요</span>
+            <span class="moodlet-icon" aria-hidden="true">✨</span>
+          </div>
+          <div class="moodlet-body">
+            <span id="count-update" class="moodlet-count version-num">2</span>
+          </div>
+        </button>
+
+        <!-- 3. 충돌/중복 감지 수 (분노 레드) -->
+        <button type="button" class="moodlet-card moodlet-conflict" data-filter="error">
+          <div class="moodlet-header">
+            <span class="moodlet-label">충돌 / 중복 감지</span>
+            <span class="moodlet-icon" aria-hidden="true">🔥</span>
+          </div>
+          <div class="moodlet-body">
+            <span id="count-conflict" class="moodlet-count version-num">1</span>
+          </div>
+        </button>
+
+        <!-- 4. 최신 상태 수 (플럼밥 그린) -->
+        <button type="button" class="moodlet-card moodlet-latest" data-filter="latest">
+          <div class="moodlet-header">
+            <span class="moodlet-label">최신 상태</span>
+            <span class="moodlet-icon" aria-hidden="true">💎</span>
+          </div>
+          <div class="moodlet-body">
+            <span id="count-latest" class="moodlet-count version-num">1</span>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <!-- 모드 리스트 영역 (심즈4 갤러리 카드 스타일 + 실시간 검색창) -->
+    <section id="mod-list-area" class="app-section mod-list-area" aria-label="모드 목록 영역">
+      <!-- 상단 타이틀 & 플럼밥 로더 -->
+      <div class="mod-list-top-row">
+        <div id="mod-list-label" class="section-subtitle mod-list-label">
+          업데이트 대상 목록 (총 4개 / 업데이트 가능 2개)
+        </div>
+        <div id="loader-indicator" class="loader-indicator is-hidden" aria-live="polite">
+          <span class="plumbob-loader" aria-hidden="true"></span>
+          <span id="loader-text" class="loader-text">플럼밥이 모드를 탐색 중...</span>
+        </div>
+      </div>
+
+      <!-- 갤러리 툴바: 전체 선택 체크박스 + 실시간 검색창 -->
+      <div class="gallery-toolbar">
+        <label class="checkbox-label select-all-pill" for="select-all-mods">
+          <input type="checkbox" id="select-all-mods" class="mod-checkbox" />
+          <span class="select-all-text">전체 선택</span>
+        </label>
+
+        <div class="search-box-wrapper">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input
+            type="text"
+            id="mod-search-input"
+            class="mod-search-input"
+            placeholder="모드 이름 또는 제작자 실시간 검색..."
+            autocomplete="off"
+          />
+          <button
+            type="button"
+            id="btn-clear-search"
+            class="btn-clear-search is-hidden"
+            title="검색어 지우기"
+            aria-label="검색어 지우기"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- 심즈4 갤러리 카드 스크롤 컨테이너 -->
+      <div id="mod-list-section" class="mod-list-container" aria-label="모드 목록 컨테이너">
+        <div id="mod-list" class="mod-list gallery-card-list"></div>
+      </div>
+    </section>
+
+    <!-- 하단 플로팅 액션 바 (진행률 바 + 심즈4 위트 멘트 롤러 + 자동 실행 토글 + 우측 거대 초록색 원형 메인 버튼) -->
+    <footer id="footer-section" class="app-section footer-section floating-action-bar sim-subcard">
+      <!-- 좌측: 상태 요약, 자동 실행 토글, 진행률 바, 위트 멘트 롤러 & 로그 -->
+      <div class="floating-bar-left">
+        <div class="progress-header-row">
+          <div id="status-summary" class="footer-status status-summary">진행 상태: 대기 중 (0 / 2)</div>
+          <label class="auto-launch-toggle" for="chk-auto-launch" title="업데이트 완료 직후 심즈4를 자동으로 실행합니다">
+            <input type="checkbox" id="chk-auto-launch" class="mod-checkbox auto-launch-checkbox" checked />
+            <span>업데이트 후 게임 자동 실행</span>
+          </label>
+        </div>
+
+        <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div id="progress-bar" class="progress-fill" style="width: 0%;"></div>
+        </div>
+
+        <div class="footer-bottom-meta">
+          <span id="witty-quote" class="witty-quote">💎 Sul Sul! 업데이트 준비가 완료되었어요.</span>
+          <div id="log-box" class="log-box log-text">&gt; 원격 버전 목록 확인이 완료되었습니다.</div>
+        </div>
+      </div>
+
+      <!-- 우측 하단: 심즈4 메인 화면 상징 '거대한 초록색 원형' 모두 업데이트 / 심즈4 바로 실행 버튼 -->
+      <div class="floating-bar-right">
+        <button
+          type="button"
+          id="btn-update"
+          class="sim-btn btn-primary sim-play-orb"
+          title="선택한 모드를 모두 업데이트하거나 심즈4를 바로 실행합니다"
+        >
+          <span class="orb-Count-badge" id="orb-count-badge">2개</span>
+          <span class="orb-play-icon" aria-hidden="true">▶</span>
+          <span class="orb-main-text" id="orb-main-text">모두 업데이트</span>
+          <span class="orb-sub-text" id="orb-sub-text">&amp; 심즈4 실행</span>
+        </button>
+      </div>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
