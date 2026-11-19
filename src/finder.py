@@ -808,7 +808,7 @@ KNOWN_CATALOG = [
         "name": "Sims 4 AI Chat BYOK Addon",
         "creator": "lvl2032",
         "mod_title": "Sims 4 AI Chat BYOK Addon",
-        "version": "2.5.5",
+        "version": "2.4.3",
         "links": [
             ("디시인사이드", "(26.11.01업뎃) AI Chat 애드온 BYOK 배포", "https://gall.dcinside.com/mgallery/board/view/?id=sims&no=281508")
         ]
@@ -2141,8 +2141,15 @@ def _extract_from_single_ts4script(path: Path) -> Dict[str, Any]:
                             info["urls"].append(u_val)
 
                     # 3. ModFileManifest가 없는 핵심 스크립트(.pyc) 내부 버전 상수 보조 추출
-                    if not info["version"]:
-                        e_low = entry_name.lower()
+                    e_low = entry_name.lower()
+                    if e_low.startswith("sims4_ai_chat_addon/") and e_low.endswith(".pyc"):
+                        for m_byok in re.finditer(rb"(?<![0-9.])(2\.[0-9]+\.[0-9]+)(?![0-9]|\.[0-9])", data):
+                            cand_byok = m_byok.group(1).decode("ascii", "ignore")
+                            cur_parts = tuple(int(x) for x in info["version"].split(".") if x.isdigit()) if info["version"] else ()
+                            cand_parts = tuple(int(x) for x in cand_byok.split(".") if x.isdigit())
+                            if cand_parts > cur_parts:
+                                info["version"] = cand_byok
+                    elif not info["version"]:
                         if e_low.endswith(("mc_cmd_version.pyc", "mc_utils.pyc", "mc_cmd_center.pyc", "mc_woohoo.pyc")):
                             m_mc = re.search(rb"(?<![0-9.])(202[0-9]\.[0-9]+\.[0-9]+)(?![0-9.])", data)
                             if m_mc:

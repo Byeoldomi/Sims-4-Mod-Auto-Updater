@@ -388,9 +388,7 @@ class Sims4ModUpdaterAPI:
                     local_ver = self._format_display_version(manifest_ver_tok)
 
         meta: Dict[str, Any] = {}
-        if (not local_ver or not catalog_hit.get("creator")) and (
-            check_remote or not catalog_hit
-        ):
+        if not local_ver or not catalog_hit.get("creator"):
             meta = extract_mod_file_metadata(primary_path) if primary_path else {}
 
         if not local_ver:
