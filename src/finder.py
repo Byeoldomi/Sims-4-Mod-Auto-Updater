@@ -808,7 +808,7 @@ KNOWN_CATALOG = [
         "name": "Sims 4 AI Chat BYOK Addon",
         "creator": "lvl2032",
         "mod_title": "Sims 4 AI Chat BYOK Addon",
-        "version": "2.4.3",
+        "version": "2.5.5",
         "links": [
             ("디시인사이드", "(26.11.01업뎃) AI Chat 애드온 BYOK 배포", "https://gall.dcinside.com/mgallery/board/view/?id=sims&no=281508")
         ]

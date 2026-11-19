@@ -816,7 +816,7 @@ class ModUpdater:
                 folder_low = (folder_name or "").strip().lower()
                 t_name_low = (target_name or "").strip().lower()
                 if "byok" in t_name_low:
-                    return "v2.4.3"
+                    return "v2.5.5"
                 if ("ai chat" in folder_low or "aichat" in folder_low or "sims4_ai_chat" in t_name_low or "sims 4 ai chat" in t_name_low) and "byok" not in t_name_low:
                     return rem_ver or "v2.5.0"
                 if "volleyball" in folder_low or "volleyball" in (target_name or "").lower():

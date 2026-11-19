@@ -40,8 +40,8 @@
       <!-- 헤더 하단 줄: 현재 모드 폴더 경로 표시 & 폴더 변경 버튼 -->
       <div id="folder-path-section" class="header-path-bar" aria-label="모드 폴더 경로">
         <span class="path-badge">📂 모드 폴더</span>
-        <div id="mod-folder-path" class="path-box path-text" title="C:\Users\User\Documents\Electronic Arts\The Sims 4\Mods">
-          C:\Users\User\Documents\Electronic Arts\The Sims 4\Mods
+        <div id="mod-folder-path" class="path-box path-text" title="모드 폴더 경로 확인 중...">
+          모드 폴더 경로 확인 중...
         </div>
         <button type="button" id="btn-change-folder" class="btn sim-btn btn-change-folder">
           폴더 변경
@@ -59,7 +59,7 @@
             <span class="moodlet-icon" aria-hidden="true">🧩</span>
           </div>
           <div class="moodlet-body">
-            <span id="count-total" class="moodlet-count version-num">4</span>
+            <span id="count-total" class="moodlet-count version-num">0</span>
           </div>
         </button>
 
@@ -70,7 +70,7 @@
             <span class="moodlet-icon" aria-hidden="true">✨</span>
           </div>
           <div class="moodlet-body">
-            <span id="count-update" class="moodlet-count version-num">2</span>
+            <span id="count-update" class="moodlet-count version-num">0</span>
           </div>
         </button>
 
@@ -81,7 +81,7 @@
             <span class="moodlet-icon" aria-hidden="true">🔥</span>
           </div>
           <div class="moodlet-body">
-            <span id="count-conflict" class="moodlet-count version-num">1</span>
+            <span id="count-conflict" class="moodlet-count version-num">0</span>
           </div>
         </button>
 
@@ -92,7 +92,7 @@
             <span class="moodlet-icon" aria-hidden="true">💎</span>
           </div>
           <div class="moodlet-body">
-            <span id="count-latest" class="moodlet-count version-num">1</span>
+            <span id="count-latest" class="moodlet-count version-num">0</span>
           </div>
         </button>
       </div>
@@ -103,7 +103,7 @@
       <!-- 상단 타이틀 & 플럼밥 로더 -->
       <div class="mod-list-top-row">
         <div id="mod-list-label" class="section-subtitle mod-list-label">
-          업데이트 대상 목록 (총 4개 / 업데이트 가능 2개)
+          업데이트 대상 목록 (총 0개 / 업데이트 가능 0개)
         </div>
         <div id="loader-indicator" class="loader-indicator is-hidden" aria-live="polite">
           <span class="plumbob-loader" aria-hidden="true"></span>
@@ -150,7 +150,7 @@
       <!-- 좌측: 상태 요약, 자동 실행 토글, 진행률 바, 위트 멘트 롤러 & 로그 -->
       <div class="floating-bar-left">
         <div class="progress-header-row">
-          <div id="status-summary" class="footer-status status-summary">진행 상태: 대기 중 (0 / 2)</div>
+          <div id="status-summary" class="footer-status status-summary">진행 상태: 모드 폴더 확인 중...</div>
           <label class="auto-launch-toggle" for="chk-auto-launch" title="업데이트 완료 직후 심즈4를 자동으로 실행합니다">
             <input type="checkbox" id="chk-auto-launch" class="mod-checkbox auto-launch-checkbox" checked />
             <span>업데이트 후 게임 자동 실행</span>
@@ -162,8 +162,8 @@
         </div>
 
         <div class="footer-bottom-meta">
-          <span id="witty-quote" class="witty-quote">💎 Sul Sul! 업데이트 준비가 완료되었어요.</span>
-          <div id="log-box" class="log-box log-text">&gt; 원격 버전 목록 확인이 완료되었습니다.</div>
+          <span id="witty-quote" class="witty-quote">💎 Sul Sul! 모드 폴더를 확인하고 있어요.</span>
+          <div id="log-box" class="log-box log-text">&gt; 모드 폴더를 확인하고 있습니다...</div>
         </div>
       </div>
 
@@ -175,10 +175,10 @@
           class="sim-btn btn-primary sim-play-orb"
           title="선택한 모드를 모두 업데이트하거나 심즈4를 바로 실행합니다"
         >
-          <span class="orb-Count-badge" id="orb-count-badge">2개</span>
+          <span class="orb-Count-badge is-launch-mode" id="orb-count-badge">PLAY</span>
           <span class="orb-play-icon" aria-hidden="true">▶</span>
-          <span class="orb-main-text" id="orb-main-text">모두 업데이트</span>
-          <span class="orb-sub-text" id="orb-sub-text">&amp; 심즈4 실행</span>
+          <span class="orb-main-text" id="orb-main-text">심즈4 실행</span>
+          <span class="orb-sub-text" id="orb-sub-text">바로 플레이</span>
         </button>
       </div>
     </footer>

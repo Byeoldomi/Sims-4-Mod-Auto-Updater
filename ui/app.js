@@ -2,60 +2,7 @@
  * Sims 4 Mod Auto Updater v0.1.5 - Web UI & pywebview Bridge Controller
  */
 
-const DEFAULT_MODS = [
-  {
-    id: 'mccc',
-    name: 'MC Command Center',
-    author: 'Deaderpool',
-    currentVersion: '2026.7.0',
-    latestVersion: '2026.8.0',
-    statusText: '업데이트 가능',
-    statusType: 'update', // --inspired-blue (#00A9E0)
-    checked: true,
-    disabled: false,
-    pageUrl: 'https://deaderpool-mccc.com/',
-    conflictPaths: [],
-  },
-  {
-    id: 'ui-cheats',
-    name: 'UI Cheats Extension',
-    author: 'weerbesu',
-    currentVersion: 'v1.44',
-    latestVersion: 'v1.45',
-    statusText: '업데이트 가능',
-    statusType: 'update', // --inspired-blue (#00A9E0)
-    checked: true,
-    disabled: false,
-    pageUrl: 'https://www.patreon.com/weerbesu',
-    conflictPaths: [],
-  },
-  {
-    id: 'wickedwhims',
-    name: 'WickedWhims',
-    author: 'TURBODRIVER',
-    currentVersion: 'v180b',
-    latestVersion: 'v180b',
-    statusText: '최신버전',
-    statusType: 'latest', // --plumbob-green (#43B02A)
-    checked: false,
-    disabled: false,
-    pageUrl: 'https://wicked.cc/mods/TURBODRIVER/wickedwhims',
-    conflictPaths: [],
-  },
-  {
-    id: 'live-in-business',
-    name: 'LittleMsSam_LiveInBusiness',
-    author: 'LittleMsSam',
-    currentVersion: 'v1.0',
-    latestVersion: '확인 불가',
-    statusText: '링크 오류',
-    statusType: 'error', // --enraged-red (#E4002B)
-    checked: false,
-    disabled: true,
-    pageUrl: '',
-    conflictPaths: [],
-  },
-];
+const DEFAULT_MODS = [];
 
 // 상태별 심즈4 로딩 화면 스타일 위트 멘트 사전
 const SIMS4_QUOTES = {
@@ -115,10 +62,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const countLatestEl = document.getElementById('count-latest');
   const moodletGrid = document.getElementById('moodlet-grid');
 
-  let currentMods = DEFAULT_MODS.map((m) => ({ ...m }));
+  let currentMods = [];
   let currentFilter = 'all'; // 'all' | 'update' | 'error' | 'latest'
   let searchQuery = '';
   let isBusy = false;
+  let isInitializing = true;
   let quoteIntervalId = null;
   let quoteIndex = 0;
   let completeQuoteIdx = 0;
@@ -332,7 +280,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const emptyEl = document.createElement('div');
       emptyEl.className = 'empty-filter-state';
       if (currentMods.length === 0) {
-        emptyEl.textContent = '선택된 Mods 폴더에 설치된 스크립트/게임플레이 모드가 없습니다.';
+        emptyEl.textContent = isInitializing
+          ? '모드 폴더에서 설치된 모드를 불러오는 중입니다...'
+          : '선택된 Mods 폴더에 설치된 스크립트/게임플레이 모드가 없습니다.';
       } else if (searchQuery.trim() !== '') {
         emptyEl.textContent = `"${searchQuery.trim()}" 검색 결과가 없습니다.`;
       } else {
@@ -594,6 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       if (Array.isArray(res?.mods)) {
+        isInitializing = false;
         renderModList(res.mods);
       }
       if (progressBar) progressBar.style.width = '100%';
@@ -841,6 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setLoading(true, '플럼밥이 모드를 탐색 중...', { category: 'scan' });
         setLog('모드 폴더 및 원격 버전을 확인하고 있습니다...');
         setTimeout(() => {
+          isInitializing = false;
           currentFilter = 'all';
           searchQuery = '';
           if (searchInput) searchInput.value = '';
@@ -875,6 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
             modFolderPath.title = res.mods_folder;
           }
           if (Array.isArray(res?.mods)) {
+            isInitializing = false;
             currentFilter = 'all';
             renderModList(res.mods);
           }
@@ -916,7 +869,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 초기 화면 렌더링 (브라우저 미리보기 시 기본 데이터, pywebview 준비 시 실제 로컬 폴더로 즉시 교체)
+  // 초기 화면 렌더링 (하드코딩된 예시 데이터 없이 빈 로딩 상태로 시작 후 pywebview 준비 시 실제 로컬 폴더 반영)
   renderModList(currentMods);
 
   // pywebview 환경 준비 시 2단계 비차단 스캔 (1단계: 로컬 0.5초 즉시 표시 -> 2단계: 백그라운드 병렬 원격 조회)
@@ -924,6 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!hasPywebview()) return;
     try {
       const state = await window.pywebview.api.get_initial_state();
+      isInitializing = false;
       if (state?.mods_folder && modFolderPath) {
         modFolderPath.textContent = state.mods_folder;
         modFolderPath.title = state.mods_folder;
@@ -931,6 +885,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // 빈 폴더([])인 경우에도 가상 샘플 데이터를 남기지 않고 실제 상태를 그대로 반영
       if (Array.isArray(state?.mods)) {
         renderModList(state.mods);
+      } else {
+        renderModList([]);
       }
       if (state?.message) {
         setLog(state.message);
@@ -942,6 +898,8 @@ document.addEventListener('DOMContentLoaded', () => {
         await runRemoteScan();
       }
     } catch (_) {
+      isInitializing = false;
+      renderModList([]);
       setWittyQuote(SIMS4_QUOTES.error[0], 'error');
     }
   });
