@@ -17,8 +17,10 @@ from bs4 import BeautifulSoup
 from src.utils import (
     NetworkSecurityError,
     SafeHttpsSession,
+    is_auxiliary_non_mod_archive,
     is_valid_https_url,
     log_security_warning,
+    normalize_mod_filename_key,
     safe_https_get,
     validate_https_url,
 )
@@ -4679,15 +4681,32 @@ def inspect_remote_mod_page(
                             ver_str = "a0.5"
                         elif str(post_id) == "115299392" and "wave" in best_fn.lower():
                             ver_str = "a0.5"
+                        target_norm_key = normalize_mod_filename_key(target_base_low) if target_base_low else ""
+                        best_norm_key = normalize_mod_filename_key(best_fn)
+                        is_same_target_file = bool(
+                            target_base_low
+                            and (
+                                best_fn.lower() == target_base_low
+                                or (target_norm_key and best_norm_key == target_norm_key)
+                            )
+                        )
                         if (
-                            ((target_base_low and best_fn.lower() == target_base_low) and str(post_id) not in ("166618081", "158968693", "142863954"))
+                            (is_same_target_file and str(post_id) not in ("166618081", "158968693", "142863954"))
                             or "wamtik" in best_fn.lower()
                             or str(post_id) in ("69121597", "115299392", "151330104", "108516027")
                             or (str(post_id) == "142863954" and "ride together" not in best_fn.lower())
                         ):
                             matched_patreon_files = [(best_fn, best_dl)]
                         else:
-                            matched_patreon_files = [(fn, dl) for _, fn, dl in files]
+                            seen_dl_urls: set[str] = {best_dl}
+                            matched_patreon_files = [(best_fn, best_dl)]
+                            for _, fn, dl in files:
+                                if dl in seen_dl_urls:
+                                    continue
+                                if is_auxiliary_non_mod_archive(fn, target_mod_name):
+                                    continue
+                                seen_dl_urls.add(dl)
+                                matched_patreon_files.append((fn, dl))
                         return {
                             "status": "free_direct",
                             "title": title,
@@ -4786,15 +4805,32 @@ def inspect_remote_mod_page(
                             ver_str = "a0.5"
                         elif str(post_id) == "115299392" and "wave" in best_fn.lower():
                             ver_str = "a0.5"
+                        target_norm_key = normalize_mod_filename_key(target_base_low) if target_base_low else ""
+                        best_norm_key = normalize_mod_filename_key(best_fn)
+                        is_same_target_file = bool(
+                            target_base_low
+                            and (
+                                best_fn.lower() == target_base_low
+                                or (target_norm_key and best_norm_key == target_norm_key)
+                            )
+                        )
                         if (
-                            ((target_base_low and best_fn.lower() == target_base_low) and str(post_id) not in ("166618081", "158968693", "142863954"))
+                            (is_same_target_file and str(post_id) not in ("166618081", "158968693", "142863954"))
                             or "wamtik" in best_fn.lower()
                             or str(post_id) in ("69121597", "115299392", "151330104", "108516027")
                             or (str(post_id) == "142863954" and "ride together" not in best_fn.lower())
                         ):
                             matched_patreon_files = [(best_fn, best_dl)]
                         else:
-                            matched_patreon_files = [(fn, dl) for _, fn, dl in files]
+                            seen_dl_urls: set[str] = {best_dl}
+                            matched_patreon_files = [(best_fn, best_dl)]
+                            for _, fn, dl in files:
+                                if dl in seen_dl_urls:
+                                    continue
+                                if is_auxiliary_non_mod_archive(fn, target_mod_name):
+                                    continue
+                                seen_dl_urls.add(dl)
+                                matched_patreon_files.append((fn, dl))
                         return {
                             "status": "free_direct",
                             "title": title,

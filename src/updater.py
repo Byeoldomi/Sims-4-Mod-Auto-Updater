@@ -17,10 +17,12 @@ from src.utils import (
     download_file,
     extract_zip,
     inspect_dangerous_extension,
+    is_auxiliary_non_mod_archive,
     is_safe_subpath,
     is_valid_https_url,
     is_whitelisted_mod_file,
     log_security_warning,
+    normalize_mod_filename_key,
     safe_https_get,
     safe_remove,
     validate_https_url,
@@ -1104,13 +1106,44 @@ class ModUpdater:
                 self.backup_manager.backup_item(target_dir, backup_session)
 
         installed_names: List[str] = []
+        installed_paths: List[Path] = []
+        known_existing_paths = [
+            Path(p) for p in (mod.get("unit_files") or []) if p and Path(p).exists()
+        ]
+        if selected_file_path and selected_file_path.exists() and selected_file_path not in known_existing_paths:
+            known_existing_paths.append(selected_file_path)
+
+        known_existing_low_set = {str(p.resolve()).lower() for p in known_existing_paths}
+        has_subdir_known = any(
+            p.parent.resolve() != target_dir.resolve()
+            for p in known_existing_paths
+            if is_safe_subpath(p, target_dir, allow_equal=False)
+        )
+        shared_container_names = {
+            "mod", "mods", "gsm", "gm", "prio", "overrides", "override",
+            "lms", "lumpinou", "utopya", "frequentlybasic", "natethel0ser",
+        }
+        is_dedicated_mod_dir = (
+            target_dir.resolve() != self.mods_folder.resolve()
+            and target_dir.name.lower() not in shared_container_names
+        )
+        include_subdirs = bool(has_subdir_known or is_dedicated_mod_dir)
 
         def _backup_if_exists(dest_p: Path) -> None:
-            if self.backup_manager and backup_session and dest_p.exists():
-                res_str = str(dest_p.resolve())
-                if res_str not in backed_up_paths:
-                    self.backup_manager.backup_item(dest_p, backup_session)
-                    backed_up_paths.add(res_str)
+            nonlocal backup_session
+            if not self.backup_manager or not dest_p.exists():
+                return
+            res_str = str(dest_p.resolve())
+            if res_str in backed_up_paths:
+                return
+            if skip_backup and res_str.lower() in known_existing_low_set:
+                return
+            if backup_session is None:
+                backup_session = self.backup_manager.create_backup_session(
+                    label=(selected_file_path.stem if selected_file_path else mod.get("name") or "pre_cleanup")
+                )
+            self.backup_manager.backup_item(dest_p, backup_session)
+            backed_up_paths.add(res_str)
 
         # 2. 임시 다운로드 및 설치
         with tempfile.TemporaryDirectory(prefix="s4mod_upd_") as tmp_dir:
@@ -1161,7 +1194,22 @@ class ModUpdater:
 
             # 기존 설치 폴더 준비
             target_dir.mkdir(parents=True, exist_ok=True)
-            existing_names_map = {f.name.lower(): f for f in target_dir.iterdir() if f.is_file()}
+            existing_names_map: Dict[str, Path] = {}
+            existing_norm_map: Dict[str, Path] = {}
+            existing_iter = target_dir.rglob("*") if include_subdirs else target_dir.iterdir()
+            for f in existing_iter:
+                if not f.is_file() or f.suffix.lower() not in ALLOWED_MOD_WHITELIST_EXTENSIONS:
+                    continue
+                existing_names_map.setdefault(f.name.lower(), f)
+                fn_nk = normalize_mod_filename_key(f.name)
+                if fn_nk:
+                    existing_norm_map.setdefault(fn_nk, f)
+            for kf in known_existing_paths:
+                if kf.exists() and kf.is_file() and kf.suffix.lower() in ALLOWED_MOD_WHITELIST_EXTENSIONS:
+                    existing_names_map.setdefault(kf.name.lower(), kf)
+                    fn_nk = normalize_mod_filename_key(kf.name)
+                    if fn_nk:
+                        existing_norm_map.setdefault(fn_nk, kf)
 
             # 3. 설치 (ZIP/RAR/7Z 압축 해제 또는 단일 파일 교체)
             if downloaded_file.suffix.lower() in (".zip", ".rar", ".7z"):
@@ -1173,10 +1221,14 @@ class ModUpdater:
                     target_filename=target_fn,
                     overwrite_mode=overwrite_mode,
                     temp_work_dir=temp_extract_dir,
+                    known_existing_files=known_existing_paths,
+                    include_subdirs=include_subdirs,
                 )
                 safe_remove(downloaded_file)
                 safe_remove(temp_extract_dir)
                 for ep in extracted_paths:
+                    if ep not in installed_paths:
+                        installed_paths.append(ep)
                     if ep.name not in installed_names:
                         installed_names.append(ep.name)
 
@@ -1210,11 +1262,25 @@ class ModUpdater:
                         if ep.suffix.lower() == selected_file_path.suffix.lower()
                     ]
                     if len(same_ext_files) == 1 and same_ext_files[0].resolve() != selected_file_path.resolve():
+                        _backup_if_exists(selected_file_path)
                         safe_remove(selected_file_path)
                         mod["file_path"] = str(same_ext_files[0])
                         if isinstance(mod.get("selected_file"), dict):
                             mod["selected_file"]["name"] = same_ext_files[0].name
                             mod["selected_file"]["full_path"] = str(same_ext_files[0])
+                    elif same_ext_files:
+                        sel_nk = normalize_mod_filename_key(selected_file_path.name)
+                        matched_rep = next(
+                            (ep for ep in same_ext_files if normalize_mod_filename_key(ep.name) == sel_nk),
+                            same_ext_files[0],
+                        )
+                        if matched_rep.resolve() != selected_file_path.resolve() and normalize_mod_filename_key(matched_rep.name) == sel_nk:
+                            _backup_if_exists(selected_file_path)
+                            safe_remove(selected_file_path)
+                        mod["file_path"] = str(matched_rep)
+                        if isinstance(mod.get("selected_file"), dict):
+                            mod["selected_file"]["name"] = matched_rep.name
+                            mod["selected_file"]["full_path"] = str(matched_rep)
             else:
                 _notify("extract", f"모드 파일 설치 중 ({downloaded_file.name})...")
                 if not is_whitelisted_mod_file(downloaded_file, ALLOWED_MOD_WHITELIST_EXTENSIONS):
@@ -1232,9 +1298,12 @@ class ModUpdater:
                     and selected_file_path.suffix.lower() == downloaded_file.suffix.lower()
                     and selected_file_path.resolve() != dest.resolve()
                 ):
+                    _backup_if_exists(selected_file_path)
                     safe_remove(selected_file_path)
+                _backup_if_exists(dest)
                 safe_remove(dest)
                 shutil.move(str(downloaded_file), str(dest))
+                installed_paths.append(dest)
                 installed_names.append(dest.name)
                 mod["file_path"] = str(dest)
                 if isinstance(mod.get("selected_file"), dict):
@@ -1245,12 +1314,15 @@ class ModUpdater:
             is_multi_bundle = bool(update_info.get("is_multi_file_bundle"))
             if overwrite_mode == "all" or is_multi_bundle:
                 all_remote_files = update_info.get("all_remote_files") or []
+                seen_remote_urls = {download_url}
                 for idx_rem, (rem_fn, rem_dl) in enumerate(all_remote_files):
-                    if not rem_fn or not rem_dl or rem_dl == download_url or rem_fn in installed_names:
+                    if not rem_fn or not rem_dl or rem_dl in seen_remote_urls or rem_fn in installed_names:
                         continue
                     safe_rem_base = Path(str(rem_fn).replace("\\", "/")).name
                     clean_rem_fn = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "_", safe_rem_base).strip(" .")
                     if not clean_rem_fn or clean_rem_fn in installed_names:
+                        continue
+                    if is_auxiliary_non_mod_archive(clean_rem_fn, target_mod_name=mod.get("name") or ""):
                         continue
                     bad_rem_ext = inspect_dangerous_extension(clean_rem_fn)
                     if bad_rem_ext is not None:
@@ -1262,8 +1334,14 @@ class ModUpdater:
                         )
                     validate_https_url(rem_dl, allow_fragment=True, purpose="부가 모드 파일 다운로드")
                     rem_ext = Path(clean_rem_fn).suffix.lower()
-                    if rem_ext in ALLOWED_MOD_WHITELIST_EXTENSIONS and (is_multi_bundle or clean_rem_fn.lower() in existing_names_map):
+                    rem_norm_key = normalize_mod_filename_key(clean_rem_fn)
+                    has_existing_match = (
+                        clean_rem_fn.lower() in existing_names_map
+                        or (bool(rem_norm_key) and rem_norm_key in existing_norm_map)
+                    )
+                    if rem_ext in ALLOWED_MOD_WHITELIST_EXTENSIONS and (is_multi_bundle or has_existing_match):
                         try:
+                            seen_remote_urls.add(rem_dl)
                             sub_dl = tmp_path / clean_rem_fn
                             if not is_safe_subpath(sub_dl, tmp_path):
                                 raise ZipSlipSecurityError(f"부가 다운로드 파일 경로 이탈 감지: {rem_fn!r}")
@@ -1277,12 +1355,25 @@ class ModUpdater:
                             if not is_whitelisted_mod_file(sub_dl, ALLOWED_MOD_WHITELIST_EXTENSIONS):
                                 safe_remove(sub_dl)
                                 continue
-                            dest_sub = target_dir / clean_rem_fn
+                            dest_parent = (
+                                existing_names_map[clean_rem_fn.lower()].parent
+                                if clean_rem_fn.lower() in existing_names_map
+                                else (
+                                    existing_norm_map[rem_norm_key].parent
+                                    if rem_norm_key in existing_norm_map
+                                    else target_dir
+                                )
+                            )
+                            if not is_safe_subpath(dest_parent, target_dir, allow_equal=True):
+                                dest_parent = target_dir
+                            dest_sub = dest_parent / clean_rem_fn
                             if not is_safe_subpath(dest_sub, target_dir):
                                 raise ZipSlipSecurityError(f"부가 설치 파일 대상 경로 이탈 감지: {clean_rem_fn!r}")
                             _backup_if_exists(dest_sub)
                             safe_remove(dest_sub)
                             shutil.move(str(sub_dl), str(dest_sub))
+                            if dest_sub not in installed_paths:
+                                installed_paths.append(dest_sub)
                             if clean_rem_fn not in installed_names:
                                 installed_names.append(clean_rem_fn)
                         except (ArchiveSecurityError, NetworkSecurityError):
@@ -1296,6 +1387,7 @@ class ModUpdater:
                             continue
                         sub_extract_dir = tmp_path / f"extract_sub_{idx_rem}"
                         try:
+                            seen_remote_urls.add(rem_dl)
                             sub_dl = tmp_path / clean_rem_fn
                             if not is_safe_subpath(sub_dl, tmp_path):
                                 raise ZipSlipSecurityError(f"부가 아카이브 경로 이탈 감지: {rem_fn!r}")
@@ -1312,9 +1404,13 @@ class ModUpdater:
                                 target_dir,
                                 overwrite_mode="all",
                                 temp_work_dir=sub_extract_dir,
+                                known_existing_files=known_existing_paths,
+                                include_subdirs=include_subdirs,
                             )
                             safe_remove(sub_dl)
                             for sep in sub_extracted:
+                                if sep not in installed_paths:
+                                    installed_paths.append(sep)
                                 if sep.name not in installed_names:
                                     installed_names.append(sep.name)
                         except (ArchiveSecurityError, NetworkSecurityError):
@@ -1323,6 +1419,42 @@ class ModUpdater:
                             pass
                         finally:
                             safe_remove(sub_extract_dir)
+
+            # 4-1. 새로 설치된 파일과 정규화 키가 일치하는 구버전 파일(예: _v1.972.package -> _v1.98.package) 자동 백업 및 정리
+            if installed_paths:
+                installed_resolved = {ip.resolve() for ip in installed_paths if ip.exists()}
+                installed_norm_keys = {
+                    normalize_mod_filename_key(ip.name)
+                    for ip in installed_paths
+                    if ip.exists() and normalize_mod_filename_key(ip.name)
+                }
+                if installed_norm_keys:
+                    candidate_old_files: List[Path] = list(known_existing_paths)
+                    scan_dirs = {target_dir.resolve()} | {ip.parent.resolve() for ip in installed_paths}
+                    for sd in scan_dirs:
+                        if sd.exists() and is_safe_subpath(sd, self.mods_folder, allow_equal=True):
+                            for f in sd.iterdir():
+                                if f.is_file() and f.suffix.lower() in ALLOWED_MOD_WHITELIST_EXTENSIONS:
+                                    candidate_old_files.append(f)
+
+                    seen_old_resolved: set[Path] = set()
+                    for old_f in candidate_old_files:
+                        try:
+                            if not old_f.exists() or not old_f.is_file() or old_f.is_symlink():
+                                continue
+                            old_res = old_f.resolve()
+                            if old_res in seen_old_resolved or old_res in installed_resolved:
+                                continue
+                            seen_old_resolved.add(old_res)
+                            if not is_safe_subpath(old_res, self.mods_folder, allow_equal=False):
+                                continue
+                            if normalize_mod_filename_key(old_f.name) in installed_norm_keys:
+                                _backup_if_exists(old_f)
+                                safe_remove(old_f)
+                        except OSError:
+                            continue
+
+        mod["installed_paths"] = [str(p) for p in installed_paths if p.exists()]
 
         # 5. 버전 및 표시 파일명 갱신 + 검증된 배포 URL 자동 고정(Pinning)
         # (.zip 아카이브 이름으로 mod["name"]이 덮어써져 카탈로그/매니페스트 매칭이 끊기지 않도록 실제 설치된 대표 모드 파일명을 유지)

@@ -1165,14 +1165,130 @@ def verify_downloaded_mod_file(
     raise ValueError(f"허용되지 않는 다운로드 파일 형식입니다: '{file_path.name}'")
 
 
+_OPTION_FOLDER_KEYWORDS = (
+    "choose",
+    "option",
+    "select one",
+    "pick one",
+    "variant",
+    "선택",
+    "택1",
+)
+
+
+def normalize_mod_filename_key(filename: str) -> str:
+    """모드 파일명에서 버전 번호 및 날짜 표기만 제거하여 업데이트 전/후 동일 모듈을 식별하는 정규화 키를 반환합니다.
+    (예: 'Pandasama_ChildBirth_mod_v1.972.package' -> 'pandasama_childbirth_mod.package')
+    """
+    raw_name = Path(str(filename or "").replace("\\", "/")).name.strip()
+    if not raw_name:
+        return ""
+
+    p = Path(raw_name)
+    ext = p.suffix.lower()
+    stem = p.stem
+
+    # 1) 점(.)으로 구분된 날짜/버전 제거 (단, 1.75x 같은 배수 표기는 제외)
+    stem = re.sub(
+        r"(?:^|[\s_.\-\[\(])(?:201[4-9]|202[0-9])[\.\-_](?:0?[1-9]|1[0-2])[\.\-_](?:0?[1-9]|[12][0-9]|3[01])(?=$|[^0-9])",
+        " ",
+        stem,
+    )
+    stem = re.sub(
+        r"(?:^|[\s_.\-\[\(])(?:0?[1-9]|[12][0-9]|3[01])[\.\-_](?:0?[1-9]|1[0-2])[\.\-_](?:201[4-9]|202[0-9])(?=$|[^0-9])",
+        " ",
+        stem,
+    )
+    stem = re.sub(
+        r"(?:^|[\s_.\-\[\(])(?:v|ver|version|a|b)?\.?\s*[0-9]+(?:\.[0-9]+)+[a-wyz]?(?=$|[^a-zA-Z0-9.xX])",
+        " ",
+        stem,
+        flags=re.IGNORECASE,
+    )
+    # 2) 명시적 v/ver 접두사가 붙은 단일 숫자 버전 제거 (예: _v2, _v4, _v42, _v2a, _v185k)
+    stem = re.sub(
+        r"(?:^|[\s_.\-\[\(]|(?<=[a-zA-Z]))(?:v|ver|version)\.?\s*[0-9]+[a-wyz]?(?=$|[^a-zA-Z0-9.xX])",
+        " ",
+        stem,
+        flags=re.IGNORECASE,
+    )
+    # 3) 대괄호 안의 순수 버전/날짜 제거 (예: [20260315], [v1.1])
+    stem = re.sub(r"\[\s*\]", " ", stem)
+    stem = re.sub(r"\(\s*\)", " ", stem)
+
+    # 구분자 정규화 (공백/언더바/하이픈/점은 '_'로 통일)
+    stem = re.sub(r"[\s_.\-]+", "_", stem).strip("_").lower()
+    return f"{stem}{ext}" if stem else raw_name.lower()
+
+
+def is_auxiliary_non_mod_archive(filename: str, target_mod_name: str = "") -> bool:
+    """아카이브가 제작자 리소스/문서/트레일러/부지 등 일반 모드 본체가 아닌 보조 파일인지 판별합니다."""
+    fn_low = (filename or "").lower()
+    t_low = (target_mod_name or "").lower()
+    aux_tokens = (
+        "creator_resource",
+        "creatorresource",
+        "moodtestingandinstructions",
+        "instructions",
+        "documentation",
+        "readme",
+        "trailer",
+        "lot&sims",
+        "lot_and_sims",
+    )
+    for tok in aux_tokens:
+        if tok in fn_low and tok not in t_low:
+            return True
+    return False
+
+
+def _is_option_or_addon_filename(filename: str) -> bool:
+    """파일명이 선택형 옵션/애드온 모듈 성격인지 판별합니다."""
+    low = (filename or "").lower()
+    return any(
+        tok in low
+        for tok in (
+            "optional",
+            "addon",
+            "add-on",
+            "choose",
+            "workingtime",
+            "lockedstats",
+            "noautocooking",
+            "noautoputaway",
+            "nogardening",
+            "nocooking",
+            "cannotdie",
+            "costfix",
+            "gotosleep",
+            "hiremore",
+            "nouniform",
+            "forbiddenmoods",
+            "age_adult",
+            "age_elder",
+            "age_youngadult",
+            "test_users",
+            "_columns",
+            "lovestruck",
+            "nolovestruck",
+            "limits-",
+            "limits_",
+            "fictionalgurus",
+            "reallifegurus",
+        )
+    )
+
+
 def _select_mods_for_installation(
     whitelisted_files: List[Path],
     existing_names_lower: set[str],
     target_filename: Optional[str],
     overwrite_mode: str,
+    existing_norm_keys: Optional[set[str]] = None,
 ) -> List[Path]:
     """화이트리스트 검증을 통과한 임시 폴더 내 모드 파일들 중 overwrite_mode 정책에 따라
     실제 Mods 폴더로 이동시킬 최종 대상 파일 목록을 선별합니다.
+    (버전 번호가 바뀐 파일명도 정규화 키로 매칭하여 일부 파일만 업데이트되는 문제를 방지합니다.)
     """
     if not whitelisted_files:
         return []
@@ -1183,6 +1299,11 @@ def _select_mods_for_installation(
         exact_matches = [f for f in whitelisted_files if f.name.lower() == target_filename.lower()]
         if exact_matches:
             return [exact_matches[0]]
+        target_norm = normalize_mod_filename_key(target_filename)
+        if target_norm:
+            norm_matches = [f for f in whitelisted_files if normalize_mod_filename_key(f.name) == target_norm]
+            if norm_matches:
+                return [norm_matches[0]]
         if target_ext:
             same_ext = [f for f in whitelisted_files if f.suffix.lower() == target_ext]
             if same_ext:
@@ -1190,22 +1311,99 @@ def _select_mods_for_installation(
         return whitelisted_files
 
     if overwrite_mode == "all":
-        installed_matches = [f for f in whitelisted_files if f.name.lower() in existing_names_lower]
-        has_choose_one = any("choose" in str(f).lower() for f in whitelisted_files)
+        norm_keys = set(existing_norm_keys or set())
+        for ex_name in existing_names_lower:
+            nk = normalize_mod_filename_key(ex_name)
+            if nk:
+                norm_keys.add(nk)
+
+        installed_matches = [
+            f
+            for f in whitelisted_files
+            if f.name.lower() in existing_names_lower
+            or (norm_keys and normalize_mod_filename_key(f.name) in norm_keys)
+        ]
+        has_choose_one = any(
+            any(kw in str(f).lower() for kw in _OPTION_FOLDER_KEYWORDS)
+            for f in whitelisted_files
+        )
         is_all_aichat = all("sims4_ai_chat" in f.name.lower() for f in whitelisted_files)
+
         if (
             not is_all_aichat
             and installed_matches
             and len(whitelisted_files) > len(installed_matches)
             and (len(whitelisted_files) > 4 or has_choose_one)
         ):
+            # 안전장치: .ts4script 등 일부만 매칭되고 본체/모듈 .package가 0개 매칭된 경우,
+            # 선택형 옵션이 아닌 핵심 .package 파일이 아카이브에 존재하면 함께 포함시켜 스크립트-패키지 버전 불일치를 방지합니다.
+            matched_pkgs = [f for f in installed_matches if f.suffix.lower() == ".package"]
+            matched_scrs = [f for f in installed_matches if f.suffix.lower() == ".ts4script"]
+            if matched_scrs and not matched_pkgs and not has_choose_one:
+                core_pkgs = [
+                    f
+                    for f in whitelisted_files
+                    if f.suffix.lower() == ".package" and not _is_option_or_addon_filename(f.name)
+                ]
+                for cp in core_pkgs:
+                    if cp not in installed_matches:
+                        installed_matches.append(cp)
             return installed_matches
         if not installed_matches and target_filename and (len(whitelisted_files) > 4 or has_choose_one):
             exact_m = [f for f in whitelisted_files if f.name.lower() == target_filename.lower()]
             if exact_m:
                 return exact_m
+            target_norm = normalize_mod_filename_key(target_filename)
+            if target_norm:
+                norm_m = [f for f in whitelisted_files if normalize_mod_filename_key(f.name) == target_norm]
+                if norm_m:
+                    return norm_m
 
     return whitelisted_files
+
+
+def _resolve_install_dest_path(
+    src_file: Path,
+    staging_dir: Path,
+    target_dir_resolved: Path,
+    existing_rel_map: Optional[Dict[str, Path]] = None,
+    existing_norm_rel_map: Optional[Dict[str, Path]] = None,
+) -> Path:
+    """설치할 화이트리스트 파일의 최종 대상 경로를 결정합니다.
+    기존에 target_dir 하위 폴더(예: SP_DA_CAS/)에 설치된 파일이면 기존 하위 폴더 위치를 유지하고,
+    그렇지 않으면 target_dir 루트에 배치합니다.
+    """
+    clean_name = _normalize_leaf_filename(src_file.name)
+    low_name = clean_name.lower()
+    norm_key = normalize_mod_filename_key(clean_name)
+
+    if existing_rel_map and low_name in existing_rel_map:
+        cand_parent = existing_rel_map[low_name].parent
+        if is_safe_subpath(cand_parent, target_dir_resolved, allow_equal=True):
+            return Path(os.path.abspath(os.path.join(str(cand_parent), clean_name)))
+
+    if existing_norm_rel_map and norm_key in existing_norm_rel_map:
+        cand_parent = existing_norm_rel_map[norm_key].parent
+        if is_safe_subpath(cand_parent, target_dir_resolved, allow_equal=True):
+            return Path(os.path.abspath(os.path.join(str(cand_parent), clean_name)))
+
+    # 기존 파일이 이미 하위 폴더 구조를 사용해 배치된 경우, 새 파일의 아카이브 내 상대 하위 폴더도 매칭 시 유지
+    if existing_rel_map and any(p.parent != target_dir_resolved for p in existing_rel_map.values()):
+        try:
+            rel_in_stage = src_file.resolve().relative_to(staging_dir.resolve())
+            parts = list(rel_in_stage.parts[:-1])
+            if parts and not any(any(kw in pt.lower() for kw in _OPTION_FOLDER_KEYWORDS) for pt in parts):
+                # 최상위 1단계가 단일 래퍼 폴더(예: SpinningPlumbobs_DivineAscension/)이고 target_dir에 동일 이름 폴더가 없으면 벗겨냄
+                if len(parts) >= 2 or (target_dir_resolved / parts[0]).is_dir():
+                    rel_sub = parts[1:] if len(parts) >= 2 and not (target_dir_resolved / parts[0]).is_dir() else parts
+                    if rel_sub:
+                        sub_dir = Path(os.path.abspath(os.path.join(str(target_dir_resolved), *rel_sub)))
+                        if is_safe_subpath(sub_dir, target_dir_resolved, allow_equal=True):
+                            return Path(os.path.abspath(os.path.join(str(sub_dir), clean_name)))
+        except Exception:
+            pass
+
+    return Path(os.path.abspath(os.path.join(str(target_dir_resolved), clean_name)))
 
 
 def _verify_and_move_whitelisted_files(
@@ -1213,6 +1411,8 @@ def _verify_and_move_whitelisted_files(
     archive_path: Path,
     staging_dir: Path,
     target_dir_resolved: Path,
+    existing_rel_map: Optional[Dict[str, Path]] = None,
+    existing_norm_rel_map: Optional[Dict[str, Path]] = None,
 ) -> List[Path]:
     """선별된 화이트리스트 파일(.package, .ts4script)의 바이너리 헤더 및 경로 안전성을 최종 확인한 뒤,
     임시 폴더에서 실제 심즈 4 Mods 폴더(target_dir_resolved)로 안전하게 이동(shutil.move)시킵니다.
@@ -1235,7 +1435,13 @@ def _verify_and_move_whitelisted_files(
             )
 
         clean_name = _normalize_leaf_filename(src_file.name)
-        dest_file = Path(os.path.abspath(os.path.join(str(target_dir_resolved), clean_name)))
+        dest_file = _resolve_install_dest_path(
+            src_file=src_file,
+            staging_dir=staging_dir,
+            target_dir_resolved=target_dir_resolved,
+            existing_rel_map=existing_rel_map,
+            existing_norm_rel_map=existing_norm_rel_map,
+        )
         if not is_safe_subpath(dest_file, target_dir_resolved):
             _abort_and_purge_unsafe_archive(
                 archive_path=archive_path,
@@ -1244,6 +1450,7 @@ def _verify_and_move_whitelisted_files(
                 reason=f"최종 이동 경로('{dest_file}')가 대상 Mods 폴더('{target_dir_resolved}') 바깥을 가리킵니다.",
             )
 
+        dest_file.parent.mkdir(parents=True, exist_ok=True)
         # 동일 하위 폴더 옵션 등에서 같은 파일명이 중복 선택된 경우 덮어쓰기 후 이동
         if dest_file.exists() or dest_file.is_symlink():
             safe_remove(dest_file)
@@ -1254,12 +1461,43 @@ def _verify_and_move_whitelisted_files(
     return moved_files
 
 
+def _collect_existing_target_files(
+    target_dir_resolved: Path,
+    include_subdirs: bool = False,
+) -> Tuple[set[str], set[str], Dict[str, Path], Dict[str, Path]]:
+    """대상 설치 폴더(필요 시 모드 전용 하위 폴더 포함)의 기존 모드 파일 이름 및 정규화 키 맵을 수집합니다."""
+    existing_names_lower: set[str] = set()
+    existing_norm_keys: set[str] = set()
+    existing_rel_map: Dict[str, Path] = {}
+    existing_norm_rel_map: Dict[str, Path] = {}
+
+    iterator = target_dir_resolved.rglob("*") if include_subdirs else target_dir_resolved.iterdir()
+    for f in iterator:
+        if not f.is_file() or f.is_symlink():
+            continue
+        if f.suffix.lower() not in ALLOWED_MOD_WHITELIST_EXTENSIONS:
+            continue
+        low = f.name.lower()
+        nk = normalize_mod_filename_key(f.name)
+        existing_names_lower.add(low)
+        if nk:
+            existing_norm_keys.add(nk)
+        if low not in existing_rel_map:
+            existing_rel_map[low] = f
+        if nk and nk not in existing_norm_rel_map:
+            existing_norm_rel_map[nk] = f
+
+    return existing_names_lower, existing_norm_keys, existing_rel_map, existing_norm_rel_map
+
+
 def extract_zip(
     zip_path: Path,
     target_dir: Path,
     target_filename: Optional[str] = None,
     overwrite_mode: str = "all",
     temp_work_dir: Optional[Path] = None,
+    known_existing_files: Optional[List[Path]] = None,
+    include_subdirs: bool = False,
 ) -> list[Path]:
     """ZIP / RAR / 7Z 압축 파일을 디스크에 추출하기 전 엔트리 헤더 전체를 보안 검증(경로 이탈 및 위험 확장자 차단)하고,
     임시 작업 폴더에 먼저 압축을 푼 뒤 화이트리스트 확장자(.package, .ts4script) 파일만 실제 대상 폴더(target_dir)로
@@ -1278,7 +1516,19 @@ def extract_zip(
 
         target_dir_resolved = Path(os.path.abspath(str(target_dir.resolve())))
         target_dir_resolved.mkdir(parents=True, exist_ok=True)
-        existing_names_lower = {f.name.lower() for f in target_dir_resolved.iterdir() if f.is_file()}
+        existing_names_lower, existing_norm_keys, existing_rel_map, existing_norm_rel_map = (
+            _collect_existing_target_files(target_dir_resolved, include_subdirs=include_subdirs)
+        )
+        for kf in known_existing_files or []:
+            if kf.exists() and kf.is_file() and kf.suffix.lower() in ALLOWED_MOD_WHITELIST_EXTENSIONS:
+                low = kf.name.lower()
+                nk = normalize_mod_filename_key(kf.name)
+                existing_names_lower.add(low)
+                if nk:
+                    existing_norm_keys.add(nk)
+                existing_rel_map.setdefault(low, kf)
+                if nk:
+                    existing_norm_rel_map.setdefault(nk, kf)
 
         stage_parent = temp_work_dir.resolve() if temp_work_dir is not None else None
         if stage_parent is not None:
@@ -1350,12 +1600,15 @@ def extract_zip(
                 existing_names_lower=existing_names_lower,
                 target_filename=target_filename,
                 overwrite_mode=overwrite_mode,
+                existing_norm_keys=existing_norm_keys,
             )
             return _verify_and_move_whitelisted_files(
                 selected_files=selected_to_move,
                 archive_path=zip_path,
                 staging_dir=run_stage_dir,
                 target_dir_resolved=target_dir_resolved,
+                existing_rel_map=existing_rel_map,
+                existing_norm_rel_map=existing_norm_rel_map,
             )
         finally:
             # 화이트리스트로 이동되지 않은 나머지 불필요한 모든 파일 및 임시 스테이징 폴더 즉시 폐기
@@ -1364,7 +1617,19 @@ def extract_zip(
     # 2. RAR / 7Z 등 아카이브 처리 (사전 헤더 검증 -> 임시 폴더 해제 -> 화이트리스트만 이동 -> 잔여 파일 일괄 폐기)
     target_dir_resolved = Path(os.path.abspath(str(target_dir.resolve())))
     target_dir_resolved.mkdir(parents=True, exist_ok=True)
-    existing_names_lower = {f.name.lower() for f in target_dir_resolved.iterdir() if f.is_file()}
+    existing_names_lower, existing_norm_keys, existing_rel_map, existing_norm_rel_map = (
+        _collect_existing_target_files(target_dir_resolved, include_subdirs=include_subdirs)
+    )
+    for kf in known_existing_files or []:
+        if kf.exists() and kf.is_file() and kf.suffix.lower() in ALLOWED_MOD_WHITELIST_EXTENSIONS:
+            low = kf.name.lower()
+            nk = normalize_mod_filename_key(kf.name)
+            existing_names_lower.add(low)
+            if nk:
+                existing_norm_keys.add(nk)
+            existing_rel_map.setdefault(low, kf)
+            if nk:
+                existing_norm_rel_map.setdefault(nk, kf)
 
     stage_parent = temp_work_dir.resolve() if temp_work_dir is not None else None
     if stage_parent is not None:
@@ -1424,12 +1689,15 @@ def extract_zip(
             existing_names_lower=existing_names_lower,
             target_filename=target_filename,
             overwrite_mode=overwrite_mode,
+            existing_norm_keys=existing_norm_keys,
         )
         return _verify_and_move_whitelisted_files(
             selected_files=selected_to_move,
             archive_path=zip_path,
             staging_dir=tmp_ext_path,
             target_dir_resolved=target_dir_resolved,
+            existing_rel_map=existing_rel_map,
+            existing_norm_rel_map=existing_norm_rel_map,
         )
     finally:
         # 이동되지 않은 모든 비화이트리스트 파일 및 임시 폴더 즉시 폐기

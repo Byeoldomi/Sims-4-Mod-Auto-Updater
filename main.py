@@ -956,6 +956,7 @@ class Sims4ModUpdaterAPI:
 
                 entry = cached["entry"]
                 mod_cfg = cached["mod_cfg"]
+                mod_cfg["unit_files"] = list(cached["unit"].get("unit_files", []))
                 update_info = cached["update_info"]
 
                 self._emit_frontend_progress(
@@ -1039,6 +1040,16 @@ class Sims4ModUpdaterAPI:
                                 cached["unit"]["primary_file_path"] = str(new_fp)
                                 cached["unit"]["primary_file_name"] = new_fp.name
                                 entry["primaryFile"] = new_fp.name
+                            # 업데이트 완료된 파일 경로들을 unit_files에 최신 반영하고 삭제된 구버전 파일 제거
+                            updated_unit_files: List[str] = []
+                            for old_uf in cached["unit"].get("unit_files", []):
+                                if Path(old_uf).exists() and old_uf not in updated_unit_files:
+                                    updated_unit_files.append(old_uf)
+                            for new_ip in mod_cfg.get("installed_paths") or []:
+                                if Path(new_ip).exists() and new_ip not in updated_unit_files:
+                                    updated_unit_files.append(new_ip)
+                            if updated_unit_files:
+                                cached["unit"]["unit_files"] = updated_unit_files
                             cached["update_info"] = dict(update_info, has_update=False)
                 except Exception:
                     failed_names.append(entry["name"])
