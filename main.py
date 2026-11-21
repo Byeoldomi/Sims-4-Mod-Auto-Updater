@@ -572,6 +572,7 @@ class Sims4ModUpdaterAPI:
         )
         remote_file_size = int(update_info.get("remote_file_size") or 0)
         asset_name = str(update_info.get("asset_name") or "").strip()
+        binary_hotfix_mismatch = False
         if (
             direct_file
             and remote_file_size > 0
@@ -591,9 +592,11 @@ class Sims4ModUpdaterAPI:
                     elif local_fsize != remote_file_size and manifest_promoted and bin_ver:
                         local_ver = self._format_display_version(bin_ver)
                         display_local_ver = local_ver
+                    elif local_fsize != remote_file_size and loc_tok and rem_tok and loc_tok.lower() == rem_tok.lower() and "(핫픽스" in rem_tok:
+                        binary_hotfix_mismatch = True
             except OSError:
                 pass
-        newer_cmp = self._is_remote_strictly_newer(local_ver, latest_ver_clean)
+        newer_cmp = True if binary_hotfix_mismatch else self._is_remote_strictly_newer(local_ver, latest_ver_clean)
 
         if conflict_paths:
             status_type = "conflict"

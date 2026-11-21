@@ -4137,10 +4137,8 @@ def _inspect_dcinside_page(
                 title_date = extract_date_from_filename(post_title)
                 if title_date and base_ver_date and title_date > base_ver_date:
                     hotfix_count = 1
-            if hotfix_count == 1:
+            if hotfix_count >= 1:
                 dc_log_ver = f"{base_sem_ver} (핫픽스)"
-            elif hotfix_count > 1:
-                dc_log_ver = f"{base_sem_ver} (핫픽스 {hotfix_count})"
             else:
                 dc_log_ver = base_sem_ver
 

@@ -813,12 +813,12 @@ class ModUpdater:
             def _resolve_web_first_version(rem_info: Dict[str, Any], loc_ver: str) -> str:
                 raw_rem_v = str(rem_info.get("version") or "").strip()
                 m_hf_rem = re.match(
-                    r"^v?([0-9]+(?:\.[0-9]+)*[a-z]?)\s*\((핫픽스(?:\s*\d+)?)\)$",
+                    r"^v?([0-9]+(?:\.[0-9]+)*[a-z]?)\s*\(핫픽스(?:\s*\d+)?\)$",
                     raw_rem_v,
                     flags=re.IGNORECASE,
                 )
                 rem_ver = (
-                    f"v{m_hf_rem.group(1)} ({m_hf_rem.group(2)})"
+                    f"v{m_hf_rem.group(1)} (핫픽스)"
                     if m_hf_rem
                     else (
                         extract_version_from_filename(raw_rem_v)
@@ -940,12 +940,9 @@ class ModUpdater:
                             eff_cur_norm = bin_norm or str(current_ver or "").strip().lstrip("vV").lower()
                             ch_norm = str(chosen_ver or "").strip().lstrip("vV").lower()
                             if local_fsize != remote_file_size and ch_norm and eff_cur_norm and ch_norm == eff_cur_norm:
-                                m_hf_cur = re.match(r"^(.+?)\s*\(핫픽스(?:\s*(\d+))?\)$", ch_norm)
-                                if m_hf_cur:
-                                    next_hf = (int(m_hf_cur.group(2)) + 1) if m_hf_cur.group(2) else 2
-                                    chosen_ver = f"v{m_hf_cur.group(1).strip()} (핫픽스 {next_hf})"
-                                else:
-                                    chosen_ver = f"v{ch_norm} (핫픽스)"
+                                m_hf_cur = re.match(r"^(.+?)\s*\(핫픽스(?:\s*\d+)?\)$", ch_norm)
+                                base_ch = m_hf_cur.group(1).strip() if m_hf_cur else ch_norm
+                                chosen_ver = f"v{base_ch} (핫픽스)"
                     except OSError:
                         pass
                 detected_ver_label = _format_latest_version_label(chosen_ver, label_page_u, is_direct=True)
