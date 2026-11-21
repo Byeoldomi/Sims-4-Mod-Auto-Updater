@@ -812,7 +812,7 @@ KNOWN_CATALOG = [
         "mod_title": "Sims 4 AI Chat BYOK Addon",
         "version": "2.4.3",
         "links": [
-            ("디시인사이드", "(26.11.01업뎃) AI Chat 애드온 BYOK 배포", "https://gall.dcinside.com/mgallery/board/view/?id=sims&no=281508")
+            ("디시인사이드", "AI Chat 애드온 BYOK 배포", "https://gall.dcinside.com/mgallery/board/view/?id=sims&no=281508")
         ]
     },
     {
@@ -2084,11 +2084,16 @@ def _extract_from_single_ts4script(path: Path) -> Dict[str, Any]:
 
     try:
         MAX_TS4SCRIPT_ENTRY_BYTES = 32 * 1024 * 1024  # 단일 엔트리 최대 32MB (압축 폭탄 메모리 고갈 방지)
+        byok_max_date = (0, 0, 0)
         with zipfile.ZipFile(path, "r") as z:
             for z_info in z.infolist():
                 entry_name = z_info.filename
                 if z_info.is_dir():
                     continue
+                if entry_name.lower().startswith("sims4_ai_chat_addon/"):
+                    dt_tuple = tuple(z_info.date_time[:3])
+                    if dt_tuple > byok_max_date:
+                        byok_max_date = dt_tuple
                 parts = [p for p in entry_name.replace("\\", "/").split("/") if p]
                 if parts:
                     top_stem = re.sub(r"\.(pyc|py|txt|yml|yaml|json|cfg|log)$", "", parts[0], flags=re.IGNORECASE)
@@ -2183,6 +2188,8 @@ def _extract_from_single_ts4script(path: Path) -> Dict[str, Any]:
                             m_be = re.search(rb"(?<![0-9.])([234]\.[0-9]{1,2}(?:\.[0-9]+)?)(?![0-9.])", data)
                             if m_be:
                                 info["version"] = m_be.group(1).decode("ascii", "ignore")
+            if info["version"] == "2.5.5" and byok_max_date >= (2026, 11, 21):
+                info["version"] = "2.5.5 (핫픽스)"
     except Exception:
         pass
 
@@ -2447,6 +2454,7 @@ def extract_mod_file_metadata(file_path: Optional[str]) -> Dict[str, Any]:
         "display_names": [],
         "urls": [],
         "version": "",
+        "binary_version": "",
         "root_tunings": [],
         "modules": [],
         "is_ww_addon": False,
@@ -2524,6 +2532,8 @@ def extract_mod_file_metadata(file_path: Optional[str]) -> Dict[str, Any]:
         if re.match(r"^V\d+G\d+$", raw_merged_ver, flags=re.IGNORECASE)
         else raw_merged_ver.lstrip("vV")
     )
+    if result["version"]:
+        result["binary_version"] = result["version"]
     result["is_ww_addon"] = bool(pkg_info.get("is_ww_addon"))
 
     for c in (pkg_info.get("creators", []) + scr_info.get("creators", [])):
@@ -2552,6 +2562,7 @@ def extract_mod_file_metadata(file_path: Optional[str]) -> Dict[str, Any]:
         mc_core_info = _extract_from_single_ts4script(p.parent / "mc_cmd_center.ts4script")
         if mc_core_info.get("version"):
             result["version"] = mc_core_info["version"].lstrip("vV")
+            result["binary_version"] = result["version"]
 
     fn_bracket = re.search(r"\[([^\]]+)\]", p.stem)
     m_by_fn = re.search(r"[\s_]by[\s_]*([a-zA-Z0-9_-]+)$", p.stem, flags=re.IGNORECASE)
@@ -2597,6 +2608,8 @@ def extract_mod_file_metadata(file_path: Optional[str]) -> Dict[str, Any]:
         if cat_match.get("mod_title") and (not result["manifest_name"] or cat_match.get("override_mod_title")):
             result["manifest_name"] = cat_match["mod_title"]
         if cat_match.get("version") and (not result["version"] or result["version"] == "4.04"):
+            if result["version"] == "4.04":
+                result["binary_version"] = ""
             result["version"] = cat_match["version"]
         if cat_match.get("candidate_links"):
             result["urls"] = [link[2] for link in cat_match["candidate_links"]]
@@ -3601,15 +3614,60 @@ def _inspect_modthesims_page(
     headers: Dict[str, str],
     timeout: int = 10,
 ) -> Optional[Dict[str, Any]]:
-    """ModTheSims(modthesims.info) 배포 페이지에서 getfile.php HTTPS 다운로드 링크와 파일명을 추출합니다."""
+    """ModTheSims(modthesims.info) 배포 페이지에서 getfile.php HTTPS 다운로드 링크, 파일명 및 실제 파일 업로드 날짜를 추출합니다."""
     validate_https_url(url, allow_fragment=True, purpose="ModTheSims 배포 페이지 조회")
+    month_map = {
+        "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+        "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+    }
+
+    def _parse_mts_dates_in_text(raw_text: str) -> List[str]:
+        found: List[str] = []
+        if not raw_text:
+            return found
+        for m_dt in re.finditer(
+            r"\b(\d{1,2})(?:st|nd|rd|th)?[\s\xa0]+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\xa0,]+(20\d{2})\b",
+            raw_text,
+            flags=re.IGNORECASE,
+        ):
+            day_i = int(m_dt.group(1))
+            mon_i = month_map.get(m_dt.group(2)[:3].lower(), 0)
+            yr_i = int(m_dt.group(3))
+            if 1 <= day_i <= 31 and 1 <= mon_i <= 12:
+                found.append(f"{yr_i:04d}.{mon_i:02d}.{day_i:02d}")
+        for m_dt in re.finditer(
+            r"\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\xa0]+(\d{1,2})(?:st|nd|rd|th)?,[\s\xa0]+(20\d{2})\b",
+            raw_text,
+            flags=re.IGNORECASE,
+        ):
+            mon_i = month_map.get(m_dt.group(1)[:3].lower(), 0)
+            day_i = int(m_dt.group(2))
+            yr_i = int(m_dt.group(3))
+            if 1 <= day_i <= 31 and 1 <= mon_i <= 12:
+                found.append(f"{yr_i:04d}.{mon_i:02d}.{day_i:02d}")
+        for m_iso in re.finditer(r"\b(20\d{2})[-./](0?[1-9]|1[0-2])[-./](0?[1-9]|[12]\d|3[01])\b", raw_text):
+            found.append(f"{int(m_iso.group(1)):04d}.{int(m_iso.group(2)):02d}.{int(m_iso.group(3)):02d}")
+        return found
+
+    def _extract_node_date(node: Any) -> str:
+        if node is None:
+            return ""
+        texts: List[str] = [node.get_text(" ", strip=True)]
+        for sub in node.find_all(True):
+            for attr in ("title", "datetime", "data-original-title"):
+                val = sub.get(attr)
+                if val:
+                    texts.append(str(val))
+        dates = _parse_mts_dates_in_text(" ".join(texts))
+        return max(dates) if dates else ""
+
     try:
         r = safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
         if r.status_code != 200:
             return None
 
         soup = BeautifulSoup(r.text, "html.parser")
-        candidates: List[Tuple[int, str, str]] = []
+        candidates: List[Tuple[int, str, str, str]] = []
         seen_urls = set()
 
         for a in soup.find_all("a", href=True):
@@ -3626,9 +3684,9 @@ def _inspect_modthesims_page(
             if text.lower().endswith((".zip", ".rar", ".7z", ".package", ".ts4script")):
                 seen_urls.add(full_dl)
                 score = _match_score_mod_name(target_mod_name, text) + 25
-                if "restrictedromance" in target_mod_name.lower() and "woohoo-tryforbabyrestricted" in text.lower():
-                    score += 250
-                candidates.append((score, text, full_dl))
+                row_node = a.find_parent("tr") or a.find_parent(["li", "div"])
+                row_date = _extract_node_date(row_node)
+                candidates.append((score, text, full_dl, row_date))
 
         if not candidates:
             for a in soup.find_all("a", href=True):
@@ -3638,14 +3696,16 @@ def _inspect_modthesims_page(
                     if not is_valid_https_url(full_dl):
                         continue
                     stem = Path(target_mod_name).stem or "ModTheSims_Download"
-                    candidates.append((10, f"{stem}.zip", full_dl))
+                    row_node = a.find_parent("tr") or a.find_parent(["li", "div"])
+                    row_date = _extract_node_date(row_node)
+                    candidates.append((10, f"{stem}.zip", full_dl, row_date))
                     break
 
         if not candidates:
             return None
 
         candidates.sort(key=lambda x: x[0], reverse=True)
-        _, best_fn, best_dl = candidates[0]
+        _, best_fn, best_dl, best_row_date = candidates[0]
         validate_https_url(best_dl, allow_fragment=True, purpose="ModTheSims 다운로드 URL 검증")
 
         raw_page_title = soup.title.get_text(" ", strip=True) if soup.title else ""
@@ -3662,26 +3722,35 @@ def _inspect_modthesims_page(
             ver_str = target_ver
 
         if not ver_str:
-            month_map = {
-                "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
-                "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
-            }
-            mts_dates: List[str] = []
-            plain_text = soup.get_text(" ", strip=True)
-            for m_dt in re.finditer(
-                r"\b(\d{1,2})(?:st|nd|rd|th)?[\s\xa0]+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\xa0,]+(20\d{2})\b",
-                plain_text,
-                flags=re.IGNORECASE,
-            ):
-                day_i = int(m_dt.group(1))
-                mon_i = month_map.get(m_dt.group(2)[:3].lower(), 0)
-                yr_i = int(m_dt.group(3))
-                if 1 <= day_i <= 31 and 1 <= mon_i <= 12:
-                    mts_dates.append(f"{yr_i:04d}.{mon_i:02d}.{day_i:02d}")
-            if mts_dates:
-                ver_str = max(mts_dates)
+            # 1순위: 매칭된 파일이 속한 #files 테이블 행(<tr>)의 실제 업로드 날짜
+            if best_row_date:
+                ver_str = best_row_date
+            else:
+                # 2순위: 댓글/프로필/타 모드 추천 영역이 아닌 공식 게시물 메타데이터(Updated / Uploaded 라벨 바로 뒤)에서만 날짜 추출
+                meta_dates: List[str] = []
+                for msg_el in soup.select("div.message-body"):
+                    el_txt = msg_el.get_text(" ", strip=True)
+                    m_upd = re.search(
+                        r"\bUpdated\s*:\s*([^\n]{5,40})",
+                        el_txt,
+                        flags=re.IGNORECASE,
+                    )
+                    if m_upd:
+                        meta_dates.extend(_parse_mts_dates_in_text(m_upd.group(1)))
+                if not meta_dates:
+                    for msg_el in soup.select("div.message-body"):
+                        el_txt = msg_el.get_text(" ", strip=True)
+                        m_upl = re.search(
+                            r"\bUploaded\s*:\s*([^\n]{5,40})",
+                            el_txt,
+                            flags=re.IGNORECASE,
+                        )
+                        if m_upl:
+                            meta_dates.extend(_parse_mts_dates_in_text(m_upl.group(1)))
+                if meta_dates:
+                    ver_str = max(meta_dates)
 
-        all_files_list = [(fn, dl) for _, fn, dl in candidates]
+        all_files_list = [(fn, dl) for _, fn, dl, _ in candidates]
         return {
             "status": "free_direct",
             "title": page_title or best_fn,
@@ -3917,9 +3986,13 @@ def _inspect_dropbox_page(
         fname = path_part if "." in path_part else ""
 
         r = safe_https_get(direct_dl, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=timeout)
+        remote_file_size = 0
         try:
             status_code = r.status_code
             cd_hdr = r.headers.get("Content-Disposition") or ""
+            cl_raw = str(r.headers.get("Content-Length") or "").strip()
+            if cl_raw.isdigit():
+                remote_file_size = int(cl_raw)
         finally:
             r.close()
         if status_code != 200:
@@ -3939,6 +4012,7 @@ def _inspect_dropbox_page(
             "file_name": fname,
             "download_url": direct_dl,
             "page_url": url,
+            "remote_file_size": remote_file_size,
         }
     except NetworkSecurityError:
         raise
@@ -4016,7 +4090,62 @@ def _inspect_dcinside_page(
         post_title = title_el.get_text(" ", strip=True) if title_el else ""
         title_ver = extract_version_from_filename(post_title)
 
-        candidates: List[Tuple[int, str, str, str]] = []
+        write_div = soup.select_one(".write_div") or soup
+        dc_log_ver = ""
+        base_sem_ver = ""
+        base_ver_date = ""
+        hotfix_count = 0
+        for line_txt in write_div.get_text("\n", strip=True).splitlines():
+            m_hdr = re.match(
+                r"^\s*(\d{2,4}[.\-/]\d{1,2}[.\-/]\d{1,2})\s*[\)\]]\s*(.*)$",
+                line_txt.strip(),
+            )
+            if not m_hdr:
+                continue
+            date_part, rest = m_hdr.group(1), m_hdr.group(2)
+            # 본문 줄 내 날짜 표기를 먼저 제외한 뒤 시맨틱 버전 탐색
+            rest_clean = re.sub(
+                r"\b(?:20\d{2}[.\-/]\d{1,2}[.\-/]\d{1,2}|2\d[.\-/][01]\d[.\-/][0-3]\d)\b",
+                " ",
+                rest,
+            )
+            sem_cands: List[str] = []
+            for m_v in re.finditer(
+                r"(?:v|ver|version)\s*\.?\s*([0-9]+\.[0-9]+(?:\.[0-9]+)*[a-z]?)(?![0-9.])",
+                rest_clean,
+                flags=re.IGNORECASE,
+            ):
+                sem_cands.append(m_v.group(1))
+            if not sem_cands:
+                for m_v in re.finditer(
+                    r"(?<![0-9.])([0-9]+\.[0-9]+\.[0-9]+[a-z]?)(?![0-9.])",
+                    rest_clean,
+                    flags=re.IGNORECASE,
+                ):
+                    sem_cands.append(m_v.group(1))
+            if sem_cands:
+                base_sem_ver = max(
+                    sem_cands,
+                    key=lambda vs: (tuple(int(p) for p in re.findall(r"\d+", vs)), vs),
+                )
+                base_ver_date = extract_date_from_filename(date_part)
+                break
+            hotfix_count += 1
+
+        if base_sem_ver:
+            if hotfix_count == 0:
+                title_date = extract_date_from_filename(post_title)
+                if title_date and base_ver_date and title_date > base_ver_date:
+                    hotfix_count = 1
+            if hotfix_count == 1:
+                dc_log_ver = f"{base_sem_ver} (핫픽스)"
+            elif hotfix_count > 1:
+                dc_log_ver = f"{base_sem_ver} (핫픽스 {hotfix_count})"
+            else:
+                dc_log_ver = base_sem_ver
+
+        effective_post_ver = dc_log_ver or (title_ver.lstrip("vV") if title_ver else "")
+        candidates: List[Tuple[int, str, str, str, int]] = []
 
         # 1) 게시글 자체 첨부파일 박스(.appending_file) 내 모드/압축 파일 확인 (HTTPS 전용)
         for a_file in soup.select(".appending_file a[href]"):
@@ -4028,12 +4157,12 @@ def _inspect_dcinside_page(
                 parsed_q = urllib.parse.parse_qs(urllib.parse.urlparse(f_href).query)
                 f_name = (parsed_q.get("f_no") or [""])[0]
             if f_name.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
-                f_ver = extract_version_from_filename(f_name) or title_ver
+                f_ver_raw = extract_version_from_filename(f_name)
+                f_ver_clean = f_ver_raw.lstrip("vV") if f_ver_raw else effective_post_ver
                 score = _match_score_mod_name(target_mod_name, f_name) + 35
-                candidates.append((score, f_name, f_href, f_ver.lstrip("vV") if f_ver else ""))
+                candidates.append((score, f_name, f_href, f_ver_clean, 0))
 
         # 2) 게시글 본문(.write_div) 내 외부 공유 HTTPS 링크 확인
-        write_div = soup.select_one(".write_div") or soup
         seen_ext: set[str] = set()
         ext_links: List[str] = []
         for a_ext in write_div.find_all("a", href=True):
@@ -4062,15 +4191,16 @@ def _inspect_dcinside_page(
                 continue
             if sub_res.get("status") == "free_direct" and sub_res.get("download_url") and is_valid_https_url(sub_res["download_url"]):
                 s_fn = sub_res.get("file_name") or ""
-                s_ver = sub_res.get("version") or (title_ver.lstrip("vV") if title_ver else "")
+                s_ver = sub_res.get("version") or effective_post_ver
+                s_size = int(sub_res.get("remote_file_size") or 0)
                 s_score = _match_score_mod_name(target_mod_name, s_fn) + 25
                 if any(h in ext_u.lower() for h in ("drive.google.com", "simfileshare.net", "mediafire.com")):
                     s_score += 20
-                candidates.append((s_score, s_fn, sub_res["download_url"], s_ver))
+                candidates.append((s_score, s_fn, sub_res["download_url"], s_ver, s_size))
 
         if candidates:
             candidates.sort(key=lambda x: x[0], reverse=True)
-            _, best_fn, best_dl, best_ver = candidates[0]
+            _, best_fn, best_dl, best_ver, best_size = candidates[0]
             validate_https_url(best_dl, allow_fragment=True, purpose="디시인사이드 첨부/공유 다운로드 URL")
             return {
                 "status": "free_direct",
@@ -4079,6 +4209,7 @@ def _inspect_dcinside_page(
                 "file_name": best_fn,
                 "download_url": best_dl,
                 "page_url": url,
+                "remote_file_size": best_size,
             }
     except NetworkSecurityError:
         raise

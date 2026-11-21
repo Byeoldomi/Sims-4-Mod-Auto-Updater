@@ -256,13 +256,40 @@ class Sims4ModUpdaterAPI:
         }
 
     @staticmethod
-    def _normalize_version_token(ver_str: str) -> str:
+    def _unwrap_platform_version(ver_str: str) -> str:
+        """플랫폼 라벨 바깥 괄호(예: '디시인사이드 (v2.5.5 (핫픽스))')를 안전하게 벗겨 내부 버전 문자열을 추출합니다."""
+        s = (ver_str or "").strip()
+        if not s:
+            return ""
+        if re.match(r"^(?:[vV]\s*\d|\d|[abAB]\d|[vV]\d+[gGbBpPrR]\d+)", s):
+            return s
+        paren = re.search(r"\((.+)\)\s*$", s)
+        return paren.group(1).strip() if paren else s
+
+    @staticmethod
+    def _to_comparable_version_str(tok: str) -> str:
+        """'(핫픽스)' 접미사를 PEP 440 post 릴리스('.post1', '.post2' 등)로 변환합니다."""
+        return re.sub(
+            r"\s*\(핫픽스(?:\s*(\d+))?\)",
+            lambda m: f".post{m.group(1) or '1'}",
+            (tok or "").strip(),
+        )
+
+    @staticmethod
+    def _is_hotfix_subversion_of(base_tok: str, cand_tok: str) -> bool:
+        """cand_tok가 base_tok의 핫픽스 하위 버전인지 판별합니다."""
+        b_low = (base_tok or "").strip().lstrip("vV").lower()
+        c_low = (cand_tok or "").strip().lstrip("vV").lower()
+        if not b_low or not c_low:
+            return False
+        return c_low.startswith(f"{b_low}.") or c_low.startswith(f"{b_low} (핫픽스")
+
+    @classmethod
+    def _normalize_version_token(cls, ver_str: str) -> str:
         s = (ver_str or "").strip()
         if not s or s in ("확인 불가", "수동 확인 필요", "-"):
             return ""
-        paren = re.search(r"\(([^)]+)\)", s)
-        if paren:
-            s = paren.group(1).strip()
+        s = cls._unwrap_platform_version(s)
         if any(k in s for k in ("최신", "유료", "선배포", "확인", "링크")):
             return ""
         return s.lstrip("vV").strip()
@@ -284,7 +311,9 @@ class Sims4ModUpdaterAPI:
             return False
 
         try:
-            return version.parse(rem_tok) > version.parse(loc_tok)
+            return version.parse(cls._to_comparable_version_str(rem_tok)) > version.parse(
+                cls._to_comparable_version_str(loc_tok)
+            )
         except Exception:
             return rem_tok.lower() != loc_tok.lower()
 
@@ -361,7 +390,7 @@ class Sims4ModUpdaterAPI:
             or (check_known_catalog(folder_name) if allow_folder_cat else None)
             or {}
         )
-        local_ver = (
+        fn_ver = (
             extract_version_from_filename(primary_file)
             or (extract_version_from_filename(folder_name) if allow_folder_cat else "")
             or ""
@@ -379,17 +408,29 @@ class Sims4ModUpdaterAPI:
                         manifest_ver_raw = manifest_ver_map[uf_low]
                         break
         manifest_ver_tok = self._normalize_version_token(manifest_ver_raw)
-        if manifest_ver_tok:
-            if not local_ver:
-                local_ver = self._format_display_version(manifest_ver_tok)
-            else:
-                # 매니페스트에 기록된 버전이 파일명/폴더명 버전보다 명확히 최신이면 매니페스트 버전 우선
-                if self._is_remote_strictly_newer(local_ver, manifest_ver_tok) is True:
-                    local_ver = self._format_display_version(manifest_ver_tok)
 
         meta: Dict[str, Any] = {}
-        if not local_ver or not catalog_hit.get("creator"):
+        if not fn_ver or not catalog_hit.get("creator"):
             meta = extract_mod_file_metadata(primary_path) if primary_path else {}
+
+        bin_ver = str(meta.get("binary_version") or "").strip()
+        explicit_local_ver = fn_ver or (self._format_display_version(bin_ver) if bin_ver else "")
+        local_ver = explicit_local_ver
+        manifest_promoted = False
+        if manifest_ver_tok:
+            if not explicit_local_ver:
+                local_ver = self._format_display_version(manifest_ver_tok)
+                manifest_promoted = True
+            elif self._is_remote_strictly_newer(explicit_local_ver, manifest_ver_tok) is True:
+                bin_clean = bin_ver.lstrip("vV")
+                allow_promote = (
+                    not bin_clean
+                    or self._is_hotfix_subversion_of(bin_clean, manifest_ver_tok)
+                    or bool(re.match(r"^20\d{2}\.\d{2}\.\d{2}$", manifest_ver_tok))
+                )
+                if allow_promote:
+                    local_ver = self._format_display_version(manifest_ver_tok)
+                    manifest_promoted = True
 
         if not local_ver:
             raw_v = str(meta.get("version") or catalog_hit.get("version") or "").strip()
@@ -498,8 +539,7 @@ class Sims4ModUpdaterAPI:
             author = str(update_info["matched_creator"])
 
         raw_latest = str(update_info.get("latest_version") or "").strip()
-        paren_match = re.search(r"\(([^)]+)\)", raw_latest)
-        latest_ver_clean = paren_match.group(1).strip() if paren_match else raw_latest
+        latest_ver_clean = self._unwrap_platform_version(raw_latest)
 
         dl_url = str(update_info.get("download_url") or "").strip()
         is_free_member_gate = "#free_member_file=" in dl_url
@@ -530,6 +570,29 @@ class Sims4ModUpdaterAPI:
             and not requires_browser
             and not is_free_member_gate
         )
+        remote_file_size = int(update_info.get("remote_file_size") or 0)
+        asset_name = str(update_info.get("asset_name") or "").strip()
+        if (
+            direct_file
+            and remote_file_size > 0
+            and asset_name.lower().endswith((".ts4script", ".package"))
+            and not update_info.get("is_multi_file_bundle")
+            and primary_path
+        ):
+            try:
+                loc_p = Path(primary_path)
+                if loc_p.exists() and loc_p.is_file() and loc_p.name.lower() == asset_name.lower():
+                    local_fsize = loc_p.stat().st_size
+                    loc_tok = self._normalize_version_token(local_ver)
+                    rem_tok = self._normalize_version_token(latest_ver_clean)
+                    if local_fsize == remote_file_size and loc_tok and rem_tok and self._is_hotfix_subversion_of(loc_tok, rem_tok):
+                        local_ver = self._format_display_version(rem_tok)
+                        display_local_ver = local_ver
+                    elif local_fsize != remote_file_size and manifest_promoted and bin_ver:
+                        local_ver = self._format_display_version(bin_ver)
+                        display_local_ver = local_ver
+            except OSError:
+                pass
         newer_cmp = self._is_remote_strictly_newer(local_ver, latest_ver_clean)
 
         if conflict_paths:

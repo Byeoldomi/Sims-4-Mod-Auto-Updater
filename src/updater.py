@@ -679,8 +679,16 @@ class ModUpdater:
 
             def _is_remote_newer_or_equal(loc_v: str, rem_v: str) -> bool:
                 try:
-                    l_s = loc_v.lstrip("vV")
-                    r_s = rem_v.lstrip("vV")
+                    l_s = re.sub(
+                        r"\s*\(핫픽스(?:\s*(\d+))?\)",
+                        lambda m: f".post{m.group(1) or '1'}",
+                        loc_v.lstrip("vV").strip(),
+                    )
+                    r_s = re.sub(
+                        r"\s*\(핫픽스(?:\s*(\d+))?\)",
+                        lambda m: f".post{m.group(1) or '1'}",
+                        rem_v.lstrip("vV").strip(),
+                    )
                     if re.match(r"^\d+\.\d{2,3}$", l_s) and re.match(r"^\d+\.\d{2,3}$", r_s):
                         l_maj, l_min = l_s.split(".")
                         r_maj, r_min = r_s.split(".")
@@ -804,11 +812,20 @@ class ModUpdater:
 
             def _resolve_web_first_version(rem_info: Dict[str, Any], loc_ver: str) -> str:
                 raw_rem_v = str(rem_info.get("version") or "").strip()
+                m_hf_rem = re.match(
+                    r"^v?([0-9]+(?:\.[0-9]+)*[a-z]?)\s*\((핫픽스(?:\s*\d+)?)\)$",
+                    raw_rem_v,
+                    flags=re.IGNORECASE,
+                )
                 rem_ver = (
-                    extract_version_from_filename(raw_rem_v)
-                    or (f"v{raw_rem_v}" if re.match(r"^[0-9]+(?:\.[0-9]+)*[a-z]?$", raw_rem_v, flags=re.IGNORECASE) else "")
-                    or extract_version_from_filename(str(rem_info.get("file_name") or ""))
-                    or extract_version_from_filename(str(rem_info.get("title") or ""))
+                    f"v{m_hf_rem.group(1)} ({m_hf_rem.group(2)})"
+                    if m_hf_rem
+                    else (
+                        extract_version_from_filename(raw_rem_v)
+                        or (f"v{raw_rem_v}" if re.match(r"^[0-9]+(?:\.[0-9]+)*[a-z]?$", raw_rem_v, flags=re.IGNORECASE) else "")
+                        or extract_version_from_filename(str(rem_info.get("file_name") or ""))
+                        or extract_version_from_filename(str(rem_info.get("title") or ""))
+                    )
                 )
                 meta_ver_raw = str(extracted_meta.get("version") or "").strip()
                 if re.match(r"^(?:20\d{2}\.\d{1,2}\.\d{1,2}|[ab]\d+\.\d+(?:\.\d+)*)$", meta_ver_raw, flags=re.IGNORECASE):
@@ -818,7 +835,7 @@ class ModUpdater:
                 folder_low = (folder_name or "").strip().lower()
                 t_name_low = (target_name or "").strip().lower()
                 if "byok" in t_name_low:
-                    return "v2.5.5"
+                    return rem_ver or "v2.5.5"
                 if ("ai chat" in folder_low or "aichat" in folder_low or "sims4_ai_chat" in t_name_low or "sims 4 ai chat" in t_name_low) and "byok" not in t_name_low:
                     return rem_ver or "v2.5.0"
                 if "volleyball" in folder_low or "volleyball" in (target_name or "").lower():
@@ -898,8 +915,6 @@ class ModUpdater:
                     if (finder_diagnostics.get("match_stage") == "known_catalog" and "tumblr.com" in (url or "").lower())
                     else final_page_u
                 )
-                detected_ver_label = _format_latest_version_label(chosen_ver, label_page_u, is_direct=True)
-                v_badge = f" | 검증: {verification_note}" if verification_note else ""
                 all_rem_files = remote_info.get("all_files") or []
                 raw_pkg_files = [
                     (fn, dl)
@@ -910,6 +925,31 @@ class ModUpdater:
                     len(raw_pkg_files) > 1
                     and str(detected_fn).lower().endswith((".package", ".ts4script"))
                 )
+                remote_file_size = int(remote_info.get("remote_file_size") or 0)
+                if (
+                    remote_file_size > 0
+                    and str(detected_fn).lower().endswith((".ts4script", ".package"))
+                    and not is_multi_pkg_bundle
+                    and file_path
+                ):
+                    try:
+                        loc_p = Path(str(file_path))
+                        if loc_p.exists() and loc_p.is_file() and loc_p.name.lower() == str(detected_fn).lower():
+                            local_fsize = loc_p.stat().st_size
+                            bin_norm = str(extracted_meta.get("binary_version") or "").strip().lstrip("vV").lower()
+                            eff_cur_norm = bin_norm or str(current_ver or "").strip().lstrip("vV").lower()
+                            ch_norm = str(chosen_ver or "").strip().lstrip("vV").lower()
+                            if local_fsize != remote_file_size and ch_norm and eff_cur_norm and ch_norm == eff_cur_norm:
+                                m_hf_cur = re.match(r"^(.+?)\s*\(핫픽스(?:\s*(\d+))?\)$", ch_norm)
+                                if m_hf_cur:
+                                    next_hf = (int(m_hf_cur.group(2)) + 1) if m_hf_cur.group(2) else 2
+                                    chosen_ver = f"v{m_hf_cur.group(1).strip()} (핫픽스 {next_hf})"
+                                else:
+                                    chosen_ver = f"v{ch_norm} (핫픽스)"
+                    except OSError:
+                        pass
+                detected_ver_label = _format_latest_version_label(chosen_ver, label_page_u, is_direct=True)
+                v_badge = f" | 검증: {verification_note}" if verification_note else ""
                 bundle_filenames = [fn for fn, _ in raw_pkg_files] if is_multi_pkg_bundle else []
                 display_detected_fn = (
                     f"{detected_fn} 외 {len(bundle_filenames) - 1}개 (총 {len(bundle_filenames)}개 파일)"
@@ -930,6 +970,7 @@ class ModUpdater:
                     "bundle_filenames": bundle_filenames,
                     "variant_choices": remote_info.get("variant_choices", []),
                     "all_remote_files": all_rem_files,
+                    "remote_file_size": remote_file_size,
                     "page_url": final_page_u,
                     "candidate_links": candidate_links,
                     "extracted_meta": extracted_meta,
