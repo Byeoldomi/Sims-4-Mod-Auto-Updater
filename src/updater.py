@@ -1,8 +1,10 @@
+import copy
 import json
 import re
 import tempfile
+import threading
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 import requests
 from packaging import version
 
@@ -33,19 +35,36 @@ from src.backup import BackupManager
 class ModUpdater:
     """모드 업데이트 관리 엔진"""
 
+    _MANIFEST_CACHE_LOCK = threading.Lock()
+    _MANIFEST_CACHE: Dict[str, Tuple[Tuple[int, int], List[Dict[str, Any]]]] = {}
+
     def __init__(self, mods_folder: Path, manifest_path: Path, backup_manager: Optional[BackupManager] = None):
         self.mods_folder = mods_folder
         self.manifest_path = manifest_path
         self.backup_manager = backup_manager
 
     def load_manifest(self) -> List[Dict[str, Any]]:
-        """모드 목록 매니페스트를 로드합니다."""
+        """모드 목록 매니페스트를 로드합니다. (동일 파일 mtime/size 기준 스레드 안전 메모리 캐싱)"""
         if not self.manifest_path.exists():
             return []
         try:
+            st = self.manifest_path.stat()
+            cache_key = str(self.manifest_path.resolve())
+            sig = (int(getattr(st, "st_mtime_ns", int(st.st_mtime * 1e9))), int(st.st_size))
+            with self._MANIFEST_CACHE_LOCK:
+                cached = self._MANIFEST_CACHE.get(cache_key)
+                if cached and cached[0] == sig:
+                    return copy.deepcopy(cached[1])
+
             with open(self.manifest_path, "r", encoding="utf-8-sig") as f:
                 data = json.load(f)
-                return data.get("mods", [])
+                mods_data = data.get("mods", [])
+                if not isinstance(mods_data, list):
+                    mods_data = []
+
+            with self._MANIFEST_CACHE_LOCK:
+                self._MANIFEST_CACHE[cache_key] = (sig, copy.deepcopy(mods_data))
+            return copy.deepcopy(mods_data)
         except Exception as e:
             print(f"[!] 매니페스트 읽기 실패: {e}")
             return []
@@ -54,6 +73,14 @@ class ModUpdater:
         """매니페스트 변경 사항을 저장합니다."""
         with open(self.manifest_path, "w", encoding="utf-8") as f:
             json.dump({"mods": mods}, f, indent=4, ensure_ascii=False)
+        try:
+            st = self.manifest_path.stat()
+            cache_key = str(self.manifest_path.resolve())
+            sig = (int(getattr(st, "st_mtime_ns", int(st.st_mtime * 1e9))), int(st.st_size))
+            with self._MANIFEST_CACHE_LOCK:
+                self._MANIFEST_CACHE[cache_key] = (sig, copy.deepcopy(mods))
+        except Exception:
+            pass
 
     def get_pinned_url(self, target_name: str, folder_name: str = "") -> str:
         """mods_manifest.json에 해당 파일명(target_name)으로 검증·고정(Pinning)된 공식 배포 페이지 URL이 있으면 반환합니다.
@@ -191,7 +218,8 @@ class ModUpdater:
         }
 
         try:
-            res = safe_https_get(url, headers=headers, timeout=(10, 15))
+            from src.finder import _cached_safe_https_get
+            res = _cached_safe_https_get(url, headers=headers, timeout=(10, 15))
             res.raise_for_status()
             soup = BeautifulSoup(res.text, "html.parser")
         except NetworkSecurityError:
@@ -326,7 +354,7 @@ class ModUpdater:
         - 광역후원자 선배포 버전(!WAMTIK-V98G8.package / !WAMTIK-V98G8-FF.package 등): Patreon/Postype 선배포 채널 수동 다운로드 안내
         """
         import re
-        from src.finder import check_known_catalog, inspect_remote_mod_page
+        from src.finder import _cached_safe_https_get, check_known_catalog, inspect_remote_mod_page
 
         patreon_url = "https://www.patreon.com/cw/wwindystarZIMS"
         postype_url = "https://www.postype.com/@wwwindystar"
@@ -387,7 +415,7 @@ class ModUpdater:
             latest_version = (cat_match.get("version") if cat_match else "") or "V98P8"
             post_link = "https://www.postype.com/@wwwindystar/post/9789832"
             try:
-                r = safe_https_get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=(8, 10))
+                r = _cached_safe_https_get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=(8, 10))
                 if r.status_code == 200:
                     m = re.search(r"통합한글화모음\s*(V\d+P\d+)", r.text)
                     if m:
@@ -427,7 +455,7 @@ class ModUpdater:
             )
             post_link = f"{postype_url}/post/11103833"
             try:
-                r = safe_https_get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=(8, 10))
+                r = _cached_safe_https_get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=(8, 10))
                 if r.status_code == 200:
                     m = re.search(r"통합한글화모음\s*(V\d+B\d+)", r.text)
                     if m:
@@ -462,7 +490,7 @@ class ModUpdater:
 
         # 포스타입에서 실시간 최신 광역/선배포 버전 검색
         try:
-            r = safe_https_get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=(8, 10))
+            r = _cached_safe_https_get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=(8, 10))
             if r.status_code == 200:
                 m = re.search(r"통합한글화모음\s*(V\d+G\d+)", r.text)
                 if m:

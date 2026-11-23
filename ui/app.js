@@ -293,6 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    const fragment = document.createDocumentFragment();
     filteredMods.forEach((mod) => {
       const cardEl = document.createElement('article');
       cardEl.className = `mod-gallery-card${mod.disabled ? ' is-disabled' : ''}`;
@@ -389,9 +390,10 @@ document.addEventListener('DOMContentLoaded', () => {
       cardEl.appendChild(leftEl);
       cardEl.appendChild(rightEl);
 
-      modList.appendChild(cardEl);
+      fragment.appendChild(cardEl);
     });
 
+    modList.appendChild(fragment);
     syncSelectionState();
   };
 

@@ -507,27 +507,29 @@ button,
 
 .plumbob-loader::before {
   background: linear-gradient(135deg, #98F772 0%, var(--plumbob-green) 55%, #277915 100%);
+  will-change: transform, opacity;
   animation: plumbobSpin 1.2s var(--spring-easing) infinite;
 }
 
 .plumbob-loader::after {
   clip-path: polygon(50% 10%, 82% 50%, 50% 90%, 18% 50%);
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0) 70%);
+  will-change: transform, opacity;
   animation: plumbobSpin 1.2s var(--spring-easing) infinite;
 }
 
 @keyframes plumbobSpin {
   0% {
     transform: scaleX(1);
-    filter: brightness(1);
+    opacity: 0.92;
   }
   50% {
     transform: scaleX(0.22);
-    filter: brightness(1.35);
+    opacity: 1;
   }
   100% {
     transform: scaleX(1);
-    filter: brightness(1);
+    opacity: 0.92;
   }
 }
 
@@ -824,9 +826,7 @@ button,
   justify-content: space-between;
   gap: 12px;
   padding: 11px 14px 11px 16px;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.94);
   border: 1.5px solid rgba(255, 255, 255, 0.96);
   border-radius: var(--radius-box);
   box-shadow: 0 4px 14px rgba(0, 88, 124, 0.06);

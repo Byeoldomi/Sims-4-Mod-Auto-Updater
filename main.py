@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 import webbrowser
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -35,7 +36,7 @@ from src.finder import (
 )
 from src.scanner import ModScanner
 from src.updater import ModUpdater
-from src.utils import is_safe_subpath, is_valid_https_url
+from src.utils import _get_shared_strict_ssl_context, is_safe_subpath, is_valid_https_url
 
 
 def resolve_ui_entry() -> Path:
@@ -54,13 +55,30 @@ def resolve_ui_entry() -> Path:
 class Sims4ModUpdaterAPI:
     """pywebview 프론트엔드(ui/app.js)와 Python 백엔드(src/*)를 연결하는 엔드포인트 클래스."""
 
+    SCAN_CACHE_SCHEMA_VERSION = 2
+
     def __init__(self, base_dir: Path = BASE_DIR) -> None:
         self.base_dir = base_dir.resolve()
         self.config_manager = ConfigManager(self.base_dir / "config.json")
         self._window: Optional[Any] = None
         self._cache_lock = threading.Lock()
+        self._progress_lock = threading.Lock()
+        self._last_progress_emit = 0.0
         self._scan_seq = 0
         self._mod_cache: Dict[str, Dict[str, Any]] = {}
+        threading.Thread(
+            target=self._warmup_ssl_context,
+            name="ssl-warmup",
+            daemon=True,
+        ).start()
+
+    @staticmethod
+    def _warmup_ssl_context() -> None:
+        """앱 시작 직후 백그라운드에서 공유 SSLContext를 선행 초기화해 첫 스캔 지연을 방지합니다."""
+        try:
+            _get_shared_strict_ssl_context()
+        except Exception:
+            pass
 
     def set_window(self, window: Any) -> None:
         """pywebview 윈도우 인스턴스를 주입합니다."""
@@ -136,6 +154,7 @@ class Sims4ModUpdaterAPI:
         cache_path = self._resolve_scan_cache_path()
         now = datetime.datetime.now()
         payload = {
+            "schema_version": self.SCAN_CACHE_SCHEMA_VERSION,
             "scan_date": now.date().isoformat(),
             "scanned_at": now.strftime("%Y-%m-%d %H:%M:%S"),
             "mods_folder": str(mods_folder.resolve()),
@@ -170,6 +189,10 @@ class Sims4ModUpdaterAPI:
             return None
 
         if not isinstance(data, dict):
+            self._clear_daily_scan_cache()
+            return None
+
+        if data.get("schema_version") != self.SCAN_CACHE_SCHEMA_VERSION:
             self._clear_daily_scan_cache()
             return None
 
@@ -215,6 +238,12 @@ class Sims4ModUpdaterAPI:
         """스캔 또는 업데이트 진행 중 프론트엔드 진행률 바와 한 줄 로그를 실시간으로 갱신합니다."""
         if self._window is None:
             return
+        now = time.monotonic()
+        is_edge = completed <= 1 or completed >= total
+        with self._progress_lock:
+            if not is_edge and (now - self._last_progress_emit) < 0.08:
+                return
+            self._last_progress_emit = now
         try:
             pct = int(round((completed / max(total, 1)) * 100))
             payload = json.dumps(

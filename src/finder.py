@@ -3,9 +3,12 @@ XML Tuning 식별자, Python 바이트코드 내장 URL, 제작자 태그 등)�
 스마트 파일명/폴더명 분석 및 웹 검색 스니펫 랭킹을 결합하여 실제 공식 배포 페이지를 찾는 엔진입니다.
 """
 
+import copy
 import html
+import json
 import re
 import struct
+import threading
 import time
 import urllib.parse
 import zipfile
@@ -13,6 +16,7 @@ import zlib
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 from bs4 import BeautifulSoup
+from requests.structures import CaseInsensitiveDict
 
 from src.utils import (
     NetworkSecurityError,
@@ -2053,9 +2057,11 @@ def _clean_pyc_url(raw_bytes: bytes, match: re.Match) -> str:
 
 def _is_valid_internal_url(url: str, file_name: str) -> bool:
     """파일 내부에서 추출한 URL이 유효한 HTTPS 모드 배포처 URL인지 판별합니다 (일반 HTTP 차단)."""
-    if len(url) < 14 or not is_valid_https_url(url):
+    if not url or len(url) < 14:
         return False
     u_lower = url.lower()
+    if not u_lower.startswith("https://"):
+        return False
     if any(u_lower.startswith(prefix) for prefix in IGNORED_INTERNAL_URL_PREFIXES):
         return False
     if u_lower.rstrip("/") in IGNORED_ROOT_URLS:
@@ -2064,6 +2070,8 @@ def _is_valid_internal_url(url: str, file_name: str) -> bool:
     if "scumbumbomods.com/xml-injector" in u_lower or "curseforge.com/sims4/mods/xml-injector" in u_lower:
         if "xml" not in file_name.lower() and "injector" not in file_name.lower():
             return False
+    if not is_valid_https_url(url):
+        return False
     parsed = urllib.parse.urlparse(url)
     if not parsed.netloc or "." not in parsed.netloc:
         return False
@@ -2441,11 +2449,43 @@ def _parse_tuning_and_module_clues(root_tunings: List[str], modules: List[str]) 
     return inferred_creator, inferred_mod
 
 
+_MOD_META_CACHE_LOCK = threading.Lock()
+_MOD_META_CACHE: Dict[Tuple[str, int, int], Dict[str, Any]] = {}
+_CATALOG_CACHE_LOCK = threading.Lock()
+_COMPILED_CATALOG_LEN = -1
+_COMPILED_CATALOG_ITEMS: List[Tuple[Dict[str, Any], List[Tuple[str, str]]]] = []
+
+
+def _get_compiled_catalog() -> List[Tuple[Dict[str, Any], List[Tuple[str, str]]]]:
+    """KNOWN_CATALOG 키워드를 소문자/정규화 형태로 사전 컴파일하여 반복 정규식 치환 비용을 제거합니다."""
+    global _COMPILED_CATALOG_LEN, _COMPILED_CATALOG_ITEMS
+    cur_len = len(KNOWN_CATALOG)
+    if _COMPILED_CATALOG_LEN == cur_len and _COMPILED_CATALOG_ITEMS:
+        return _COMPILED_CATALOG_ITEMS
+
+    with _CATALOG_CACHE_LOCK:
+        cur_len = len(KNOWN_CATALOG)
+        if _COMPILED_CATALOG_LEN == cur_len and _COMPILED_CATALOG_ITEMS:
+            return _COMPILED_CATALOG_ITEMS
+        compiled: List[Tuple[Dict[str, Any], List[Tuple[str, str]]]] = []
+        for item in KNOWN_CATALOG:
+            kw_pairs: List[Tuple[str, str]] = []
+            for kw in item["keywords"]:
+                kw_lower = kw.lower()
+                clean_kw = re.sub(r"[^a-zA-Z0-9가-힣]", "", kw_lower)
+                kw_pairs.append((kw_lower, clean_kw))
+            compiled.append((item, kw_pairs))
+        _COMPILED_CATALOG_ITEMS = compiled
+        _COMPILED_CATALOG_LEN = cur_len
+        return compiled
+
+
 def extract_mod_file_metadata(file_path: Optional[str]) -> Dict[str, Any]:
     """지정된 .package 또는 .ts4script 파일(및 동일 폴더의 짝 파일) 내부를 분석하여
     제작자명, 모드명, 버전, 내장 공식 배포 URL, 튜닝/모듈 식별자를 반환합니다.
+    (동일 파일 mtime/size 기준 스레드 안전 메모리 캐싱으로 중복 압축 해제를 방지합니다.)
     """
-    result: Dict[str, Any] = {
+    empty_result: Dict[str, Any] = {
         "has_metadata": False,
         "manifest_name": "",
         "creators": [],
@@ -2460,11 +2500,52 @@ def extract_mod_file_metadata(file_path: Optional[str]) -> Dict[str, Any]:
         "is_ww_addon": False,
     }
     if not file_path:
-        return result
+        return empty_result
 
     p = Path(file_path)
-    if not p.exists() or not p.is_file():
-        return result
+    try:
+        if not p.exists() or not p.is_file():
+            return empty_result
+        st = p.stat()
+        cache_key = (
+            str(p.resolve()),
+            int(getattr(st, "st_mtime_ns", int(st.st_mtime * 1e9))),
+            int(st.st_size),
+        )
+    except OSError:
+        return empty_result
+
+    with _MOD_META_CACHE_LOCK:
+        cached = _MOD_META_CACHE.get(cache_key)
+        if cached is not None:
+            return copy.deepcopy(cached)
+
+    result = _extract_mod_file_metadata_uncached(p)
+
+    with _MOD_META_CACHE_LOCK:
+        if len(_MOD_META_CACHE) >= 512:
+            _MOD_META_CACHE.clear()
+        _MOD_META_CACHE[cache_key] = copy.deepcopy(result)
+
+    return result
+
+
+def _extract_mod_file_metadata_uncached(p: Path) -> Dict[str, Any]:
+    """실제 바이너리/아카이브 메타데이터 추출 구현부."""
+    result: Dict[str, Any] = {
+        "has_metadata": False,
+        "manifest_name": "",
+        "creators": [],
+        "inferred_creator": "",
+        "inferred_mod": "",
+        "display_names": [],
+        "urls": [],
+        "version": "",
+        "binary_version": "",
+        "root_tunings": [],
+        "modules": [],
+        "is_ww_addon": False,
+    }
 
     suffix = p.suffix.lower()
     pkg_info: Dict[str, Any] = {}
@@ -2649,12 +2730,12 @@ def split_camel_case(text: str) -> str:
 
 def check_known_catalog(raw_name: str) -> Optional[Dict[str, Any]]:
     """핵심 코어 모드 카탈로그(MCCC, WickedWhims 본체, 바람별 한글화 등)와 정확히 일치하는지 확인합니다."""
+    if not raw_name:
+        return None
     name_lower = raw_name.lower()
     clean = re.sub(r"[^a-zA-Z0-9가-힣]", "", name_lower)
-    for item in KNOWN_CATALOG:
-        for kw in item["keywords"]:
-            kw_lower = kw.lower()
-            clean_kw = re.sub(r"[^a-zA-Z0-9가-힣]", "", kw_lower)
+    for item, kw_pairs in _get_compiled_catalog():
+        for kw_lower, clean_kw in kw_pairs:
             if kw_lower in name_lower or (len(clean_kw) >= 6 and clean_kw in clean):
                 return {
                     "found": True,
@@ -2955,6 +3036,84 @@ def _explain_snippet_rejection(
     return f"유사도 점수 미달 ({score}점 < 안전 기준 85점)"
 
 
+_HTTP_PAGE_CACHE_LOCK = threading.Lock()
+_HTTP_PAGE_CACHE: Dict[Tuple[str, str], Tuple[float, "_CachedHttpResponse"]] = {}
+_HTTP_PAGE_INFLIGHT_LOCKS: Dict[Tuple[str, str], threading.Lock] = {}
+_HTTP_PAGE_CACHE_TTL = 45.0
+_HTTP_PAGE_CACHE_MAX_BYTES = 3 * 1024 * 1024
+_HTTP_PAGE_CACHE_MAX_ENTRIES = 128
+
+
+class _CachedHttpResponse:
+    """읽기 전용 HTTP GET 응답을 스레드 안전하게 재사용하기 위한 경량 응답 래퍼."""
+
+    def __init__(self, resp: Any) -> None:
+        self.status_code: int = int(resp.status_code)
+        self.url: str = str(getattr(resp, "url", "") or "")
+        self.headers = CaseInsensitiveDict(getattr(resp, "headers", {}) or {})
+        self.encoding: Optional[str] = getattr(resp, "encoding", None)
+        self.content: bytes = bytes(getattr(resp, "content", b"") or b"")
+        self.text: str = str(getattr(resp, "text", "") or "")
+
+    def json(self) -> Any:
+        if self.text:
+            return json.loads(self.text)
+        return json.loads(self.content.decode(self.encoding or "utf-8", errors="replace"))
+
+    def raise_for_status(self) -> None:
+        if 400 <= self.status_code < 600:
+            raise RuntimeError(f"HTTP {self.status_code} Error for url: {self.url}")
+
+    def close(self) -> None:
+        pass
+
+
+def _cached_safe_https_get(
+    url: str,
+    *,
+    headers: Optional[Dict[str, str]] = None,
+    timeout: Any = 10,
+) -> Any:
+    """비스트리밍 읽기 전용 GET 요청을 URL 기준 단기(45초 TTL) Singleflight 메모리 캐시로 병합합니다.
+    (동시 다발 스캔 시 동일 Patreon/MTS/Deaderpool/검색 페이지 중복 조회 방지; HTTP 200 & 3MB 이하만 캐싱)
+    """
+    accept_hdr = str((headers or {}).get("Accept", ""))
+    cache_key = (url, accept_hdr)
+    now = time.monotonic()
+
+    with _HTTP_PAGE_CACHE_LOCK:
+        cached_entry = _HTTP_PAGE_CACHE.get(cache_key)
+        if cached_entry is not None:
+            expires_at, cached_resp = cached_entry
+            if now < expires_at:
+                return cached_resp
+            _HTTP_PAGE_CACHE.pop(cache_key, None)
+        inflight_lock = _HTTP_PAGE_INFLIGHT_LOCKS.get(cache_key)
+        if inflight_lock is None:
+            inflight_lock = threading.Lock()
+            _HTTP_PAGE_INFLIGHT_LOCKS[cache_key] = inflight_lock
+
+    with inflight_lock:
+        now = time.monotonic()
+        with _HTTP_PAGE_CACHE_LOCK:
+            cached_entry = _HTTP_PAGE_CACHE.get(cache_key)
+            if cached_entry is not None:
+                expires_at, cached_resp = cached_entry
+                if now < expires_at:
+                    return cached_resp
+                _HTTP_PAGE_CACHE.pop(cache_key, None)
+
+        resp = safe_https_get(url, headers=headers, timeout=timeout)
+        if getattr(resp, "status_code", 0) == 200 and len(getattr(resp, "content", b"") or b"") <= _HTTP_PAGE_CACHE_MAX_BYTES:
+            wrapped = _CachedHttpResponse(resp)
+            with _HTTP_PAGE_CACHE_LOCK:
+                if len(_HTTP_PAGE_CACHE) >= _HTTP_PAGE_CACHE_MAX_ENTRIES:
+                    _HTTP_PAGE_CACHE.clear()
+                _HTTP_PAGE_CACHE[cache_key] = (time.monotonic() + _HTTP_PAGE_CACHE_TTL, wrapped)
+            return wrapped
+        return resp
+
+
 def search_and_rank_distribution_links(tokens: Dict[str, Any], timeout: int = 8) -> List[Tuple[str, str, str]]:
     """추출된 제작자명과 모드명을 바탕으로 검색을 수행하고,
     동일 URL을 가리키는 다중 앵커(<a>) 텍스트를 병합하여 정확한 제목과 스니펫으로 유사도를 채점합니다.
@@ -2993,7 +3152,7 @@ def search_and_rank_distribution_links(tokens: Dict[str, Any], timeout: int = 8)
         url_groups: Dict[str, Dict[str, Any]] = {}
         search_url = f"https://search.naver.com/search.naver?query={urllib.parse.quote(query)}"
         try:
-            r = safe_https_get(search_url, headers=headers, timeout=timeout)
+            r = _cached_safe_https_get(search_url, headers=headers, timeout=timeout)
             if r.status_code == 200:
                 soup = BeautifulSoup(r.text, "html.parser")
                 for a in soup.find_all("a", href=True):
@@ -3033,7 +3192,7 @@ def search_and_rank_distribution_links(tokens: Dict[str, Any], timeout: int = 8)
         # 디시인사이드 심즈 갤러리(id=sims, thesims, sims4 등) 게시글 검색 연동
         try:
             dc_q = urllib.parse.quote(query)
-            r_dc = safe_https_get(f"https://search.dcinside.com/post/q/{dc_q}", headers=headers, timeout=timeout)
+            r_dc = _cached_safe_https_get(f"https://search.dcinside.com/post/q/{dc_q}", headers=headers, timeout=timeout)
             if r_dc.status_code == 200:
                 soup_dc = BeautifulSoup(r_dc.text, "html.parser")
                 for li in soup_dc.select("ul.sch_result_list > li"):
@@ -3088,7 +3247,7 @@ def search_and_rank_distribution_links(tokens: Dict[str, Any], timeout: int = 8)
                     mts_search_url = (
                         f"https://modthesims.info/browse.php?gs=4&f=38&showType=1&tag={urllib.parse.quote(mts_tag)}"
                     )
-                    r_mts = safe_https_get(mts_search_url, headers=headers, timeout=timeout)
+                    r_mts = _cached_safe_https_get(mts_search_url, headers=headers, timeout=timeout)
                     if r_mts.status_code == 200:
                         soup_mts = BeautifulSoup(r_mts.text, "html.parser")
                         cards = soup_mts.select("li.smol-card-component")
@@ -3351,10 +3510,10 @@ def _inspect_curseforge_mod_page(
     api_url = f"https://api.cfwidget.com/{path}"
     validate_https_url(api_url, allow_fragment=False, purpose="cfwidget 원격 카탈로그 API 조회")
     try:
-        r = safe_https_get(api_url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+        r = _cached_safe_https_get(api_url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
         if r.status_code == 202:
             time.sleep(1.5)
-            r = safe_https_get(api_url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+            r = _cached_safe_https_get(api_url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
         if r.status_code == 200:
             data = r.json()
             title = data.get("title") or ""
@@ -3662,7 +3821,7 @@ def _inspect_modthesims_page(
         return max(dates) if dates else ""
 
     try:
-        r = safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+        r = _cached_safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
         if r.status_code != 200:
             return None
 
@@ -3777,7 +3936,7 @@ def _inspect_simfileshare_page(
     # 1) SimFileShare 폴더 공유 링크(/folder/ID)인 경우 내부 파일 목록에서 대상 모드와 가장 일치하는 파일 선택
     if "/folder/" in url.lower():
         try:
-            r_f = safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+            r_f = _cached_safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
             if r_f.status_code == 200:
                 soup_f = BeautifulSoup(r_f.text, "html.parser")
                 f_cands: List[Tuple[int, str, str]] = []
@@ -4082,7 +4241,7 @@ def _inspect_dcinside_page(
     """디시인사이드(gall.dcinside.com) 게시글에서 첨부된 모드/압축 파일 또는 본문 내 HTTPS 배포 링크를 추출합니다."""
     validate_https_url(url, allow_fragment=True, purpose="디시인사이드 게시글 조회")
     try:
-        r = safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+        r = _cached_safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
         if r.status_code != 200:
             return None
         soup = BeautifulSoup(r.text, "html.parser")
@@ -4231,7 +4390,7 @@ def _inspect_naver_blog_page(
             blog_id, log_no = m_nb.group(1), m_nb.group(2)
             fetch_url = f"https://blog.naver.com/PostView.naver?blogId={blog_id}&logNo={log_no}"
 
-        r = safe_https_get(fetch_url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+        r = _cached_safe_https_get(fetch_url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
         if r.status_code != 200:
             return None
 
@@ -4332,7 +4491,7 @@ def _inspect_postype_page(
     """포스타입(postype.com) 포스트에서 첨부된 모드/압축 파일 또는 무료 공개 애드온 메타데이터(HTTPS 전용)를 추출합니다."""
     validate_https_url(url, allow_fragment=True, purpose="포스타입 포스트 조회")
     try:
-        r = safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+        r = _cached_safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
         if r.status_code != 200:
             return None
 
@@ -4513,7 +4672,7 @@ def inspect_remote_mod_page(
     if "deaderpool-mccc.com" in u_lower:
         dl_page = "https://deaderpool-mccc.com/downloads.html"
         try:
-            r_dp = safe_https_get(dl_page, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+            r_dp = _cached_safe_https_get(dl_page, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
             if r_dp.status_code == 200:
                 soup_dp = BeautifulSoup(r_dp.text, "html.parser")
                 is_woohoo = "woohoo" in (target_mod_name or "").lower()
@@ -4605,7 +4764,7 @@ def inspect_remote_mod_page(
     if "kemzimamods.com/" in u_lower:
         kz_timeout = max(timeout, 15)
         try:
-            r_kz = safe_https_get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=kz_timeout)
+            r_kz = _cached_safe_https_get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=kz_timeout)
             if r_kz.status_code == 200:
                 soup_kz = BeautifulSoup(r_kz.text, "html.parser")
                 sdm_links: List[Tuple[int, str, str]] = []
@@ -4678,7 +4837,7 @@ def inspect_remote_mod_page(
             post_id = m_post.group(1)
             api_url = f"https://www.patreon.com/api/posts/{post_id}"
             try:
-                r = safe_https_get(api_url, headers=headers, timeout=timeout)
+                r = _cached_safe_https_get(api_url, headers=headers, timeout=timeout)
                 if r.status_code == 200:
                     data = r.json()
                     attrs = data.get("data", {}).get("attributes", {})
@@ -4978,7 +5137,7 @@ def inspect_remote_mod_page(
 
         # 2) 제작자 메인/캠페인 URL인 경우 (예: https://www.patreon.com/weerbesu, https://www.patreon.com/roburky)
         try:
-            r_page = safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+            r_page = _cached_safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
             if r_page.status_code == 200:
                 m_camp = (
                     re.search(r"patreon-media/p/campaign/(\d+)/", r_page.text)
@@ -4991,7 +5150,7 @@ def inspect_remote_mod_page(
                         f"https://www.patreon.com/api/posts?filter[campaign_id]={camp_id}"
                         "&filter[is_draft]=false&sort=-published_at&page[count]=25"
                     )
-                    rp = safe_https_get(api_posts, headers=headers, timeout=timeout)
+                    rp = _cached_safe_https_get(api_posts, headers=headers, timeout=timeout)
                     if rp.status_code == 200:
                         pdata = rp.json()
                         media_map: Dict[str, Tuple[str, str]] = {}
@@ -5088,7 +5247,7 @@ def inspect_remote_mod_page(
     # D. 일반 공식 웹사이트 및 Tumblr 포스트 내 다운로드 파일/외부 스토리지 링크 감지
     # ==========================================================================
     try:
-        r_web = safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+        r_web = _cached_safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
         if r_web.status_code == 200:
             soup = BeautifulSoup(r_web.text, "html.parser")
             direct_files: List[Tuple[int, str, str]] = []

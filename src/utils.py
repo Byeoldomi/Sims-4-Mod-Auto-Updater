@@ -9,6 +9,7 @@ import ssl
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import urllib.parse
 import uuid
@@ -655,14 +656,26 @@ def normalize_network_timeout(
     return (DEFAULT_CONNECT_TIMEOUT, DEFAULT_READ_TIMEOUT)
 
 
+_CACHED_CA_BUNDLE: Optional[str] = None
+_SHARED_STRICT_SSL_CONTEXT: Optional[ssl.SSLContext] = None
+_SSL_CONTEXT_LOCK = threading.Lock()
+_THREAD_LOCAL_HTTP = threading.local()
+
+
 def _get_trusted_ca_bundle() -> Union[str, bool]:
     """신뢰할 수 있는 공인 CA 인증서 번들 경로(certifi) 또는 기본 시스템 인증서 검증(True)을 반환합니다.
     어떠한 경우에도 False나 빈 문자열을 반환하지 않습니다.
     """
+    global _CACHED_CA_BUNDLE
+    cached = _CACHED_CA_BUNDLE
+    if cached and os.path.isfile(cached):
+        return cached
+
     if certifi is not None:
         try:
             ca_path = certifi.where()
             if ca_path and os.path.isfile(ca_path):
+                _CACHED_CA_BUNDLE = ca_path
                 return ca_path
         except Exception:
             pass
@@ -679,6 +692,23 @@ def _create_strict_ssl_context() -> ssl.SSLContext:
     if hasattr(ssl, "TLSVersion"):
         ctx.minimum_version = ssl.TLSVersion.TLSv1_2
     return ctx
+
+
+def _get_shared_strict_ssl_context() -> ssl.SSLContext:
+    """프로세스 전체에서 안전하게 공유할 엄격한 SSLContext를 반환합니다.
+    매 HTTPS 요청마다 certifi CA 번들을 반복 파싱해 발생하는 GIL/CPU 병목을 제거합니다.
+    """
+    global _SHARED_STRICT_SSL_CONTEXT
+    ctx = _SHARED_STRICT_SSL_CONTEXT
+    if ctx is not None and ctx.verify_mode == ssl.CERT_REQUIRED and ctx.check_hostname:
+        return ctx
+
+    with _SSL_CONTEXT_LOCK:
+        ctx = _SHARED_STRICT_SSL_CONTEXT
+        if ctx is None or ctx.verify_mode != ssl.CERT_REQUIRED or not ctx.check_hostname:
+            ctx = _create_strict_ssl_context()
+            _SHARED_STRICT_SSL_CONTEXT = ctx
+        return ctx
 
 
 class _BlockedPlainHttpAdapter(requests.adapters.BaseAdapter):
@@ -699,12 +729,33 @@ class _StrictTlsHttpAdapter(requests.adapters.HTTPAdapter):
     """SSL/TLS 인증서 검증 우회(verify=False)를 원천 차단하고 공인 인증서 및 TLS 1.2+만 신뢰하는 전용 HTTPS 어댑터."""
 
     def init_poolmanager(self, connections: int, maxsize: int, block: bool = False, **pool_kwargs: Any) -> Any:
-        pool_kwargs["ssl_context"] = _create_strict_ssl_context()
+        pool_kwargs["ssl_context"] = _get_shared_strict_ssl_context()
         return super().init_poolmanager(connections, maxsize, block=block, **pool_kwargs)
 
     def proxy_manager_for(self, proxy: str, **proxy_kwargs: Any) -> Any:
-        proxy_kwargs["ssl_context"] = _create_strict_ssl_context()
+        proxy_kwargs["ssl_context"] = _get_shared_strict_ssl_context()
         return super().proxy_manager_for(proxy, **proxy_kwargs)
+
+    def build_connection_pool_key_attributes(
+        self,
+        request: requests.PreparedRequest,
+        verify: Any,
+        cert: Any = None,
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        if verify is False or not verify:
+            bad_url = getattr(request, "url", "")
+            log_security_warning(f"풀 키 구성 단계 SSL/TLS 인증서 검증 우회(verify={verify!r}) 차단: url={bad_url!r}")
+            raise SslCertificateSecurityError(
+                "[보안 차단] SSL/TLS 보안 인증서 검증을 우회(verify=False)할 수 없습니다."
+            )
+        host_params, pool_kwargs = super().build_connection_pool_key_attributes(request, verify, cert)
+        default_ca = _get_trusted_ca_bundle()
+        if verify is True or verify == default_ca:
+            pool_kwargs["ssl_context"] = _get_shared_strict_ssl_context()
+            pool_kwargs["cert_reqs"] = "CERT_REQUIRED"
+            pool_kwargs.pop("ca_certs", None)
+            pool_kwargs.pop("ca_cert_dir", None)
+        return host_params, pool_kwargs
 
     def cert_verify(self, conn: Any, url: str, verify: Any, cert: Any) -> None:
         if not str(url or "").lower().startswith("https://"):
@@ -715,8 +766,24 @@ class _StrictTlsHttpAdapter(requests.adapters.HTTPAdapter):
             raise SslCertificateSecurityError(
                 "[보안 차단] SSL/TLS 보안 인증서 검증을 우회(verify=False)할 수 없습니다."
             )
-        trusted = verify if (isinstance(verify, str) and os.path.exists(verify)) else _get_trusted_ca_bundle()
-        super().cert_verify(conn, url, trusted, cert)
+        default_ca = _get_trusted_ca_bundle()
+        if isinstance(verify, str) and verify != default_ca and os.path.exists(verify):
+            super().cert_verify(conn, url, verify, cert)
+        else:
+            super().cert_verify(conn, url, True, cert)
+            conn_kw = getattr(conn, "conn_kw", None)
+            conn_ctx = getattr(conn, "ssl_context", None) or (
+                conn_kw.get("ssl_context") if isinstance(conn_kw, dict) else None
+            )
+            if (
+                conn_ctx is not None
+                and conn_ctx.verify_mode == ssl.CERT_REQUIRED
+                and conn_ctx.check_hostname
+            ):
+                # HTTPSConnectionPool(conn)의 conn_kw['ssl_context']에 공인 CA 번들이 이미 로드되어 있으므로
+                # 매 소켓 연결마다 urllib3가 load_verify_locations()를 재실행하지 않도록 ca_certs를 비웁니다.
+                conn.ca_certs = None
+                conn.ca_cert_dir = None
         conn.cert_reqs = "CERT_REQUIRED"
 
 
@@ -728,7 +795,7 @@ class SafeHttpsSession(requests.Session):
     def __init__(self) -> None:
         super().__init__()
         self.verify = _get_trusted_ca_bundle()
-        self.mount("https://", _StrictTlsHttpAdapter())
+        self.mount("https://", _StrictTlsHttpAdapter(pool_connections=20, pool_maxsize=20))
         self.mount("http://", _BlockedPlainHttpAdapter())
 
     def merge_environment_settings(
@@ -859,6 +926,15 @@ class SafeHttpsSession(requests.Session):
         raise requests.TooManyRedirects(f"리다이렉트 한도({MAX_HTTPS_REDIRECTS}회)를 초과했습니다.")
 
 
+def _get_thread_safe_https_session() -> SafeHttpsSession:
+    """워커 스레드별로 TLS Keep-Alive 커넥션 풀을 재사용하기 위한 SafeHttpsSession을 반환합니다."""
+    sess = getattr(_THREAD_LOCAL_HTTP, "session", None)
+    if not isinstance(sess, SafeHttpsSession):
+        sess = SafeHttpsSession()
+        _THREAD_LOCAL_HTTP.session = sess
+    return sess
+
+
 def safe_https_request(
     method: str,
     url: str,
@@ -867,30 +943,13 @@ def safe_https_request(
     stream: bool = False,
     **kwargs: Any,
 ) -> requests.Response:
-    """단발성 네트워크 요청을 SafeHttpsSession으로 안전하게 수행합니다.
+    """단발성 네트워크 요청을 스레드 로컬 SafeHttpsSession 커넥션 풀로 안전하게 수행합니다.
     (HTTPS 전용, 리다이렉트 다운그레이드 차단, 유효 인증서 강제, 타임아웃 필수 적용)
     """
-    sess = SafeHttpsSession()
-    try:
-        response = sess.request(method=method, url=url, timeout=timeout, stream=stream, **kwargs)
-    except Exception:
-        sess.close()
-        raise
-
-    if stream:
-        orig_close = response.close
-
-        def _close_stream_and_session() -> None:
-            try:
-                orig_close()
-            finally:
-                sess.close()
-
-        response.close = _close_stream_and_session  # type: ignore[method-assign]
-    else:
-        sess.close()
-
-    return response
+    sess = _get_thread_safe_https_session()
+    # 단발성 요청 간 쿠키 간섭이 없도록 요청 전 세션 쿠키만 비우고 TCP/TLS 커넥션 풀은 유지합니다.
+    sess.cookies.clear()
+    return sess.request(method=method, url=url, timeout=timeout, stream=stream, **kwargs)
 
 
 def safe_https_get(

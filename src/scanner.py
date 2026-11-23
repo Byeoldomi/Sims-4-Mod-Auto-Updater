@@ -1,3 +1,4 @@
+import os
 import re
 from pathlib import Path
 from typing import Dict, List, Any
@@ -113,14 +114,22 @@ class ModScanner:
         f_low = f.name.lower()
         if f_low.startswith("mc_woohoo"):
             return "mccc:mc_woohoo"
-        if f_low.startswith("mc_") and not f_low.startswith(("mc_yf", "mc_ym", "mc_cf", "mc_cm", "mc_tf", "mc_tm", "mc_ef", "mc_em", "mc_pf", "mc_pm", "mc_uf", "mc_um")):
+        if f_low.startswith("mc_cmd") or (
+            f_low.startswith("mc_")
+            and not f_low.startswith(("mc_yf", "mc_ym", "mc_cf", "mc_cm", "mc_tf", "mc_tm", "mc_ef", "mc_em", "mc_pf", "mc_pm", "mc_uf", "mc_um"))
+        ):
             return "mccc:mc_cmd_center"
 
         try:
             from src.finder import check_known_catalog
             cat = check_known_catalog(f.name)
             if cat and cat.get("matched_catalog"):
-                return f"cat:{cat['matched_catalog']}"
+                matched_cat = cat["matched_catalog"]
+                if matched_cat == "MC Command Center (MCCC)":
+                    return "mccc:mc_cmd_center"
+                if matched_cat == "MC Woohoo (MCCC Module)":
+                    return "mccc:mc_woohoo"
+                return f"cat:{matched_cat}"
         except Exception:
             pass
 
@@ -328,43 +337,58 @@ class ModScanner:
             if not top_dir.is_dir():
                 continue
 
-            all_scripts_in_top = [f for f in top_dir.rglob("*") if f.is_file() and f.suffix.lower() == ".ts4script"]
-            all_pkgs_in_top = [f for f in top_dir.rglob("*") if f.is_file() and f.suffix.lower() == ".package"]
-            if not all_scripts_in_top and not all_pkgs_in_top:
-                continue
-
-            # CC 전용 폴더명(예: 4 High Priority CC, 6 Slider, 7 CC, CAS, BUILD, POSE 등)은 절대 건드리지 않음
+            # CC 전용 폴더명(예: CAS, BUILD, POSE, 4 High Priority CC, 6 Slider, 7 CC 등)은 내부 rglob 전에 즉시 건너뜀
             if self._is_cc_folder_name(top_dir.name):
                 continue
 
-            root_files = [
-                f for f in top_dir.iterdir()
-                if f.is_file() and f.suffix.lower() in (".package", ".ts4script")
-            ]
-            has_root_mods = len(root_files) > 0
+            collected_by_dir: Dict[Path, List[Path]] = {}
+            has_root_mods = False
+            has_any_mod_files = False
 
-            dirs_to_scan: List[Path] = [top_dir]
-            for sub in sorted(top_dir.rglob("*"), key=lambda p: str(p).lower()):
-                if not sub.is_dir():
-                    continue
-                rel_parts = sub.relative_to(top_dir).parts
-                if any(
-                    pt.lower() in AUX_SUBFOLDER_NAMES or self._is_cc_folder_name(pt)
-                    for pt in rel_parts
-                ):
-                    continue
-                if self._is_cc_or_aux_subfolder(sub, has_root_mods):
-                    continue
-                dirs_to_scan.append(sub)
+            for dirpath_str, dirnames, filenames in os.walk(top_dir):
+                cur_dir = Path(dirpath_str)
+                is_top = cur_dir == top_dir
 
-            for d in dirs_to_scan:
-                d_files = sorted(
-                    [f for f in d.iterdir() if f.is_file() and f.suffix.lower() in (".package", ".ts4script")],
+                mod_files = sorted(
+                    [
+                        cur_dir / fn
+                        for fn in filenames
+                        if os.path.splitext(fn)[1].lower() in (".package", ".ts4script")
+                    ],
                     key=lambda p: p.name.lower(),
                 )
-                if not d_files:
-                    continue
-                all_units.extend(self._group_directory_into_units(d, d_files, is_standalone_root=False))
+                if mod_files:
+                    has_any_mod_files = True
+                    if is_top:
+                        has_root_mods = True
+                    collected_by_dir[cur_dir] = mod_files
+
+                # 보조/옵션/CC 전용 하위폴더는 os.walk 순회 자체를 가지치기(prune)
+                pruned_dirnames: List[str] = []
+                for dname in dirnames:
+                    d_low = dname.lower().strip()
+                    if d_low in AUX_SUBFOLDER_NAMES or self._is_cc_folder_name(dname):
+                        continue
+                    if self._is_cc_or_aux_subfolder(cur_dir / dname, has_root_mods):
+                        continue
+                    pruned_dirnames.append(dname)
+                dirnames[:] = pruned_dirnames
+
+            if not has_any_mod_files:
+                continue
+
+            if top_dir in collected_by_dir:
+                all_units.extend(
+                    self._group_directory_into_units(top_dir, collected_by_dir[top_dir], is_standalone_root=False)
+                )
+
+            for sub_dir, d_files in sorted(
+                ((d, files) for d, files in collected_by_dir.items() if d != top_dir),
+                key=lambda item: str(item[0]).lower(),
+            ):
+                all_units.extend(
+                    self._group_directory_into_units(sub_dir, d_files, is_standalone_root=False)
+                )
 
         # 2. Mods 루트 직속 단일 파일(standalone_files) 스캔 및 그룹화
         root_standalone = sorted(
