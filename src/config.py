@@ -36,6 +36,9 @@ class ConfigManager:
             "backup_folder": "backups",
             "auto_backup": True,
             "manifest_path": "mods_manifest.json",
+            "rpo_channel": "early_access",
+            "ww_channel": "free",
+            "scan_subfolder": "",
         }
 
     def load(self) -> Dict[str, Any]:
@@ -86,3 +89,39 @@ class ConfigManager:
     @property
     def manifest_path(self) -> Path:
         return Path(self.config.get("manifest_path", "mods_manifest.json"))
+
+    @property
+    def rpo_channel(self) -> str:
+        val = str(self.config.get("rpo_channel") or "early_access").strip().lower()
+        return "free" if val == "free" else "early_access"
+
+    def set_rpo_channel(self, channel: str) -> str:
+        normalized = "free" if str(channel or "").strip().lower() == "free" else "early_access"
+        self.config["rpo_channel"] = normalized
+        self.save()
+        return normalized
+
+    @property
+    def ww_channel(self) -> str:
+        val = str(self.config.get("ww_channel") or "free").strip().lower()
+        return "paid" if val == "paid" else "free"
+
+    def set_ww_channel(self, channel: str) -> str:
+        normalized = "paid" if str(channel or "").strip().lower() == "paid" else "free"
+        self.config["ww_channel"] = normalized
+        self.save()
+        return normalized
+
+    @property
+    def scan_subfolder(self) -> str:
+        raw = str(self.config.get("scan_subfolder") or "").strip()
+        return raw.strip("/\\")
+
+    def set_scan_subfolder(self, subfolder: str) -> str:
+        raw = str(subfolder or "").strip().strip("/\\")
+        normalized = os.path.normpath(raw) if raw else ""
+        if normalized in ("", "."):
+            normalized = ""
+        self.config["scan_subfolder"] = normalized
+        self.save()
+        return normalized

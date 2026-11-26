@@ -1,5 +1,5 @@
 /**
- * Sims 4 Mod Auto Updater v0.1.5 - Web UI & pywebview Bridge Controller
+ * Sims 4 Mod Auto Updater v0.1.6 - Web UI & pywebview Bridge Controller
  */
 
 const DEFAULT_MODS = [];
@@ -34,11 +34,17 @@ const SIMS4_QUOTES = {
 document.addEventListener('DOMContentLoaded', () => {
   const appContainer = document.getElementById('app-container');
   const modListLabel = document.getElementById('mod-list-label');
+  const modListWrapper = document.getElementById('mod-list-wrapper');
   const modListContainer = document.getElementById('mod-list-section');
   const modList = document.getElementById('mod-list');
+  const scrollUpBtn = document.getElementById('btn-scroll-up');
+  const scrollDownBtn = document.getElementById('btn-scroll-down');
   const backupBtn = document.getElementById('btn-backup');
   const refreshBtn = document.getElementById('btn-refresh');
   const modFolderPath = document.getElementById('mod-folder-path');
+  const pathScopeBadge = document.getElementById('path-scope-badge');
+  const selectSubfolderBtn = document.getElementById('btn-select-subfolder');
+  const resetSubfolderBtn = document.getElementById('btn-reset-subfolder');
   const changeFolderBtn = document.getElementById('btn-change-folder');
   const selectAllCheckbox = document.getElementById('select-all-mods');
   const searchInput = document.getElementById('mod-search-input');
@@ -59,8 +65,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const countTotalEl = document.getElementById('count-total');
   const countUpdateEl = document.getElementById('count-update');
   const countConflictEl = document.getElementById('count-conflict');
+  const countErrorEl = document.getElementById('count-error');
   const countLatestEl = document.getElementById('count-latest');
   const moodletGrid = document.getElementById('moodlet-grid');
+  const optionSelectModal = document.getElementById('option-select-modal');
+  const optionModalTitle = document.getElementById('option-modal-title');
+  const optionModalDesc = document.getElementById('option-modal-desc');
+  const optionModalList = document.getElementById('option-modal-list');
+  const optionModalCloseBtn = document.getElementById('btn-option-modal-close');
+  const optionModalCancelBtn = document.getElementById('btn-option-modal-cancel');
+  const optionModalConfirmBtn = document.getElementById('btn-option-modal-confirm');
 
   let currentMods = [];
   let currentFilter = 'all'; // 'all' | 'update' | 'error' | 'latest'
@@ -71,16 +85,96 @@ document.addEventListener('DOMContentLoaded', () => {
   let quoteIndex = 0;
   let completeQuoteIdx = 0;
 
-  // 전체 창에서 불필요한 드래그/스크롤 이벤트 방지 (모드 목록 컨테이너 내부만 세로 스크롤 허용)
+  // 전체 창에서 불필요한 드래그/스크롤 이벤트 방지 (모드 목록 및 옵션 모달 내부만 세로 스크롤 허용)
   window.addEventListener(
     'wheel',
     (event) => {
-      if (!modListContainer.contains(event.target)) {
+      if (optionSelectModal && !optionSelectModal.classList.contains('is-hidden')) {
+        if (!optionModalList || !optionModalList.contains(event.target)) {
+          event.preventDefault();
+        }
+        return;
+      }
+      const scrollArea = modListWrapper || modListContainer;
+      if (!scrollArea || !scrollArea.contains(event.target)) {
         event.preventDefault();
       }
     },
     { passive: false }
   );
+
+  // 모드 목록 위/아래 스크롤 화살표 표시 상태 갱신 및 클릭/길게 누르기/더블클릭 제어
+  const updateScrollArrows = () => {
+    if (!modListContainer) return;
+    const { scrollTop, clientHeight, scrollHeight } = modListContainer;
+    const canScrollUp = scrollTop > 4;
+    const canScrollDown = scrollTop + clientHeight < scrollHeight - 4;
+    if (scrollUpBtn) {
+      scrollUpBtn.classList.toggle('is-hidden', !canScrollUp);
+    }
+    if (scrollDownBtn) {
+      scrollDownBtn.classList.toggle('is-hidden', !canScrollDown);
+    }
+  };
+
+  const bindScrollArrow = (btn, direction) => {
+    if (!btn || !modListContainer) return;
+    let holdTimeoutId = null;
+    let holdIntervalId = null;
+    let didHoldScroll = false;
+
+    const stopHold = () => {
+      if (holdTimeoutId) {
+        clearTimeout(holdTimeoutId);
+        holdTimeoutId = null;
+      }
+      if (holdIntervalId) {
+        clearInterval(holdIntervalId);
+        holdIntervalId = null;
+      }
+    };
+
+    btn.addEventListener('mousedown', (event) => {
+      if (event.button !== 0) return;
+      didHoldScroll = false;
+      stopHold();
+      holdTimeoutId = setTimeout(() => {
+        didHoldScroll = true;
+        holdIntervalId = setInterval(() => {
+          modListContainer.scrollTop += direction * 24;
+          updateScrollArrows();
+        }, 32);
+      }, 240);
+    });
+
+    ['mouseup', 'mouseleave', 'blur'].forEach((evt) => {
+      btn.addEventListener(evt, stopHold);
+    });
+
+    btn.addEventListener('click', () => {
+      if (didHoldScroll) {
+        didHoldScroll = false;
+        return;
+      }
+      modListContainer.scrollBy({ top: direction * 170, behavior: 'smooth' });
+    });
+
+    btn.addEventListener('dblclick', (event) => {
+      event.preventDefault();
+      stopHold();
+      modListContainer.scrollTo({
+        top: direction < 0 ? 0 : modListContainer.scrollHeight,
+        behavior: 'smooth',
+      });
+    });
+  };
+
+  if (modListContainer) {
+    modListContainer.addEventListener('scroll', updateScrollArrows, { passive: true });
+  }
+  bindScrollArrow(scrollUpBtn, -1);
+  bindScrollArrow(scrollDownBtn, 1);
+  window.addEventListener('resize', () => requestAnimationFrame(updateScrollArrows));
 
   const hasPywebview = () =>
     Boolean(window.pywebview && window.pywebview.api);
@@ -128,10 +222,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // 경로 바 범위(전체 Mods / 지정 하위 폴더) UI 동기화
+  const applyFolderScopeUI = (modsFolder, scanSubfolder = '', scanTargetPath = '') => {
+    const sub = String(scanSubfolder || '').trim();
+    const displayPath = sub
+      ? String(scanTargetPath || `${modsFolder || ''}\\${sub}`).trim()
+      : String(modsFolder || '').trim();
+    if (modFolderPath && displayPath) {
+      modFolderPath.textContent = displayPath;
+      modFolderPath.title = sub
+        ? `하위 폴더 지정 스캔 중: ${displayPath} (전체 Mods: ${modsFolder || ''})`
+        : displayPath;
+    }
+    if (pathScopeBadge) {
+      pathScopeBadge.textContent = sub ? '📂 하위 폴더' : '📂 모드 폴더';
+    }
+    if (resetSubfolderBtn) {
+      resetSubfolderBtn.classList.toggle('is-hidden', !sub);
+    }
+  };
+
   // 작업 진행 중 중복 클릭(레이스 컨디션) 방지용 전체 컨트롤 잠금/해제
   const applyBusyLockState = () => {
     if (backupBtn) backupBtn.disabled = isBusy;
     if (refreshBtn) refreshBtn.disabled = isBusy;
+    if (selectSubfolderBtn) selectSubfolderBtn.disabled = isBusy;
+    if (resetSubfolderBtn) resetSubfolderBtn.disabled = isBusy;
     if (changeFolderBtn) changeFolderBtn.disabled = isBusy;
     if (selectAllCheckbox) selectAllCheckbox.disabled = isBusy;
 
@@ -145,6 +261,9 @@ document.addEventListener('DOMContentLoaded', () => {
         .forEach((btn) => {
           btn.disabled = isBusy;
         });
+      modList.querySelectorAll('.mod-variant-select').forEach((sel) => {
+        sel.disabled = isBusy;
+      });
     }
 
     syncSelectionState();
@@ -217,7 +336,10 @@ document.addEventListener('DOMContentLoaded', () => {
     ) {
       return false;
     }
-    if (currentFilter === 'error' && mod.statusType !== 'error' && mod.statusType !== 'conflict') {
+    if (currentFilter === 'conflict' && mod.statusType !== 'conflict') {
+      return false;
+    }
+    if (currentFilter === 'error' && mod.statusType !== 'error') {
       return false;
     }
     if (currentFilter === 'latest' && mod.statusType !== 'latest') {
@@ -246,14 +368,14 @@ document.addEventListener('DOMContentLoaded', () => {
         m.statusType === 'outdated' ||
         m.statusType === 'manual'
     ).length;
-    const conflictCount = currentMods.filter(
-      (m) => m.statusType === 'error' || m.statusType === 'conflict'
-    ).length;
+    const conflictCount = currentMods.filter((m) => m.statusType === 'conflict').length;
+    const errorCount = currentMods.filter((m) => m.statusType === 'error').length;
     const latestCount = currentMods.filter((m) => m.statusType === 'latest').length;
 
     if (countTotalEl) countTotalEl.textContent = String(totalCount);
     if (countUpdateEl) countUpdateEl.textContent = String(updateCount);
     if (countConflictEl) countConflictEl.textContent = String(conflictCount);
+    if (countErrorEl) countErrorEl.textContent = String(errorCount);
     if (countLatestEl) countLatestEl.textContent = String(latestCount);
 
     if (modListLabel) {
@@ -264,6 +386,35 @@ document.addEventListener('DOMContentLoaded', () => {
       moodletGrid.querySelectorAll('.moodlet-card').forEach((card) => {
         card.classList.toggle('is-active', card.dataset.filter === currentFilter);
       });
+    }
+  };
+
+  // 텍스트 클립보드 복사 유틸리티 (웹뷰 권한 제한 환경 폴백 포함)
+  const copyTextToClipboard = async (text) => {
+    const val = String(text || '');
+    if (!val) return false;
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(val);
+        return true;
+      }
+    } catch (_) {
+      // fallback below
+    }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = val;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return Boolean(ok);
+    } catch (_) {
+      return false;
     }
   };
 
@@ -290,6 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       modList.appendChild(emptyEl);
       syncSelectionState();
+      requestAnimationFrame(updateScrollArrows);
       return;
     }
 
@@ -318,13 +470,47 @@ document.addEventListener('DOMContentLoaded', () => {
       const titleRowEl = document.createElement('div');
       titleRowEl.className = 'mod-card-title-row';
 
-      const nameLabelEl = document.createElement('label');
-      nameLabelEl.className = 'mod-name';
-      nameLabelEl.htmlFor = `mod-check-${mod.id}`;
-      nameLabelEl.textContent = mod.name;
-      nameLabelEl.title = mod.name;
+      const nameEl = document.createElement('span');
+      nameEl.className = 'mod-name';
+      nameEl.textContent = mod.name;
+      nameEl.title = mod.name;
 
-      titleRowEl.appendChild(nameLabelEl);
+      titleRowEl.appendChild(nameEl);
+
+      let filenameRowEl = null;
+      if (mod.primaryFile) {
+        filenameRowEl = document.createElement('div');
+        filenameRowEl.className = 'mod-filename-row';
+
+        const filenameEl = document.createElement('span');
+        filenameEl.className = 'mod-filename';
+        filenameEl.textContent = mod.primaryFile;
+        filenameEl.title = mod.primaryFile;
+
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'btn-copy-filename';
+        copyBtn.title = '파일명 클립보드 복사';
+        copyBtn.textContent = '📋';
+        copyBtn.addEventListener('click', async (event) => {
+          event.stopPropagation();
+          const copied = await copyTextToClipboard(mod.primaryFile);
+          if (copied) {
+            copyBtn.textContent = '✓ 복사됨';
+            copyBtn.classList.add('is-copied');
+            setLog(`파일명이 클립보드에 복사되었습니다: ${mod.primaryFile}`);
+            setTimeout(() => {
+              copyBtn.textContent = '📋';
+              copyBtn.classList.remove('is-copied');
+            }, 1200);
+          } else {
+            setLog(`드래그 후 Ctrl+C로 복사해 주세요: ${mod.primaryFile}`);
+          }
+        });
+
+        filenameRowEl.appendChild(filenameEl);
+        filenameRowEl.appendChild(copyBtn);
+      }
 
       const metaRowEl = document.createElement('div');
       metaRowEl.className = 'mod-card-meta-row';
@@ -340,8 +526,114 @@ document.addEventListener('DOMContentLoaded', () => {
       metaRowEl.appendChild(authorBadgeEl);
       metaRowEl.appendChild(versionEl);
 
+      if (mod.optionModalMode === 'rpo_channel' || mod.optionModalMode === 'ww_channel') {
+        const isWwChannel = mod.optionModalMode === 'ww_channel';
+        const isFreeChannel = isWwChannel ? mod.wwChannel !== 'paid' : mod.rpoChannel === 'free';
+        const channelBtn = document.createElement('button');
+        channelBtn.type = 'button';
+        channelBtn.className = `mod-channel-pill ${isFreeChannel ? 'is-free' : 'is-early'}`;
+        channelBtn.disabled = isBusy;
+        channelBtn.textContent = isFreeChannel
+          ? '무료 버전 ▾'
+          : '선배포 버전 ▾';
+        channelBtn.title = isWwChannel
+          ? 'WickedWhims 무료 버전(v185k) / 선배포 버전(v187.18) 전환'
+          : 'RPO Collection 선배포 버전 / 무료 버전 전환';
+        channelBtn.addEventListener('click', async (event) => {
+          event.stopPropagation();
+          if (isBusy) return;
+          const modalResult = await openOptionSelectModal(mod, {
+            confirmLabel: '옵션 저장 및 적용',
+          });
+          if (!modalResult || !modalResult.selectedVariant) {
+            setLog(`[${mod.name}] 버전 선택이 취소되었습니다.`);
+            return;
+          }
+          if (hasPywebview() && window.pywebview.api.set_mod_variant) {
+            try {
+              const varRes = await window.pywebview.api.set_mod_variant(
+                mod.id,
+                modalResult.selectedVariant,
+                null
+              );
+              if (varRes?.error) {
+                setLog(`옵션 변경 오류: ${varRes.error}`);
+                return;
+              }
+              if (Array.isArray(varRes?.mods)) {
+                renderModList(varRes.mods);
+              } else if (varRes?.entry) {
+                Object.assign(mod, varRes.entry);
+                renderModList(currentMods);
+              }
+              if (varRes?.message) {
+                setLog(varRes.message);
+              }
+            } catch (err) {
+              setLog(`옵션 변경 오류: ${err}`);
+            }
+          }
+        });
+        metaRowEl.appendChild(channelBtn);
+      }
+
       infoEl.appendChild(titleRowEl);
+      if (filenameRowEl) {
+        infoEl.appendChild(filenameRowEl);
+      }
       infoEl.appendChild(metaRowEl);
+
+      // 택1 옵션(예: Canvas Frame Override v1~v3 등)이 있는 모드는 카드 하단에 콤팩트 선택 드롭다운 표시
+      // (requiresOptionModal이 활성화된 모드는 업데이트 시 전용 선택 모달을 띄우므로 카드 레이아웃을 유지)
+      if (!mod.requiresOptionModal && Array.isArray(mod.variantChoices) && mod.variantChoices.length > 1) {
+        const variantRowEl = document.createElement('div');
+        variantRowEl.className = 'mod-variant-row';
+
+        const variantBadgeEl = document.createElement('span');
+        variantBadgeEl.className = 'mod-variant-badge';
+        variantBadgeEl.textContent = '옵션 택1';
+
+        const variantSelectEl = document.createElement('select');
+        variantSelectEl.className = 'mod-variant-select';
+        variantSelectEl.disabled = isBusy;
+        variantSelectEl.setAttribute('aria-label', `${mod.name} 설치 옵션 선택`);
+        variantSelectEl.title = '동시 설치 불가 옵션 — 1개만 선택해 다운로드합니다';
+
+        mod.variantChoices.forEach((vc) => {
+          const opt = document.createElement('option');
+          opt.value = vc.file_name;
+          opt.textContent = vc.label || vc.file_name;
+          if ((mod.selectedVariant || mod.variantChoices[0].file_name) === vc.file_name) {
+            opt.selected = true;
+          }
+          variantSelectEl.appendChild(opt);
+        });
+
+        variantSelectEl.addEventListener('change', async (event) => {
+          const nextVariant = event.target.value;
+          mod.selectedVariant = nextVariant;
+          if (hasPywebview() && window.pywebview.api.set_mod_variant) {
+            try {
+              const res = await window.pywebview.api.set_mod_variant(mod.id, nextVariant);
+              if (res?.ok && res?.entry) {
+                Object.assign(mod, res.entry);
+                renderModList(currentMods);
+              }
+              if (res?.message) {
+                setLog(res.message);
+              }
+            } catch (err) {
+              setLog(`옵션 선택 반영 오류: ${err}`);
+            }
+          } else {
+            setLog(`[${mod.name}] 설치 옵션 선택: ${nextVariant}`);
+          }
+        });
+
+        variantRowEl.appendChild(variantBadgeEl);
+        variantRowEl.appendChild(variantSelectEl);
+        infoEl.appendChild(variantRowEl);
+      }
 
       leftEl.appendChild(checkboxEl);
       leftEl.appendChild(infoEl);
@@ -395,6 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     modList.appendChild(fragment);
     syncSelectionState();
+    requestAnimationFrame(updateScrollArrows);
   };
 
   // 체크박스 및 우측 하단 거대 초록 원형 버튼('모두 업데이트' ↔ '심즈4 바로 실행') 동기화
@@ -417,7 +710,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const totalCheckedCount = currentMods.filter((m) => !m.disabled && m.checked).length;
-    const autoLaunch = autoLaunchCheckbox ? autoLaunchCheckbox.checked : true;
+    const autoLaunch = autoLaunchCheckbox ? autoLaunchCheckbox.checked : false;
 
     if (totalCheckedCount > 0) {
       if (orbCountBadge) {
@@ -473,10 +766,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!nextFilter) return;
     currentFilter = nextFilter;
     if (!isBusy) {
-      if (nextFilter === 'error') {
-        const hasError = currentMods.some(
-          (m) => m.statusType === 'error' || m.statusType === 'conflict'
-        );
+      if (nextFilter === 'conflict') {
+        const hasConflict = currentMods.some((m) => m.statusType === 'conflict');
+        if (hasConflict) setWittyQuote(SIMS4_QUOTES.error[0], 'error');
+      } else if (nextFilter === 'error') {
+        const hasError = currentMods.some((m) => m.statusType === 'error');
         if (hasError) setWittyQuote(SIMS4_QUOTES.error[0], 'error');
       } else if (nextFilter === 'latest') {
         setWittyQuote(SIMS4_QUOTES.complete[1], 'complete');
@@ -544,6 +838,13 @@ document.addEventListener('DOMContentLoaded', () => {
           tone: 'error',
         });
         return;
+      }
+      if (res?.mods_folder || res?.scan_target_path) {
+        applyFolderScopeUI(
+          res?.mods_folder || '',
+          res?.scan_subfolder || '',
+          res?.scan_target_path || ''
+        );
       }
       if (Array.isArray(res?.mods)) {
         isInitializing = false;
@@ -619,9 +920,300 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // 옵션 선택 모달 (More Columns in CAS, First Impressions, RPO Collection 등 옵션 선택용)
+  const openOptionSelectModal = (mod, modalOpts = {}) => {
+    const choices = Array.isArray(mod?.variantChoices) ? mod.variantChoices : [];
+    const addons = Array.isArray(mod?.optionalAddons) ? mod.optionalAddons : [];
+    if (!optionSelectModal || !optionModalList || (choices.length === 0 && addons.length === 0)) {
+      return Promise.resolve({
+        selectedVariant: mod?.selectedVariant || choices[0]?.file_name || '',
+        selectedAddons: Array.isArray(mod?.selectedAddons) ? mod.selectedAddons : [],
+      });
+    }
+
+    const isChannelMode = mod?.optionModalMode === 'rpo_channel' || mod?.optionModalMode === 'ww_channel';
+    const primaryLow = String(mod.primaryFile || '').trim().toLowerCase();
+    const initialChoice =
+      choices.find((vc) => vc.file_name === mod.selectedVariant) ||
+      choices.find((vc) => vc.installed || vc.file_name.toLowerCase() === primaryLow) ||
+      choices[0];
+    let selectedFile = initialChoice ? initialChoice.file_name : '';
+
+    const selectedAddonsLow = new Set(
+      (Array.isArray(mod.selectedAddons)
+        ? mod.selectedAddons
+        : addons.filter((oa) => oa.installed).map((oa) => oa.file_name)
+      ).map((fn) => String(fn).toLowerCase())
+    );
+
+    if (optionModalTitle) {
+      optionModalTitle.textContent = mod.name || '모드 옵션 선택';
+    }
+    if (optionModalDesc) {
+      optionModalDesc.textContent =
+        mod.optionModalPrompt ||
+        '설치할 버전을 선택해 주세요. (동시 설치 불가 · 1개 선택)';
+    }
+    if (optionModalConfirmBtn) {
+      optionModalConfirmBtn.textContent = modalOpts.confirmLabel || '선택 완료 및 업데이트';
+    }
+
+    const syncSelectedVisuals = () => {
+      const radioItems = optionModalList.querySelectorAll('.option-modal-item[role="radio"]');
+      radioItems.forEach((btn) => {
+        const isSel = btn.dataset.fileName === selectedFile;
+        btn.classList.toggle('is-selected', isSel);
+        btn.setAttribute('aria-checked', isSel ? 'true' : 'false');
+      });
+      const checkItems = optionModalList.querySelectorAll('.option-modal-item[role="checkbox"]');
+      checkItems.forEach((btn) => {
+        const isChk = selectedAddonsLow.has(String(btn.dataset.fileName || '').toLowerCase());
+        btn.classList.toggle('is-selected', isChk);
+        btn.setAttribute('aria-checked', isChk ? 'true' : 'false');
+      });
+    };
+
+    optionModalList.innerHTML = '';
+
+    if (addons.length > 0 && choices.length > 0) {
+      const mainSectionEl = document.createElement('div');
+      mainSectionEl.className = 'option-section-label';
+      mainSectionEl.textContent = '필수 본체 버전 (택1)';
+      optionModalList.appendChild(mainSectionEl);
+    }
+
+    choices.forEach((vc) => {
+      const itemBtn = document.createElement('button');
+      itemBtn.type = 'button';
+      itemBtn.className = 'option-modal-item';
+      itemBtn.setAttribute('role', 'radio');
+      itemBtn.dataset.fileName = vc.file_name;
+
+      const dotEl = document.createElement('span');
+      dotEl.className = 'option-radio-dot';
+      dotEl.setAttribute('aria-hidden', 'true');
+
+      const textWrapEl = document.createElement('div');
+      textWrapEl.className = 'option-item-text';
+
+      const labelRowEl = document.createElement('div');
+      labelRowEl.className = 'option-item-label-row';
+
+      const labelEl = document.createElement('span');
+      labelEl.className = 'option-item-label';
+      labelEl.textContent = vc.label || vc.file_name;
+      labelRowEl.appendChild(labelEl);
+
+      if (vc.installed || (!isChannelMode && primaryLow && vc.file_name.toLowerCase() === primaryLow)) {
+        const curBadgeEl = document.createElement('span');
+        curBadgeEl.className = 'option-current-badge';
+        curBadgeEl.textContent = isChannelMode ? '현재 선택됨' : '현재 설치됨';
+        labelRowEl.appendChild(curBadgeEl);
+      }
+
+      const fileNameEl = document.createElement('span');
+      fileNameEl.className = 'option-item-filename';
+      fileNameEl.textContent = vc.description || vc.file_name;
+
+      textWrapEl.appendChild(labelRowEl);
+      textWrapEl.appendChild(fileNameEl);
+
+      itemBtn.appendChild(dotEl);
+      itemBtn.appendChild(textWrapEl);
+      itemBtn.addEventListener('click', () => {
+        selectedFile = vc.file_name;
+        syncSelectedVisuals();
+      });
+
+      optionModalList.appendChild(itemBtn);
+    });
+
+    if (addons.length > 0) {
+      const addonSectionEl = document.createElement('div');
+      addonSectionEl.className = 'option-section-label';
+      addonSectionEl.textContent = '세부 옵션 파일 (선택 사항 · 복수 선택 가능)';
+      optionModalList.appendChild(addonSectionEl);
+
+      addons.forEach((oa) => {
+        const itemBtn = document.createElement('button');
+        itemBtn.type = 'button';
+        itemBtn.className = 'option-modal-item';
+        itemBtn.setAttribute('role', 'checkbox');
+        itemBtn.dataset.fileName = oa.file_name;
+
+        const boxEl = document.createElement('span');
+        boxEl.className = 'option-check-box';
+        boxEl.setAttribute('aria-hidden', 'true');
+        boxEl.textContent = '✓';
+
+        const textWrapEl = document.createElement('div');
+        textWrapEl.className = 'option-item-text';
+
+        const labelRowEl = document.createElement('div');
+        labelRowEl.className = 'option-item-label-row';
+
+        const labelEl = document.createElement('span');
+        labelEl.className = 'option-item-label';
+        labelEl.textContent = oa.label || oa.file_name;
+        labelRowEl.appendChild(labelEl);
+
+        if (oa.installed) {
+          const curBadgeEl = document.createElement('span');
+          curBadgeEl.className = 'option-current-badge';
+          curBadgeEl.textContent = '현재 설치됨';
+          labelRowEl.appendChild(curBadgeEl);
+        }
+
+        const fileNameEl = document.createElement('span');
+        fileNameEl.className = 'option-item-filename';
+        fileNameEl.textContent = oa.file_name;
+
+        textWrapEl.appendChild(labelRowEl);
+        textWrapEl.appendChild(fileNameEl);
+
+        itemBtn.appendChild(boxEl);
+        itemBtn.appendChild(textWrapEl);
+        itemBtn.addEventListener('click', () => {
+          const low = oa.file_name.toLowerCase();
+          if (selectedAddonsLow.has(low)) {
+            selectedAddonsLow.delete(low);
+          } else {
+            selectedAddonsLow.add(low);
+          }
+          syncSelectedVisuals();
+        });
+
+        optionModalList.appendChild(itemBtn);
+      });
+    }
+
+    syncSelectedVisuals();
+    optionSelectModal.classList.remove('is-hidden');
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const cleanupAndResolve = (result) => {
+        if (settled) return;
+        settled = true;
+        optionSelectModal.classList.add('is-hidden');
+        optionModalConfirmBtn?.removeEventListener('click', onConfirm);
+        optionModalCancelBtn?.removeEventListener('click', onCancel);
+        optionModalCloseBtn?.removeEventListener('click', onCancel);
+        optionSelectModal.removeEventListener('click', onBackdropClick);
+        document.removeEventListener('keydown', onKeyDown);
+        resolve(result);
+      };
+
+      const onConfirm = () => {
+        const chosenAddons = addons
+          .filter((oa) => selectedAddonsLow.has(oa.file_name.toLowerCase()))
+          .map((oa) => oa.file_name);
+        cleanupAndResolve({
+          selectedVariant: selectedFile || choices[0]?.file_name || '',
+          selectedAddons: chosenAddons,
+        });
+      };
+      const onCancel = () => cleanupAndResolve(null);
+      const onBackdropClick = (ev) => {
+        if (ev.target === optionSelectModal) onCancel();
+      };
+      const onKeyDown = (ev) => {
+        if (ev.key === 'Escape') {
+          ev.preventDefault();
+          onCancel();
+        } else if (ev.key === 'Enter') {
+          ev.preventDefault();
+          onConfirm();
+        }
+      };
+
+      optionModalConfirmBtn?.addEventListener('click', onConfirm);
+      optionModalCancelBtn?.addEventListener('click', onCancel);
+      optionModalCloseBtn?.addEventListener('click', onCancel);
+      optionSelectModal.addEventListener('click', onBackdropClick);
+      document.addEventListener('keydown', onKeyDown);
+      optionModalConfirmBtn?.focus();
+    });
+  };
+
   // 모드 업데이트 실행 및 선택적 심즈4 런치
   const executeModUpdates = async (targetIds, launchGameAfter = false) => {
     if (isBusy || !targetIds || targetIds.length === 0) return;
+
+    const effectiveTargetIds = [];
+    // 옵션 선택 모달이 필요한 모드(예: More Columns in CAS, First Impressions, RPO Collection 등)가 포함된 경우 업데이트 전에 사용자 선택 확인
+    for (const modId of targetIds) {
+      const targetMod = currentMods.find((m) => m.id === modId);
+      if (
+        targetMod &&
+        targetMod.requiresOptionModal &&
+        Array.isArray(targetMod.variantChoices) &&
+        targetMod.variantChoices.length > 0
+      ) {
+        const isRpoChannelMode = targetMod.optionModalMode === 'rpo_channel';
+        const isWwChannelMode = targetMod.optionModalMode === 'ww_channel';
+        const modalResult = await openOptionSelectModal(targetMod);
+        if (!modalResult || !modalResult.selectedVariant) {
+          setLog(`[${targetMod.name}] 옵션 선택이 취소되어 업데이트를 중단했습니다.`);
+          return;
+        }
+        const chosenVariant = modalResult.selectedVariant;
+        const hasOptionalAddons =
+          Array.isArray(targetMod.optionalAddons) && targetMod.optionalAddons.length > 0;
+        const chosenAddons = hasOptionalAddons
+          ? Array.isArray(modalResult.selectedAddons)
+            ? modalResult.selectedAddons
+            : []
+          : null;
+        targetMod.selectedVariant = chosenVariant;
+        if (hasOptionalAddons) {
+          targetMod.selectedAddons = chosenAddons;
+        }
+        if (hasPywebview() && window.pywebview.api.set_mod_variant) {
+          try {
+            const varRes = await window.pywebview.api.set_mod_variant(
+              targetMod.id,
+              chosenVariant,
+              chosenAddons
+            );
+            if (varRes?.error) {
+              setLog(`옵션 선택 반영 오류: ${varRes.error}`);
+              return;
+            }
+            if (Array.isArray(varRes?.mods)) {
+              currentMods = varRes.mods;
+              Object.assign(targetMod, currentMods.find((m) => m.id === targetMod.id) || {});
+            } else if (varRes?.entry) {
+              Object.assign(targetMod, varRes.entry);
+            }
+            if (varRes?.message) {
+              setLog(varRes.message);
+            }
+          } catch (err) {
+            setLog(`옵션 선택 반영 오류: ${err}`);
+            return;
+          }
+        }
+        if (
+          (isRpoChannelMode && chosenVariant === 'rpo_channel:early_access') ||
+          (isWwChannelMode && chosenVariant === 'ww_channel:paid')
+        ) {
+          renderModList(currentMods);
+          setLog(
+            `[${targetMod.name}] 선배포 버전을 선택하여 자동 다운로드를 실행하지 않고 '수동 확인' 상태를 유지합니다.`
+          );
+          continue;
+        }
+      }
+      effectiveTargetIds.push(modId);
+    }
+
+    if (effectiveTargetIds.length === 0) {
+      if (launchGameAfter) {
+        await launchSims4Directly();
+      }
+      return;
+    }
 
     setLoading(true, '플럼밥이 업데이트 중...', { category: 'update' });
     if (progressBar) progressBar.style.width = '5%';
@@ -629,7 +1221,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (hasPywebview()) {
       try {
         const res = await window.pywebview.api.update_selected_mods(
-          targetIds,
+          effectiveTargetIds,
           launchGameAfter
         );
         if (res?.error) {
@@ -645,11 +1237,11 @@ document.addEventListener('DOMContentLoaded', () => {
           renderModList(res.mods);
         }
         if (statusSummary) {
-          statusSummary.textContent = `진행 상태: 완료 (${targetIds.length} / ${targetIds.length})`;
+          statusSummary.textContent = `진행 상태: 완료 (${effectiveTargetIds.length} / ${effectiveTargetIds.length})`;
         }
         setLog(
           res?.message ||
-            `선택한 ${targetIds.length}개 모드 업데이트가 완료되었습니다!`
+            `선택한 ${effectiveTargetIds.length}개 모드 업데이트가 완료되었습니다!`
         );
         setLoading(false, '', {
           doneQuote: getNextCompleteQuote(),
@@ -664,8 +1256,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } else {
       let completed = 0;
-      const total = targetIds.length;
-      for (const id of targetIds) {
+      const total = effectiveTargetIds.length;
+      for (const id of effectiveTargetIds) {
         const target = currentMods.find((m) => m.id === id);
         setLog(`[${target ? target.name : id}] 최신 버전 다운로드 및 적용 중...`);
         await new Promise((r) => setTimeout(r, 800));
@@ -811,6 +1403,91 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // 하위 폴더 지정 스캔 버튼
+  if (selectSubfolderBtn) {
+    selectSubfolderBtn.addEventListener('click', async () => {
+      if (isBusy) return;
+      if (hasPywebview()) {
+        try {
+          const res = await window.pywebview.api.select_scan_subfolder();
+          if (res?.cancelled) return;
+          if (res?.error) {
+            setLog(`하위 폴더 지정 오류: ${res.error}`);
+            setWittyQuote(SIMS4_QUOTES.error[0], 'error');
+            return;
+          }
+          applyFolderScopeUI(
+            res?.mods_folder || '',
+            res?.scan_subfolder || '',
+            res?.scan_target_path || ''
+          );
+          if (Array.isArray(res?.mods)) {
+            isInitializing = false;
+            currentFilter = 'all';
+            renderModList(res.mods);
+          }
+          setLog(res?.message || '스캔 대상 하위 폴더가 지정되었습니다.');
+          if (res?.needs_remote_scan) {
+            await runRemoteScan();
+          } else if (res?.cached) {
+            if (progressBar) progressBar.style.width = '100%';
+            setWittyQuote(getNextCompleteQuote(), 'complete');
+          }
+        } catch (err) {
+          setLog(`하위 폴더 지정 중 오류가 발생했습니다: ${err}`);
+          setWittyQuote(SIMS4_QUOTES.error[0], 'error');
+        }
+      } else {
+        const subInput = window.prompt('Mods 기준 스캔할 하위 폴더 상대 경로를 입력하세요 (비우면 전체):', '');
+        if (subInput !== null) {
+          const clean = subInput.trim();
+          applyFolderScopeUI('Mods', clean, clean ? `Mods\\${clean}` : 'Mods');
+          setLog(clean ? `하위 폴더 지정됨: ${clean}` : '전체 Mods 폴더로 복귀했습니다.');
+        }
+      }
+    });
+  }
+
+  // 전체 Mods 폴더 스캔 복귀 버튼
+  if (resetSubfolderBtn) {
+    resetSubfolderBtn.addEventListener('click', async () => {
+      if (isBusy) return;
+      if (hasPywebview()) {
+        try {
+          const res = await window.pywebview.api.set_scan_subfolder('');
+          if (res?.error) {
+            setLog(`전체 보기 전환 오류: ${res.error}`);
+            setWittyQuote(SIMS4_QUOTES.error[0], 'error');
+            return;
+          }
+          applyFolderScopeUI(
+            res?.mods_folder || '',
+            res?.scan_subfolder || '',
+            res?.scan_target_path || ''
+          );
+          if (Array.isArray(res?.mods)) {
+            isInitializing = false;
+            currentFilter = 'all';
+            renderModList(res.mods);
+          }
+          setLog(res?.message || '전체 Mods 폴더 스캔으로 복귀했습니다.');
+          if (res?.needs_remote_scan) {
+            await runRemoteScan();
+          } else if (res?.cached) {
+            if (progressBar) progressBar.style.width = '100%';
+            setWittyQuote(getNextCompleteQuote(), 'complete');
+          }
+        } catch (err) {
+          setLog(`전체 보기 전환 중 오류가 발생했습니다: ${err}`);
+          setWittyQuote(SIMS4_QUOTES.error[0], 'error');
+        }
+      } else {
+        applyFolderScopeUI('Mods', '', 'Mods');
+        setLog('전체 Mods 폴더 스캔으로 복귀했습니다.');
+      }
+    });
+  }
+
   // 폴더 변경 버튼
   if (changeFolderBtn) {
     changeFolderBtn.addEventListener('click', async () => {
@@ -824,9 +1501,12 @@ document.addEventListener('DOMContentLoaded', () => {
             setWittyQuote(SIMS4_QUOTES.error[0], 'error');
             return;
           }
-          if (res?.mods_folder && modFolderPath) {
-            modFolderPath.textContent = res.mods_folder;
-            modFolderPath.title = res.mods_folder;
+          if (res?.mods_folder || res?.scan_target_path) {
+            applyFolderScopeUI(
+              res?.mods_folder || '',
+              res?.scan_subfolder || '',
+              res?.scan_target_path || ''
+            );
           }
           if (Array.isArray(res?.mods)) {
             isInitializing = false;
@@ -845,8 +1525,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentPath = modFolderPath ? modFolderPath.textContent.trim() : '';
         const nextPath = window.prompt('변경할 심즈4 Mods 폴더 경로를 입력하세요:', currentPath);
         if (nextPath && nextPath.trim() && modFolderPath) {
-          modFolderPath.textContent = nextPath.trim();
-          modFolderPath.title = nextPath.trim();
+          applyFolderScopeUI(nextPath.trim(), '', nextPath.trim());
           setLog(`모드 폴더 경로가 변경되었습니다: ${nextPath.trim()}`);
         }
       }
@@ -866,7 +1545,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const launchAfter = autoLaunchCheckbox ? autoLaunchCheckbox.checked : true;
+      const launchAfter = autoLaunchCheckbox ? autoLaunchCheckbox.checked : false;
       await executeModUpdates(selectedIds, launchAfter);
     });
   }
@@ -880,9 +1559,12 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const state = await window.pywebview.api.get_initial_state();
       isInitializing = false;
-      if (state?.mods_folder && modFolderPath) {
-        modFolderPath.textContent = state.mods_folder;
-        modFolderPath.title = state.mods_folder;
+      if (state?.mods_folder || state?.scan_target_path) {
+        applyFolderScopeUI(
+          state?.mods_folder || '',
+          state?.scan_subfolder || '',
+          state?.scan_target_path || ''
+        );
       }
       // 빈 폴더([])인 경우에도 가상 샘플 데이터를 남기지 않고 실제 상태를 그대로 반영
       if (Array.isArray(state?.mods)) {
@@ -931,7 +1613,11 @@ document.addEventListener('DOMContentLoaded', () => {
     backupBtn,
     refreshBtn,
     modFolderPath,
+    pathScopeBadge,
+    selectSubfolderBtn,
+    resetSubfolderBtn,
     changeFolderBtn,
+    applyFolderScopeUI,
     selectAllCheckbox,
     searchInput,
     statusSummary,

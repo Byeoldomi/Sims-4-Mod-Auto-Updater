@@ -1,4 +1,4 @@
-# 심즈 4 모드 자동 업데이터 (Sims 4 Mod Auto Updater) v0.1.5
+# 심즈 4 모드 자동 업데이터 (Sims 4 Mod Auto Updater) v0.1.6
 
 심즈 4 모드 파일(`.package`, `.ts4script`)의 버전을 자동으로 조회하고, 최신 버전 다운로드 및 안전한 백업·업데이트를 지원하는 **데스크톱 GUI 도구**입니다.
 
@@ -58,7 +58,7 @@ Sims 4 Mod Auto Updater/
 
 ### 실행 파일로 바로 사용하기 (Windows)
 1. GitHub Releases에서 Sims.4.Mod.Auto.Updater.zip을 내려받습니다.
-2. 원하는 폴더에 압축을 풀거나 파일을 둔 뒤 `Sims4ModUpdater_v0.1.5.exe`를 실행합니다.
+2. 원하는 폴더에 압축을 풀거나 파일을 둔 뒤 `Sims4ModUpdater_v0.1.6.exe`를 실행합니다.
 3. 필요 시 `checksum.txt` 또는 `release_hash.txt`의 SHA-256 해시로 파일 무결성을 확인할 수 있습니다.
 
 ### 소스 코드로 실행하기

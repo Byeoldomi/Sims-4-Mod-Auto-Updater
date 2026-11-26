@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>심즈4 모드 자동 업데이터 v0.1.5</title>
+  <title>심즈4 모드 자동 업데이터 v0.1.6</title>
+  <link rel="icon" type="image/x-icon" href="app_icon.ico" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -20,7 +21,7 @@
             <div class="brand-eyebrow">THE SIMS 4 MOD UTILITY</div>
             <div class="brand-title-row">
               <h1 class="app-title">심즈4 모드 자동 업데이터</h1>
-              <span class="version-badge app-version">v0.1.5</span>
+              <span class="version-badge app-version">v0.1.6</span>
             </div>
           </div>
         </div>
@@ -37,19 +38,25 @@
         </div>
       </div>
 
-      <!-- 헤더 하단 줄: 현재 모드 폴더 경로 표시 & 폴더 변경 버튼 -->
+      <!-- 헤더 하단 줄: 현재 모드 폴더 경로 표시 & 폴더/하위 폴더 변경 버튼 -->
       <div id="folder-path-section" class="header-path-bar" aria-label="모드 폴더 경로">
-        <span class="path-badge">📂 모드 폴더</span>
+        <span id="path-scope-badge" class="path-badge">📂 모드 폴더</span>
         <div id="mod-folder-path" class="path-box path-text" title="모드 폴더 경로 확인 중...">
           모드 폴더 경로 확인 중...
         </div>
+        <button type="button" id="btn-reset-subfolder" class="btn sim-btn btn-subfolder-reset is-hidden" title="전체 Mods 폴더 스캔으로 복귀">
+          전체 보기 ✕
+        </button>
+        <button type="button" id="btn-select-subfolder" class="btn sim-btn btn-subfolder-scope" title="Mods 폴더 내 특정 하위 폴더만 지정하여 스캔 및 업데이트합니다">
+          하위 폴더 지정
+        </button>
         <button type="button" id="btn-change-folder" class="btn sim-btn btn-change-folder">
           폴더 변경
         </button>
       </div>
     </header>
 
-    <!-- 상태 요약 대시보드 (심즈4 무드렛 카드 4종 - 클릭 시 필터 연동) -->
+    <!-- 상태 요약 대시보드 (심즈4 무드렛 카드 5종 - 클릭 시 필터 연동) -->
     <section id="dashboard-section" class="app-section dashboard-section" aria-label="상태 요약 대시보드">
       <div id="moodlet-grid" class="moodlet-grid">
         <!-- 1. 전체 설치된 모드 수 -->
@@ -75,9 +82,9 @@
         </button>
 
         <!-- 3. 충돌/중복 감지 수 (분노 레드) -->
-        <button type="button" class="moodlet-card moodlet-conflict" data-filter="error">
+        <button type="button" class="moodlet-card moodlet-conflict" data-filter="conflict">
           <div class="moodlet-header">
-            <span class="moodlet-label">충돌 / 중복 감지</span>
+            <span class="moodlet-label">충돌 및 중복</span>
             <span class="moodlet-icon" aria-hidden="true">🔥</span>
           </div>
           <div class="moodlet-body">
@@ -85,7 +92,18 @@
           </div>
         </button>
 
-        <!-- 4. 최신 상태 수 (플럼밥 그린) -->
+        <!-- 4. 링크 오류 수 (불편 오렌지) -->
+        <button type="button" class="moodlet-card moodlet-error" data-filter="error">
+          <div class="moodlet-header">
+            <span class="moodlet-label">링크 오류</span>
+            <span class="moodlet-icon" aria-hidden="true">🔗</span>
+          </div>
+          <div class="moodlet-body">
+            <span id="count-error" class="moodlet-count version-num">0</span>
+          </div>
+        </button>
+
+        <!-- 5. 최신 상태 수 (플럼밥 그린) -->
         <button type="button" class="moodlet-card moodlet-latest" data-filter="latest">
           <div class="moodlet-header">
             <span class="moodlet-label">최신 상태</span>
@@ -139,9 +157,27 @@
         </div>
       </div>
 
-      <!-- 심즈4 갤러리 카드 스크롤 컨테이너 -->
-      <div id="mod-list-section" class="mod-list-container" aria-label="모드 목록 컨테이너">
-        <div id="mod-list" class="mod-list gallery-card-list"></div>
+      <!-- 심즈4 갤러리 카드 스크롤 컨테이너 & 위/아래 스크롤 화살표 -->
+      <div id="mod-list-wrapper" class="mod-list-wrapper">
+        <button
+          type="button"
+          id="btn-scroll-up"
+          class="mod-scroll-arrow is-up is-hidden"
+          title="위로 스크롤 (길게 누르면 연속 이동 · 더블클릭 시 맨 위로)"
+          aria-label="모드 목록 위로 스크롤"
+        >▲</button>
+
+        <div id="mod-list-section" class="mod-list-container" aria-label="모드 목록 컨테이너">
+          <div id="mod-list" class="mod-list gallery-card-list"></div>
+        </div>
+
+        <button
+          type="button"
+          id="btn-scroll-down"
+          class="mod-scroll-arrow is-down is-hidden"
+          title="아래로 스크롤 (길게 누르면 연속 이동 · 더블클릭 시 맨 아래로)"
+          aria-label="모드 목록 아래로 스크롤"
+        >▼</button>
       </div>
     </section>
 
@@ -152,7 +188,7 @@
         <div class="progress-header-row">
           <div id="status-summary" class="footer-status status-summary">진행 상태: 모드 폴더 확인 중...</div>
           <label class="auto-launch-toggle" for="chk-auto-launch" title="업데이트 완료 직후 심즈4를 자동으로 실행합니다">
-            <input type="checkbox" id="chk-auto-launch" class="mod-checkbox auto-launch-checkbox" checked />
+            <input type="checkbox" id="chk-auto-launch" class="mod-checkbox auto-launch-checkbox" />
             <span>업데이트 후 게임 자동 실행</span>
           </label>
         </div>
@@ -183,6 +219,38 @@
       </div>
     </footer>
   </main>
+
+  <!-- 옵션 선택 모달 (More Columns in CAS 등 택1 옵션 설치/업데이트 시 표시) -->
+  <div
+    id="option-select-modal"
+    class="option-modal-overlay is-hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="option-modal-title"
+  >
+    <div class="option-modal-card sim-card">
+      <div class="option-modal-header">
+        <div class="option-modal-title-wrap">
+          <span class="option-modal-badge">옵션 선택 (택1)</span>
+          <h2 id="option-modal-title" class="option-modal-title">모드 옵션 선택</h2>
+        </div>
+        <button
+          type="button"
+          id="btn-option-modal-close"
+          class="option-modal-close"
+          aria-label="옵션 선택 창 닫기"
+        >✕</button>
+      </div>
+      <p id="option-modal-desc" class="option-modal-desc">
+        설치할 버전을 선택해 주세요. (동시 설치 불가 · 1개 선택)
+      </p>
+      <div id="option-modal-list" class="option-modal-list" role="radiogroup" aria-labelledby="option-modal-title"></div>
+      <div class="option-modal-actions">
+        <button type="button" id="btn-option-modal-cancel" class="sim-btn btn-modal-cancel">취소</button>
+        <button type="button" id="btn-option-modal-confirm" class="sim-btn btn-modal-confirm">선택 완료 및 업데이트</button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

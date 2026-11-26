@@ -1,7 +1,9 @@
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
+
+from src.utils import is_safe_subpath
 
 # CC(외형/건축/포즈 등) 전용 폴더 판별용 키워드
 CC_FOLDER_TOKEN_PATTERN = re.compile(
@@ -323,12 +325,80 @@ class ModScanner:
             prio = 3
         return (prio, p.name.lower())
 
-    def scan_updatable_mod_units(self) -> List[Dict[str, Any]]:
-        """Mods 폴더 전체(1단계 폴더, 통합 폴더 내 하위 폴더, Mods 루트 직속 단일 파일, .package 전용 모드 포함)를
-        스캔하여 실제 업데이트 점검 대상인 '개별 모드 단위(Mod Unit)' 목록을 반환합니다.
+    def _collect_directory_tree_units(self, root_dir: Path, skip_root_if_cc: bool = True) -> List[Dict[str, Any]]:
+        """지정된 디렉터리 트리를 순회하며 비-CC/비보조 폴더 내 모드 유닛 목록을 수집합니다."""
+        if not root_dir.exists() or not root_dir.is_dir():
+            return []
+        if skip_root_if_cc and self._is_cc_folder_name(root_dir.name):
+            return []
+
+        collected_by_dir: Dict[Path, List[Path]] = {}
+        has_root_mods = False
+        has_any_mod_files = False
+
+        for dirpath_str, dirnames, filenames in os.walk(root_dir):
+            cur_dir = Path(dirpath_str)
+            is_root = cur_dir == root_dir
+
+            mod_files = sorted(
+                [
+                    cur_dir / fn
+                    for fn in filenames
+                    if os.path.splitext(fn)[1].lower() in (".package", ".ts4script")
+                ],
+                key=lambda p: p.name.lower(),
+            )
+            if mod_files:
+                has_any_mod_files = True
+                if is_root:
+                    has_root_mods = True
+                collected_by_dir[cur_dir] = mod_files
+
+            # 보조/옵션/CC 전용 하위폴더는 os.walk 순회 자체를 가지치기(prune)
+            pruned_dirnames: List[str] = []
+            for dname in dirnames:
+                d_low = dname.lower().strip()
+                if d_low in AUX_SUBFOLDER_NAMES or self._is_cc_folder_name(dname):
+                    continue
+                if self._is_cc_or_aux_subfolder(cur_dir / dname, has_root_mods):
+                    continue
+                pruned_dirnames.append(dname)
+            dirnames[:] = pruned_dirnames
+
+        if not has_any_mod_files:
+            return []
+
+        units: List[Dict[str, Any]] = []
+        if root_dir in collected_by_dir:
+            units.extend(
+                self._group_directory_into_units(root_dir, collected_by_dir[root_dir], is_standalone_root=False)
+            )
+
+        for sub_dir, d_files in sorted(
+            ((d, files) for d, files in collected_by_dir.items() if d != root_dir),
+            key=lambda item: str(item[0]).lower(),
+        ):
+            units.extend(
+                self._group_directory_into_units(sub_dir, d_files, is_standalone_root=False)
+            )
+        return units
+
+    def scan_updatable_mod_units(self, target_subfolder: Optional[Path] = None) -> List[Dict[str, Any]]:
+        """Mods 폴더 전체(또는 지정된 특정 하위 폴더)를 스캔하여
+        실제 업데이트 점검 대상인 '개별 모드 단위(Mod Unit)' 목록을 반환합니다.
         """
         if not self.mods_folder.exists():
             return []
+
+        if target_subfolder is not None:
+            sub_resolved = Path(target_subfolder).resolve()
+            mods_resolved = self.mods_folder.resolve()
+            if sub_resolved != mods_resolved:
+                if not sub_resolved.exists() or not sub_resolved.is_dir():
+                    return []
+                if not is_safe_subpath(sub_resolved, mods_resolved, allow_equal=False):
+                    return []
+                return self._collect_directory_tree_units(sub_resolved, skip_root_if_cc=False)
 
         all_units: List[Dict[str, Any]] = []
 
@@ -336,59 +406,7 @@ class ModScanner:
         for top_dir in sorted(self.mods_folder.iterdir(), key=self._folder_scan_sort_key):
             if not top_dir.is_dir():
                 continue
-
-            # CC 전용 폴더명(예: CAS, BUILD, POSE, 4 High Priority CC, 6 Slider, 7 CC 등)은 내부 rglob 전에 즉시 건너뜀
-            if self._is_cc_folder_name(top_dir.name):
-                continue
-
-            collected_by_dir: Dict[Path, List[Path]] = {}
-            has_root_mods = False
-            has_any_mod_files = False
-
-            for dirpath_str, dirnames, filenames in os.walk(top_dir):
-                cur_dir = Path(dirpath_str)
-                is_top = cur_dir == top_dir
-
-                mod_files = sorted(
-                    [
-                        cur_dir / fn
-                        for fn in filenames
-                        if os.path.splitext(fn)[1].lower() in (".package", ".ts4script")
-                    ],
-                    key=lambda p: p.name.lower(),
-                )
-                if mod_files:
-                    has_any_mod_files = True
-                    if is_top:
-                        has_root_mods = True
-                    collected_by_dir[cur_dir] = mod_files
-
-                # 보조/옵션/CC 전용 하위폴더는 os.walk 순회 자체를 가지치기(prune)
-                pruned_dirnames: List[str] = []
-                for dname in dirnames:
-                    d_low = dname.lower().strip()
-                    if d_low in AUX_SUBFOLDER_NAMES or self._is_cc_folder_name(dname):
-                        continue
-                    if self._is_cc_or_aux_subfolder(cur_dir / dname, has_root_mods):
-                        continue
-                    pruned_dirnames.append(dname)
-                dirnames[:] = pruned_dirnames
-
-            if not has_any_mod_files:
-                continue
-
-            if top_dir in collected_by_dir:
-                all_units.extend(
-                    self._group_directory_into_units(top_dir, collected_by_dir[top_dir], is_standalone_root=False)
-                )
-
-            for sub_dir, d_files in sorted(
-                ((d, files) for d, files in collected_by_dir.items() if d != top_dir),
-                key=lambda item: str(item[0]).lower(),
-            ):
-                all_units.extend(
-                    self._group_directory_into_units(sub_dir, d_files, is_standalone_root=False)
-                )
+            all_units.extend(self._collect_directory_tree_units(top_dir, skip_root_if_cc=True))
 
         # 2. Mods 루트 직속 단일 파일(standalone_files) 스캔 및 그룹화
         root_standalone = sorted(
@@ -949,17 +967,24 @@ class ModScanner:
         has_package = len(matched_packages) > 0
         has_script = len(matched_scripts) > 0
 
-        # 3. package / ts4script 단위 중복 모드 파일 감지
+        # 3. package / ts4script 단위 중복 모드 파일 감지 (일반 CC 제외: .ts4script 또는 카탈로그 등록 모드만 검사)
         duplicates = []
         target_file_map = {f.name.lower(): f for f in matched_packages + matched_scripts}
 
         if target_file_map:
+            try:
+                from src.finder import check_known_catalog
+            except Exception:
+                check_known_catalog = None  # type: ignore[assignment]
             for item in self.mods_folder.rglob("*"):
                 if not item.is_file():
                     continue
                 suffix = item.suffix.lower()
                 if suffix not in [".package", ".ts4script"]:
                     continue
+                if suffix == ".package":
+                    if check_known_catalog is None or not check_known_catalog(item.name):
+                        continue
                 item_name_lower = item.name.lower()
                 if item_name_lower in target_file_map:
                     original_file = target_file_map[item_name_lower]

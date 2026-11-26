@@ -55,7 +55,23 @@ def resolve_ui_entry() -> Path:
 class Sims4ModUpdaterAPI:
     """pywebview 프론트엔드(ui/app.js)와 Python 백엔드(src/*)를 연결하는 엔드포인트 클래스."""
 
-    SCAN_CACHE_SCHEMA_VERSION = 2
+    SCAN_CACHE_SCHEMA_VERSION = 10
+
+    @staticmethod
+    def _is_variant_installed(vc: Dict[str, Any], unit_names_low: set[str]) -> bool:
+        fn_low = str(vc.get("file_name") or "").strip().lower()
+        if not fn_low or not unit_names_low:
+            return False
+        if fn_low in unit_names_low:
+            return True
+        toks = [str(t).strip().lower() for t in (vc.get("match_tokens") or []) if str(t).strip()]
+        if not toks:
+            for auto_tok in ("withtimedecay", "notimedecay"):
+                if auto_tok in fn_low:
+                    toks.append(auto_tok)
+        if toks:
+            return any(all(tok in un for tok in toks) for un in unit_names_low)
+        return False
 
     def __init__(self, base_dir: Path = BASE_DIR) -> None:
         self.base_dir = base_dir.resolve()
@@ -118,6 +134,24 @@ class Sims4ModUpdaterAPI:
                 return candidate.resolve()
         return (self.base_dir / manifest_rel).resolve()
 
+    def _resolve_scan_target(self, mods_folder: Path) -> Tuple[Path, str]:
+        """설정된 하위 폴더(scan_subfolder)가 유효하면 (하위 폴더 Path, 상대 경로)를, 아니면 (전체 Mods, '')를 반환합니다."""
+        raw_sub = self.config_manager.scan_subfolder
+        if not raw_sub or not str(mods_folder).strip() or not mods_folder.exists():
+            return mods_folder, ""
+        try:
+            mods_resolved = mods_folder.resolve()
+            cand = (mods_resolved / raw_sub).resolve()
+            if cand == mods_resolved:
+                self.config_manager.set_scan_subfolder("")
+                return mods_resolved, ""
+            if cand.exists() and cand.is_dir() and is_safe_subpath(cand, mods_resolved, allow_equal=False):
+                return cand, str(cand.relative_to(mods_resolved))
+        except Exception:
+            pass
+        self.config_manager.set_scan_subfolder("")
+        return mods_folder, ""
+
     def _resolve_scan_cache_path(self) -> Path:
         return (self.base_dir / "scan_cache.json").resolve()
 
@@ -149,6 +183,7 @@ class Sims4ModUpdaterAPI:
         mods_list: List[Dict[str, Any]],
         summary: Dict[str, int],
         mod_cache: Dict[str, Dict[str, Any]],
+        scan_subfolder: str = "",
     ) -> None:
         """당일(자정 전까지) 재사용할 모드 스캔 결과를 디스크(scan_cache.json)에 저장합니다."""
         cache_path = self._resolve_scan_cache_path()
@@ -158,6 +193,9 @@ class Sims4ModUpdaterAPI:
             "scan_date": now.date().isoformat(),
             "scanned_at": now.strftime("%Y-%m-%d %H:%M:%S"),
             "mods_folder": str(mods_folder.resolve()),
+            "scan_subfolder": str(scan_subfolder or ""),
+            "rpo_channel": self.config_manager.rpo_channel,
+            "ww_channel": self.config_manager.ww_channel,
             "mods": self._json_safe(mods_list),
             "summary": self._json_safe(summary),
             "mod_cache": self._json_safe(mod_cache),
@@ -175,7 +213,9 @@ class Sims4ModUpdaterAPI:
             except Exception:
                 pass
 
-    def _load_daily_scan_cache(self, mods_folder: Path) -> Optional[Dict[str, Any]]:
+    def _load_daily_scan_cache(
+        self, mods_folder: Path, scan_subfolder: str = ""
+    ) -> Optional[Dict[str, Any]]:
         """당일 스캔 캐시를 불러옵니다. 자정이 지나 날짜가 바뀌었으면 캐시를 초기화하고 None을 반환합니다."""
         cache_path = self._resolve_scan_cache_path()
         if not cache_path.exists():
@@ -194,6 +234,17 @@ class Sims4ModUpdaterAPI:
 
         if data.get("schema_version") != self.SCAN_CACHE_SCHEMA_VERSION:
             self._clear_daily_scan_cache()
+            return None
+
+        if data.get("rpo_channel") != self.config_manager.rpo_channel:
+            self._clear_daily_scan_cache()
+            return None
+
+        if data.get("ww_channel", "free") != self.config_manager.ww_channel:
+            self._clear_daily_scan_cache()
+            return None
+
+        if str(data.get("scan_subfolder") or "") != str(scan_subfolder or ""):
             return None
 
         today_str = datetime.date.today().isoformat()
@@ -264,15 +315,28 @@ class Sims4ModUpdaterAPI:
             pass
 
     @staticmethod
+    def _is_conflict_check_eligible_file(path: Path) -> bool:
+        """충돌/중복 검사 대상인지 판별합니다.
+        일반 CC(.package) 오탐지를 막기 위해 스크립트(.ts4script) 또는 카탈로그에 등록된 기능성/게임플레이 모드 파일만 허용합니다.
+        """
+        ext = path.suffix.lower()
+        if ext == ".ts4script":
+            return True
+        if ext == ".package":
+            return bool(check_known_catalog(path.name))
+        return False
+
+    @classmethod
     def _detect_duplicate_map_from_units(
+        cls,
         units: List[Dict[str, Any]],
     ) -> Dict[str, List[str]]:
-        """이미 스캔된 모드 유닛들의 파일 목록에서 중복(.package / .ts4script) 파일명과 경로를 고속 추출합니다."""
+        """이미 스캔된 모드 유닛들의 파일 목록에서 중복(.ts4script 또는 카탈로그 등록 .package) 파일명과 경로를 고속 추출합니다."""
         grouped: Dict[str, List[str]] = {}
         for unit in units:
             for f_str in unit.get("unit_files", []):
                 p = Path(f_str)
-                if p.suffix.lower() not in (".package", ".ts4script"):
+                if not cls._is_conflict_check_eligible_file(p):
                     continue
                 key = p.name.lower()
                 norm_str = str(p)
@@ -290,19 +354,23 @@ class Sims4ModUpdaterAPI:
         s = (ver_str or "").strip()
         if not s:
             return ""
-        if re.match(r"^(?:[vV]\s*\d|\d|[abAB]\d|[vV]\d+[gGbBpPrR]\d+)", s):
+        if re.match(r"^(?:[vV]\s*\d|\d|[abAB]\d|[vV]\d+(?:\.\d+)?[gGbBpPrR]\d*)", s):
             return s
         paren = re.search(r"\((.+)\)\s*$", s)
         return paren.group(1).strip() if paren else s
 
     @staticmethod
     def _to_comparable_version_str(tok: str) -> str:
-        """'(핫픽스)' 접미사를 PEP 440 post 릴리스('.post1', '.post2' 등)로 변환합니다."""
-        return re.sub(
+        """'(핫픽스)' 접미사 및 선행 알파/베타 접두사('a0.5', 'b1.0')를 PEP 440 비교 가능 문자열로 변환합니다."""
+        s = re.sub(
             r"\s*\(핫픽스(?:\s*(\d+))?\)",
             lambda m: f".post{m.group(1) or '1'}",
             (tok or "").strip(),
         )
+        m_ab = re.match(r"^([abAB])(\d+(?:\.\d+)*)(.*)$", s)
+        if m_ab:
+            s = f"{m_ab.group(2)}{m_ab.group(1).lower()}0{m_ab.group(3)}"
+        return s
 
     @staticmethod
     def _is_hotfix_subversion_of(base_tok: str, cand_tok: str) -> bool:
@@ -339,6 +407,11 @@ class Sims4ModUpdaterAPI:
         if loc_tok.lower() == rem_tok.lower():
             return False
 
+        is_loc_date = bool(re.match(r"^20\d{2}\.\d{2}\.\d{2}$", loc_tok))
+        is_rem_date = bool(re.match(r"^20\d{2}\.\d{2}\.\d{2}$", rem_tok))
+        if is_loc_date != is_rem_date:
+            return None
+
         try:
             return version.parse(cls._to_comparable_version_str(rem_tok)) > version.parse(
                 cls._to_comparable_version_str(loc_tok)
@@ -346,29 +419,62 @@ class Sims4ModUpdaterAPI:
         except Exception:
             return rem_tok.lower() != loc_tok.lower()
 
+    @classmethod
+    def _is_explicit_version_token(cls, ver_str: str) -> bool:
+        """날짜('YYYY.MM.DD') 형식이 아닌 명시적 버전 번호(예: v1.38, v1, v1.677, v2.0.12.0, v3.0.3, 2026.6.0, V98G8, a0.5 등)인지 판별합니다."""
+        tok = cls._normalize_version_token(ver_str)
+        if not tok:
+            return False
+        if re.match(r"^20\d{2}\.\d{2}\.\d{2}$", tok):
+            return False
+        return True
+
     @staticmethod
     def _format_display_version(ver_str: str) -> str:
-        """버전 토큰을 UI 표시용 문자열로 포맷합니다 (예: 1.1 -> v1.1, 2026.08.09 -> 2026.08.09)."""
+        """버전 토큰을 UI 표시용 문자열로 포맷합니다 (예: 1.1 -> v1.1, a0.5 -> a0.5, 2026.08.09 -> 2026.08.09)."""
         tok = (ver_str or "").strip()
         if not tok:
             return ""
+        if re.match(r"^V\d+(?:\.\d+)?[GBPR]\d*$", tok, flags=re.IGNORECASE):
+            return tok.upper()
+        if re.match(r"^[abAB]\d", tok):
+            return tok[0].lower() + tok[1:]
         if re.match(r"^(?:[vV]|20\d{2}\.)", tok):
             return tok
         return f"v{tok}"
 
     @staticmethod
-    def _build_manifest_version_map(updater: ModUpdater) -> Dict[str, str]:
-        """mods_manifest.json에서 파일명(소문자) -> current_version 매핑을 생성합니다."""
-        ver_map: Dict[str, str] = {}
+    def _build_manifest_version_map(updater: ModUpdater) -> Dict[str, Dict[str, Any]]:
+        """mods_manifest.json에서 파일명(소문자) -> {'version', 'size', 'mtime', 'asset_name'} 매핑을 생성합니다."""
+        ver_map: Dict[str, Dict[str, Any]] = {}
         try:
             for item in updater.load_manifest():
                 cur_v = str(item.get("current_version") or "").strip()
-                if not cur_v:
+                asset_n = str(item.get("installed_asset_name") or "").strip()
+                raw_size = item.get("local_file_size")
+                try:
+                    file_size = int(raw_size) if raw_size is not None else 0
+                except (TypeError, ValueError):
+                    file_size = 0
+                raw_mtime = item.get("local_file_mtime")
+                try:
+                    file_mtime = int(raw_mtime) if raw_mtime is not None else 0
+                except (TypeError, ValueError):
+                    file_mtime = 0
+                if not cur_v and not (file_size > 0 and asset_n):
                     continue
+                info = {"version": cur_v, "size": file_size, "mtime": file_mtime, "asset_name": asset_n}
                 for key_field in ("local_file", "name"):
                     raw_k = str(item.get(key_field) or "").strip().lower()
-                    if raw_k and raw_k not in ver_map:
-                        ver_map[raw_k] = cur_v
+                    if not raw_k:
+                        continue
+                    existing_info = ver_map.get(raw_k)
+                    if (
+                        existing_info is None
+                        or info["size"] > 0
+                        or existing_info.get("size", 0) == 0
+                    ):
+                        ver_map[raw_k] = info
         except Exception:
             pass
         return ver_map
@@ -393,7 +499,7 @@ class Sims4ModUpdaterAPI:
         updater: ModUpdater,
         duplicate_map: Dict[str, List[str]],
         check_remote: bool = True,
-        manifest_ver_map: Optional[Dict[str, str]] = None,
+        manifest_ver_map: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> Tuple[str, Dict[str, Any]]:
         """ModScanner의 개별 모드 유닛(unit)을 프론트엔드 갤러리 카드 스키마로 변환합니다."""
         primary_file = (
@@ -414,11 +520,21 @@ class Sims4ModUpdaterAPI:
         allow_folder_cat = f_low_clean not in (
             "prio", "overrides", "override", "mod", "mods", "gsm", "gm", "(mods 루트)"
         )
+        rpo_channel = self.config_manager.rpo_channel
+        ww_channel = self.config_manager.ww_channel
         catalog_hit = (
-            check_known_catalog(primary_file)
-            or (check_known_catalog(folder_name) if allow_folder_cat else None)
+            check_known_catalog(primary_file, rpo_channel=rpo_channel, ww_channel=ww_channel)
+            or (
+                check_known_catalog(folder_name, rpo_channel=rpo_channel, ww_channel=ww_channel)
+                if allow_folder_cat
+                else None
+            )
             or {}
         )
+        is_rpo_collection = (
+            catalog_hit.get("matched_catalog") == "Relationship & Pregnancy Overhaul (RPO Collection)"
+        )
+        is_wickedwhims_catalog = catalog_hit.get("matched_catalog") == "WickedWhims"
         fn_ver = (
             extract_version_from_filename(primary_file)
             or (extract_version_from_filename(folder_name) if allow_folder_cat else "")
@@ -426,16 +542,43 @@ class Sims4ModUpdaterAPI:
         )
 
         # mods_manifest.json에 저장된 설치 버전(업데이트 완료 후 기록됨) 반영
+        # size가 기록되어 있으면 파일 크기/수정 시각 일치 시 채택하고, size 미기재 기존 레코드는 실제 파일 존재 시 채택
         manifest_ver_raw = ""
+        manifest_fallback_raw = ""
+        manifest_file_verified = False
+        manifest_asset_name = ""
         if manifest_ver_map:
-            if primary_file and primary_file.lower() in manifest_ver_map:
-                manifest_ver_raw = manifest_ver_map[primary_file.lower()]
-            else:
-                for uf in unit.get("unit_files", []):
-                    uf_low = Path(uf).name.lower()
-                    if uf_low in manifest_ver_map:
-                        manifest_ver_raw = manifest_ver_map[uf_low]
-                        break
+            candidate_files: List[Path] = []
+            if primary_path:
+                candidate_files.append(Path(primary_path))
+            for uf in unit.get("unit_files", []):
+                uf_p = Path(uf)
+                if not primary_path or str(uf_p) != str(primary_path):
+                    candidate_files.append(uf_p)
+            for cf in candidate_files:
+                cf_low = cf.name.lower()
+                m_info = manifest_ver_map.get(cf_low)
+                if not m_info:
+                    continue
+                if not manifest_fallback_raw:
+                    manifest_fallback_raw = str(m_info.get("version") or "")
+                try:
+                    if not (cf.exists() and cf.is_file()):
+                        continue
+                    m_size = int(m_info.get("size") or 0)
+                    m_mtime = int(m_info.get("mtime") or 0)
+                    if m_size > 0:
+                        st = cf.stat()
+                        if st.st_size != m_size:
+                            continue
+                        if m_mtime > 0 and abs(int(st.st_mtime) - m_mtime) > 2:
+                            continue
+                        manifest_file_verified = True
+                    manifest_ver_raw = str(m_info.get("version") or "")
+                    manifest_asset_name = str(m_info.get("asset_name") or "")
+                    break
+                except OSError:
+                    continue
         manifest_ver_tok = self._normalize_version_token(manifest_ver_raw)
 
         meta: Dict[str, Any] = {}
@@ -446,6 +589,7 @@ class Sims4ModUpdaterAPI:
         explicit_local_ver = fn_ver or (self._format_display_version(bin_ver) if bin_ver else "")
         local_ver = explicit_local_ver
         manifest_promoted = False
+        is_mtime_fallback = False
         if manifest_ver_tok:
             if not explicit_local_ver:
                 local_ver = self._format_display_version(manifest_ver_tok)
@@ -453,7 +597,8 @@ class Sims4ModUpdaterAPI:
             elif self._is_remote_strictly_newer(explicit_local_ver, manifest_ver_tok) is True:
                 bin_clean = bin_ver.lstrip("vV")
                 allow_promote = (
-                    not bin_clean
+                    manifest_file_verified
+                    or not bin_clean
                     or self._is_hotfix_subversion_of(bin_clean, manifest_ver_tok)
                     or bool(re.match(r"^20\d{2}\.\d{2}\.\d{2}$", manifest_ver_tok))
                 )
@@ -461,10 +606,53 @@ class Sims4ModUpdaterAPI:
                     local_ver = self._format_display_version(manifest_ver_tok)
                     manifest_promoted = True
 
+        # 명시적 버전 번호(예: v1.38, v1, v1.677, v2.0.12.0, v3.0.3)가 존재할 경우 날짜로 대체하지 않음
         if not local_ver:
-            raw_v = str(meta.get("version") or catalog_hit.get("version") or "").strip()
-            if raw_v:
-                local_ver = self._format_display_version(raw_v)
+            ver_cands = (
+                (meta.get("version"), manifest_fallback_raw)
+                if ((is_rpo_collection and rpo_channel == "free") or (is_wickedwhims_catalog and ww_channel == "paid"))
+                else (catalog_hit.get("version"), meta.get("version"), manifest_fallback_raw)
+            )
+            for cand_ver in ver_cands:
+                if cand_ver and self._is_explicit_version_token(str(cand_ver)):
+                    unwrapped_cand = self._unwrap_platform_version(str(cand_ver).strip())
+                    if unwrapped_cand:
+                        local_ver = self._format_display_version(unwrapped_cand)
+                        break
+
+        # 오직 명시적 버전 문자열이 비어 있거나 날짜 형식만 있는 버전 미표기 대상인 경우에만 파일 수정 날짜(mtime) 기준 적용
+        cat_ver_tok = self._normalize_version_token(str(catalog_hit.get("version") or ""))
+        cat_date_tok = cat_ver_tok if re.match(r"^20\d{2}\.\d{2}\.\d{2}$", cat_ver_tok) else ""
+        raw_mtime_date = ""
+        is_created_today = False
+        today_str = datetime.date.today().strftime("%Y.%m.%d")
+        if not local_ver:
+            mtime_candidates: List[Path] = []
+            if primary_path:
+                mtime_candidates.append(Path(primary_path))
+            for uf in unit.get("unit_files", []):
+                uf_p = Path(uf)
+                if not primary_path or str(uf_p) != str(primary_path):
+                    mtime_candidates.append(uf_p)
+            for mc in mtime_candidates:
+                try:
+                    if mc.exists() and mc.is_file():
+                        st_mc = mc.stat()
+                        raw_mtime_date = datetime.datetime.fromtimestamp(st_mc.st_mtime).strftime("%Y.%m.%d")
+                        is_created_today = (
+                            raw_mtime_date == today_str
+                            and abs(st_mc.st_ctime - st_mc.st_mtime) <= 120
+                        )
+                        if cat_date_tok and raw_mtime_date > cat_date_tok:
+                            local_ver = cat_date_tok
+                        elif is_created_today and not cat_date_tok:
+                            local_ver = ""
+                        else:
+                            local_ver = raw_mtime_date
+                        is_mtime_fallback = True
+                        break
+                except OSError:
+                    continue
 
         bracket_m = re.search(r"\[([^\]]+)\]", primary_file or "")
         bracket_creator = bracket_m.group(1).strip() if bracket_m else ""
@@ -494,10 +682,23 @@ class Sims4ModUpdaterAPI:
         elif "wickedwhims" in clean_title.lower():
             clean_title = "WickedWhims"
 
-        # 중복/충돌 경로 점검
+        is_unreleased_mod = bool(catalog_hit.get("is_unreleased")) or bool(
+            re.search(
+                r"sulsul[\s_-]*ai",
+                f"{primary_file} {folder_name} {clean_title}",
+                flags=re.IGNORECASE,
+            )
+        )
+        if is_unreleased_mod and "sulsul" in f"{primary_file} {folder_name} {clean_title}".lower():
+            clean_title = "SulSul AI Mod"
+
+        # 중복/충돌 경로 점검 (스크립트 또는 카탈로그 등록 기능성 모드 파일만 대상)
         conflict_paths: List[str] = []
         for uf in unit.get("unit_files", []):
-            fname_low = Path(uf).name.lower()
+            uf_path = Path(uf)
+            if not self._is_conflict_check_eligible_file(uf_path):
+                continue
+            fname_low = uf_path.name.lower()
             if fname_low in duplicate_map:
                 for p in duplicate_map[fname_low]:
                     if p not in conflict_paths:
@@ -519,6 +720,11 @@ class Sims4ModUpdaterAPI:
         mod_cfg["file_path"] = primary_path
         mod_cfg["install_folder"] = unit.get("install_folder") or ""
         mod_cfg["current_version"] = local_ver.lstrip("vV") if local_ver else ""
+        is_wickedwhims = is_wickedwhims_catalog or mod_cfg.get("source_type") == "wickedwhims"
+        if is_rpo_collection:
+            mod_cfg["rpo_channel"] = rpo_channel
+        if is_wickedwhims:
+            mod_cfg["ww_channel"] = ww_channel
 
         display_local_ver = local_ver or "버전 미표기"
         catalog_url = str(catalog_hit.get("primary_url") or "").strip()
@@ -531,10 +737,63 @@ class Sims4ModUpdaterAPI:
                 status_type = "conflict"
                 status_text = "충돌 / 중복"
                 latest_label = "중복 감지"
+            elif is_unreleased_mod:
+                status_type = "latest"
+                status_text = "미출시"
+                latest_label = "미출시"
             else:
                 status_type = "checking"
                 status_text = "버전 확인 중"
                 latest_label = "조회 대기..."
+
+            cat_requires_modal = bool(catalog_hit.get("requires_option_modal"))
+            cat_modal_mode = str(catalog_hit.get("option_modal_mode") or "")
+            cat_modal_prompt = str(catalog_hit.get("option_modal_prompt") or "")
+            p1_names_low = {Path(uf).name.lower() for uf in unit.get("unit_files", [])}
+            if primary_file:
+                p1_names_low.add(Path(primary_file).name.lower())
+            cat_option_choices = [
+                {
+                    "file_name": str(vc.get("file_name") or ""),
+                    "label": str(vc.get("label") or vc.get("file_name") or ""),
+                    "description": str(vc.get("description") or ""),
+                    "channel": str(vc.get("channel") or ""),
+                    "match_tokens": list(vc.get("match_tokens") or []),
+                    "installed": (
+                        str(vc.get("channel") or "") == rpo_channel
+                        if cat_modal_mode == "rpo_channel"
+                        else (
+                            str(vc.get("channel") or "") == ww_channel
+                            if cat_modal_mode == "ww_channel"
+                            else self._is_variant_installed(vc, p1_names_low)
+                        )
+                    ),
+                }
+                for vc in (catalog_hit.get("option_presets") or [])
+                if isinstance(vc, dict) and vc.get("file_name")
+            ]
+            cat_selected_variant = ""
+            if cat_modal_mode == "rpo_channel":
+                cat_selected_variant = f"rpo_channel:{rpo_channel}"
+            elif cat_modal_mode == "ww_channel":
+                cat_selected_variant = f"ww_channel:{ww_channel}"
+            elif cat_option_choices:
+                p1_matched_vc = next(
+                    (vc["file_name"] for vc in cat_option_choices if vc.get("installed")),
+                    "",
+                )
+                cat_selected_variant = p1_matched_vc or cat_option_choices[0]["file_name"]
+
+            cat_optional_addons = [
+                {
+                    "file_name": str(oa.get("file_name") or ""),
+                    "label": str(oa.get("label") or oa.get("file_name") or ""),
+                    "installed": str(oa.get("file_name") or "").strip().lower() in p1_names_low,
+                }
+                for oa in (catalog_hit.get("optional_addons") or [])
+                if isinstance(oa, dict) and oa.get("file_name")
+            ]
+            cat_selected_addons = [oa["file_name"] for oa in cat_optional_addons if oa["installed"]]
 
             entry = {
                 "id": mod_id,
@@ -550,6 +809,15 @@ class Sims4ModUpdaterAPI:
                 "conflictPaths": conflict_paths,
                 "folderName": folder_name,
                 "primaryFile": primary_file,
+                "variantChoices": cat_option_choices,
+                "selectedVariant": cat_selected_variant,
+                "optionalAddons": cat_optional_addons,
+                "selectedAddons": cat_selected_addons,
+                "requiresOptionModal": cat_requires_modal,
+                "optionModalMode": cat_modal_mode,
+                "optionModalPrompt": cat_modal_prompt,
+                "rpoChannel": rpo_channel if is_rpo_collection else "",
+                "wwChannel": ww_channel if is_wickedwhims else "",
             }
             return mod_id, {
                 "entry": entry,
@@ -602,6 +870,14 @@ class Sims4ModUpdaterAPI:
         remote_file_size = int(update_info.get("remote_file_size") or 0)
         asset_name = str(update_info.get("asset_name") or "").strip()
         binary_hotfix_mismatch = False
+        local_fsize = 0
+        if primary_path:
+            try:
+                loc_p = Path(primary_path)
+                if loc_p.exists() and loc_p.is_file():
+                    local_fsize = loc_p.stat().st_size
+            except OSError:
+                local_fsize = 0
         if (
             direct_file
             and remote_file_size > 0
@@ -612,10 +888,9 @@ class Sims4ModUpdaterAPI:
             try:
                 loc_p = Path(primary_path)
                 if loc_p.exists() and loc_p.is_file() and loc_p.name.lower() == asset_name.lower():
-                    local_fsize = loc_p.stat().st_size
                     loc_tok = self._normalize_version_token(local_ver)
                     rem_tok = self._normalize_version_token(latest_ver_clean)
-                    if local_fsize == remote_file_size and loc_tok and rem_tok and self._is_hotfix_subversion_of(loc_tok, rem_tok):
+                    if local_fsize == remote_file_size and rem_tok and (not loc_tok or is_mtime_fallback or self._is_hotfix_subversion_of(loc_tok, rem_tok)):
                         local_ver = self._format_display_version(rem_tok)
                         display_local_ver = local_ver
                     elif local_fsize != remote_file_size and manifest_promoted and bin_ver:
@@ -625,6 +900,21 @@ class Sims4ModUpdaterAPI:
                         binary_hotfix_mismatch = True
             except OSError:
                 pass
+        if is_mtime_fallback and raw_mtime_date:
+            rem_date_tok = self._normalize_version_token(latest_ver_clean)
+            if re.match(r"^20\d{2}\.\d{2}\.\d{2}$", rem_date_tok):
+                if raw_mtime_date >= rem_date_tok:
+                    local_ver = rem_date_tok
+                elif cat_date_tok and cat_date_tok < rem_date_tok and raw_mtime_date > cat_date_tok:
+                    local_ver = cat_date_tok
+                else:
+                    local_ver = raw_mtime_date
+                display_local_ver = local_ver or "버전 미표기"
+                mod_cfg["current_version"] = local_ver.lstrip("vV") if local_ver else ""
+            elif is_created_today and not cat_date_tok:
+                local_ver = ""
+                display_local_ver = "버전 미표기"
+                mod_cfg["current_version"] = ""
         newer_cmp = True if binary_hotfix_mismatch else self._is_remote_strictly_newer(local_ver, latest_ver_clean)
 
         if conflict_paths:
@@ -633,12 +923,45 @@ class Sims4ModUpdaterAPI:
             display_latest_ver = latest_ver_clean or "중복 감지"
             checked = False
             disabled = True
+        elif is_unreleased_mod:
+            status_type = "latest"
+            status_text = "미출시"
+            display_latest_ver = "미출시"
+            checked = False
+            disabled = True
+            page_url = ""
         elif update_info.get("error") or update_info.get("link_not_found"):
             status_type = "error"
             status_text = "링크 오류"
             display_latest_ver = "확인 불가"
             checked = False
             disabled = True
+        elif is_rpo_collection and rpo_channel == "early_access":
+            if newer_cmp is False and local_ver:
+                status_type = "latest"
+                status_text = "최신버전"
+                display_latest_ver = latest_ver_clean or display_local_ver
+                checked = False
+                disabled = False
+            else:
+                status_type = "manual"
+                status_text = "수동 확인"
+                display_latest_ver = latest_ver_clean or "v3"
+                checked = False
+                disabled = True
+        elif is_wickedwhims and ww_channel == "paid":
+            if newer_cmp is False and local_ver:
+                status_type = "latest"
+                status_text = "최신버전"
+                display_latest_ver = latest_ver_clean or display_local_ver
+                checked = False
+                disabled = False
+            else:
+                status_type = "manual"
+                status_text = "수동 확인"
+                display_latest_ver = latest_ver_clean or "v187.18"
+                checked = False
+                disabled = True
         elif requires_browser:
             if newer_cmp is False and local_ver:
                 status_type = "latest"
@@ -653,11 +976,19 @@ class Sims4ModUpdaterAPI:
                 checked = False
                 disabled = True
         elif direct_file:
-            is_updatable = (
-                bool(newer_cmp)
-                if newer_cmp is not None
-                else bool(update_info.get("has_update"))
-            )
+            if newer_cmp is not None:
+                is_updatable = bool(newer_cmp)
+            else:
+                same_verified_asset = (
+                    manifest_file_verified
+                    and (
+                        not asset_name
+                        or not manifest_asset_name
+                        or manifest_asset_name.lower() == asset_name.lower()
+                    )
+                    and (remote_file_size <= 0 or local_fsize == remote_file_size)
+                )
+                is_updatable = False if same_verified_asset else bool(update_info.get("has_update"))
             if is_updatable:
                 status_type = "update"
                 status_text = "업데이트 가능"
@@ -677,6 +1008,71 @@ class Sims4ModUpdaterAPI:
             checked = False
             disabled = False
 
+        unit_names_low = {Path(uf).name.lower() for uf in unit.get("unit_files", [])}
+        if primary_file:
+            unit_names_low.add(Path(primary_file).name.lower())
+
+        option_modal_mode = str(
+            update_info.get("option_modal_mode") or catalog_hit.get("option_modal_mode") or ""
+        )
+        raw_variant_choices = update_info.get("variant_choices") or catalog_hit.get("option_presets") or []
+        variant_choices = [
+            {
+                "file_name": str(vc.get("file_name") or ""),
+                "label": str(vc.get("label") or vc.get("file_name") or ""),
+                "description": str(vc.get("description") or ""),
+                "channel": str(vc.get("channel") or ""),
+                "match_tokens": list(vc.get("match_tokens") or []),
+                "installed": (
+                    str(vc.get("channel") or "") == rpo_channel
+                    if option_modal_mode == "rpo_channel"
+                    else (
+                        str(vc.get("channel") or "") == ww_channel
+                        if option_modal_mode == "ww_channel"
+                        else self._is_variant_installed(vc, unit_names_low)
+                    )
+                ),
+            }
+            for vc in raw_variant_choices
+            if isinstance(vc, dict) and vc.get("file_name")
+        ]
+        selected_variant = ""
+        if option_modal_mode == "rpo_channel":
+            selected_variant = f"rpo_channel:{rpo_channel}"
+            update_info["selected_variant"] = selected_variant
+        elif option_modal_mode == "ww_channel":
+            selected_variant = f"ww_channel:{ww_channel}"
+            update_info["selected_variant"] = selected_variant
+        elif variant_choices:
+            matched_vc = next(
+                (vc["file_name"] for vc in variant_choices if vc.get("installed")),
+                "",
+            )
+            selected_variant = matched_vc or variant_choices[0]["file_name"]
+            update_info["selected_variant"] = selected_variant
+
+        raw_optional_addons = update_info.get("optional_addons") or catalog_hit.get("optional_addons") or []
+        optional_addons_entries = [
+            {
+                "file_name": str(oa.get("file_name") or ""),
+                "label": str(oa.get("label") or oa.get("file_name") or ""),
+                "installed": str(oa.get("file_name") or "").strip().lower() in unit_names_low,
+            }
+            for oa in raw_optional_addons
+            if isinstance(oa, dict) and oa.get("file_name")
+        ]
+        selected_addons = [oa["file_name"] for oa in optional_addons_entries if oa["installed"]]
+        if optional_addons_entries:
+            update_info["optional_addons"] = raw_optional_addons
+            update_info["selected_addons"] = list(selected_addons)
+
+        requires_option_modal = bool(
+            update_info.get("requires_option_modal") or catalog_hit.get("requires_option_modal")
+        )
+        option_modal_prompt = str(
+            update_info.get("option_modal_prompt") or catalog_hit.get("option_modal_prompt") or ""
+        )
+
         entry = {
             "id": mod_id,
             "name": clean_title,
@@ -691,6 +1087,15 @@ class Sims4ModUpdaterAPI:
             "conflictPaths": conflict_paths,
             "folderName": folder_name,
             "primaryFile": primary_file,
+            "variantChoices": variant_choices,
+            "selectedVariant": selected_variant,
+            "optionalAddons": optional_addons_entries,
+            "selectedAddons": selected_addons,
+            "requiresOptionModal": requires_option_modal,
+            "optionModalMode": option_modal_mode,
+            "optionModalPrompt": option_modal_prompt,
+            "rpoChannel": rpo_channel if is_rpo_collection else "",
+            "wwChannel": ww_channel if is_wickedwhims else "",
         }
 
         return mod_id, {
@@ -706,21 +1111,25 @@ class Sims4ModUpdaterAPI:
     def get_initial_state(self) -> Dict[str, Any]:
         """[Endpoint 1] 당일 스캔 캐시가 유효하면 즉시 복원하고, 자정이 지났거나 캐시가 없으면 로컬 선스캔을 반환합니다."""
         mods_folder = self._resolve_mods_folder()
+        scan_target, scan_sub = self._resolve_scan_target(mods_folder)
         if str(mods_folder).strip() and mods_folder.exists():
-            cached = self._load_daily_scan_cache(mods_folder)
+            cached = self._load_daily_scan_cache(mods_folder, scan_subfolder=scan_sub)
             if cached is not None:
                 total_cnt = cached["summary"].get("total", len(cached["mods"]))
                 update_cnt = cached["summary"].get("update", 0)
                 scanned_time = cached["scanned_at"].split(" ")[-1][:5]
+                scope_label = f" [하위 폴더: {scan_sub}]" if scan_sub else ""
                 return {
                     "ok": True,
                     "cached": True,
                     "mods_folder": str(mods_folder),
+                    "scan_subfolder": scan_sub,
+                    "scan_target_path": str(scan_target),
                     "mods": cached["mods"],
                     "summary": cached["summary"],
                     "needs_remote_scan": False,
                     "message": (
-                        f"오늘({scanned_time}) 스캔된 모드 {total_cnt}개 데이터를 유지 중 "
+                        f"오늘({scanned_time}) 스캔된 모드 {total_cnt}개 데이터를 유지 중{scope_label} "
                         f"(업데이트/수동확인 {update_cnt}개 · 자정 이후 자동 초기화)"
                     ),
                 }
@@ -730,6 +1139,8 @@ class Sims4ModUpdaterAPI:
             "ok": local_scan.get("ok", True),
             "cached": False,
             "mods_folder": str(mods_folder),
+            "scan_subfolder": local_scan.get("scan_subfolder", scan_sub),
+            "scan_target_path": local_scan.get("scan_target_path", str(scan_target)),
             "mods": local_scan.get("mods", []),
             "summary": local_scan.get("summary", {}),
             "needs_remote_scan": len(local_scan.get("mods", [])) > 0,
@@ -748,7 +1159,7 @@ class Sims4ModUpdaterAPI:
 
             start_dir = self._resolve_mods_folder()
             selected = self._window.create_file_dialog(
-                webview.FOLDER_DIALOG,
+                webview.FileDialog.FOLDER if hasattr(webview, "FileDialog") else webview.FOLDER_DIALOG,
                 directory=str(start_dir) if start_dir.exists() else str(Path.home()),
             )
             if not selected or len(selected) == 0:
@@ -763,14 +1174,16 @@ class Sims4ModUpdaterAPI:
                 return {"ok": False, "error": "유효하지 않은 폴더 경로입니다."}
 
             self.config_manager.config["mods_folder"] = str(new_folder)
-            self.config_manager.save()
+            self.config_manager.set_scan_subfolder("")
 
-            cached = self._load_daily_scan_cache(new_folder)
+            cached = self._load_daily_scan_cache(new_folder, scan_subfolder="")
             if cached is not None:
                 return {
                     "ok": True,
                     "cached": True,
                     "mods_folder": str(new_folder),
+                    "scan_subfolder": "",
+                    "scan_target_path": str(new_folder),
                     "mods": cached["mods"],
                     "summary": cached["summary"],
                     "needs_remote_scan": False,
@@ -782,6 +1195,8 @@ class Sims4ModUpdaterAPI:
                 "ok": True,
                 "cached": False,
                 "mods_folder": str(new_folder),
+                "scan_subfolder": "",
+                "scan_target_path": str(new_folder),
                 "mods": local_scan.get("mods", []),
                 "summary": local_scan.get("summary", {}),
                 "needs_remote_scan": len(local_scan.get("mods", [])) > 0,
@@ -790,8 +1205,106 @@ class Sims4ModUpdaterAPI:
         except Exception as exc:
             return {"ok": False, "error": str(exc)}
 
+    def set_scan_subfolder(self, subfolder_rel: str = "") -> Dict[str, Any]:
+        """[Endpoint 2-1] Mods 폴더 내 특정 하위 폴더(또는 빈 문자열 지정 시 전체 Mods)를 스캔/업데이트 대상으로 설정합니다."""
+        mods_folder = self._resolve_mods_folder()
+        if not str(mods_folder).strip() or not mods_folder.exists():
+            return {"ok": False, "error": "유효한 Mods 폴더 경로가 없습니다."}
+
+        mods_resolved = mods_folder.resolve()
+        raw_sub = str(subfolder_rel or "").strip().strip("/\\")
+        if not raw_sub or raw_sub == ".":
+            rel_clean = ""
+            target_path = mods_resolved
+        else:
+            cand = (mods_resolved / raw_sub).resolve()
+            if not cand.exists() or not cand.is_dir():
+                return {"ok": False, "error": "유효하지 않은 하위 폴더 경로입니다."}
+            if cand == mods_resolved:
+                rel_clean = ""
+                target_path = mods_resolved
+            elif not is_safe_subpath(cand, mods_resolved, allow_equal=False):
+                return {
+                    "ok": False,
+                    "error": "선택한 폴더가 현재 Mods 폴더 하위 경로가 아닙니다. 다른 폴더를 사용하려면 [폴더 변경]을 이용해 주세요.",
+                }
+            else:
+                rel_clean = str(cand.relative_to(mods_resolved))
+                target_path = cand
+
+        self.config_manager.set_scan_subfolder(rel_clean)
+
+        cached = self._load_daily_scan_cache(mods_resolved, scan_subfolder=rel_clean)
+        if cached is not None:
+            scope_msg = f"하위 폴더 지정 완료 ({rel_clean} · 오늘 스캔 캐시 유지)" if rel_clean else f"전체 Mods 폴더로 복귀 완료 (오늘 스캔 캐시 유지)"
+            return {
+                "ok": True,
+                "cached": True,
+                "mods_folder": str(mods_resolved),
+                "scan_subfolder": rel_clean,
+                "scan_target_path": str(target_path),
+                "mods": cached["mods"],
+                "summary": cached["summary"],
+                "needs_remote_scan": False,
+                "message": scope_msg,
+            }
+
+        local_scan = self.scan_mods(check_remote=False)
+        scope_msg = (
+            f"하위 폴더 스캔 대상으로 지정됨: {rel_clean}"
+            if rel_clean
+            else f"전체 Mods 폴더 스캔으로 복귀됨: {mods_resolved}"
+        )
+        return {
+            "ok": local_scan.get("ok", True),
+            "cached": False,
+            "mods_folder": str(mods_resolved),
+            "scan_subfolder": rel_clean,
+            "scan_target_path": str(target_path),
+            "mods": local_scan.get("mods", []),
+            "summary": local_scan.get("summary", {}),
+            "needs_remote_scan": len(local_scan.get("mods", [])) > 0,
+            "message": f"{scope_msg} · {local_scan.get('message', '')}".strip(" ·"),
+        }
+
+    def select_scan_subfolder(self) -> Dict[str, Any]:
+        """[Endpoint 2-2] 네이티브 폴더 선택 대화상자로 Mods 폴더 내 스캔할 특정 하위 폴더를 선택합니다."""
+        if self._window is None:
+            return {"ok": False, "error": "윈도우가 아직 초기화되지 않았습니다."}
+
+        mods_folder = self._resolve_mods_folder()
+        if not str(mods_folder).strip() or not mods_folder.exists():
+            return {"ok": False, "error": "먼저 [폴더 변경]으로 Mods 폴더를 설정해 주세요."}
+
+        try:
+            import webview
+
+            scan_target, _ = self._resolve_scan_target(mods_folder)
+            start_dir = scan_target if scan_target.exists() else mods_folder
+            selected = self._window.create_file_dialog(
+                webview.FileDialog.FOLDER if hasattr(webview, "FileDialog") else webview.FOLDER_DIALOG,
+                directory=str(start_dir),
+            )
+            if not selected or len(selected) == 0:
+                return {"ok": False, "cancelled": True}
+
+            selected_dir = Path(selected[0]).resolve()
+            mods_resolved = mods_folder.resolve()
+            if not selected_dir.exists() or not selected_dir.is_dir():
+                return {"ok": False, "error": "유효하지 않은 폴더 경로입니다."}
+            if not is_safe_subpath(selected_dir, mods_resolved, allow_equal=True):
+                return {
+                    "ok": False,
+                    "error": "선택한 폴더가 현재 Mods 폴더 하위 경로가 아닙니다. 다른 폴더를 사용하려면 [폴더 변경]을 이용해 주세요.",
+                }
+
+            rel = "" if selected_dir == mods_resolved else str(selected_dir.relative_to(mods_resolved))
+            return self.set_scan_subfolder(rel)
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
+
     def scan_mods(self, check_remote: bool = True) -> Dict[str, Any]:
-        """[Endpoint 3] 로컬 'Mods' 폴더 스캔 및 ThreadPoolExecutor 병렬 원격 최신 버전 조회를 수행합니다."""
+        """[Endpoint 3] 로컬 'Mods' 폴더(또는 지정된 하위 폴더) 스캔 및 ThreadPoolExecutor 병렬 원격 최신 버전 조회를 수행합니다."""
         with self._cache_lock:
             self._scan_seq += 1
             current_seq = self._scan_seq
@@ -808,6 +1321,7 @@ class Sims4ModUpdaterAPI:
             }
 
         try:
+            scan_target, scan_sub = self._resolve_scan_target(mods_folder)
             scanner = ModScanner(mods_folder)
             backup_mgr = BackupManager(self._resolve_backup_dir())
             updater = ModUpdater(
@@ -816,7 +1330,9 @@ class Sims4ModUpdaterAPI:
                 backup_manager=backup_mgr,
             )
 
-            units = scanner.scan_updatable_mod_units()
+            units = scanner.scan_updatable_mod_units(
+                target_subfolder=(scan_target if scan_sub else None)
+            )
             duplicate_map = self._detect_duplicate_map_from_units(units)
             manifest_ver_map = self._build_manifest_version_map(updater)
             total_units = len(units)
@@ -827,13 +1343,22 @@ class Sims4ModUpdaterAPI:
                     if current_seq == self._scan_seq:
                         self._mod_cache.clear()
                 if check_remote and current_seq == self._scan_seq:
-                    self._save_daily_scan_cache(mods_folder, [], empty_summary, {})
+                    self._save_daily_scan_cache(
+                        mods_folder, [], empty_summary, {}, scan_subfolder=scan_sub
+                    )
+                empty_msg = (
+                    f"[{scan_sub}] 하위 폴더에 설치된 스크립트/게임플레이 모드가 없습니다."
+                    if scan_sub
+                    else "설치된 스크립트/게임플레이 모드가 없습니다."
+                )
                 return {
                     "ok": True,
                     "mods_folder": str(mods_folder),
+                    "scan_subfolder": scan_sub,
+                    "scan_target_path": str(scan_target),
                     "mods": [],
                     "summary": empty_summary,
-                    "message": "설치된 스크립트/게임플레이 모드가 없습니다.",
+                    "message": empty_msg,
                 }
 
             ordered_bundles: List[Optional[Tuple[str, Dict[str, Any]]]] = [None] * total_units
@@ -894,16 +1419,21 @@ class Sims4ModUpdaterAPI:
                     self._mod_cache = new_cache
 
             if check_remote and current_seq == self._scan_seq:
-                self._save_daily_scan_cache(mods_folder, mods_list, summary, new_cache)
+                self._save_daily_scan_cache(
+                    mods_folder, mods_list, summary, new_cache, scan_subfolder=scan_sub
+                )
 
+            scope_tag = f"[{scan_sub}] " if scan_sub else ""
             msg = (
-                f"로컬 모드 {summary['total']}개 감지됨. 원격 최신 버전을 확인 중..."
+                f"{scope_tag}로컬 모드 {summary['total']}개 감지됨. 원격 최신 버전을 확인 중..."
                 if not check_remote
-                else f"총 {summary['total']}개 모드 스캔 완료 (업데이트/수동확인 {summary['update']}개)"
+                else f"{scope_tag}총 {summary['total']}개 모드 스캔 완료 (업데이트/수동확인 {summary['update']}개)"
             )
             return {
                 "ok": True,
                 "mods_folder": str(mods_folder),
+                "scan_subfolder": scan_sub,
+                "scan_target_path": str(scan_target),
                 "mods": mods_list,
                 "summary": summary,
                 "message": msg,
@@ -918,8 +1448,11 @@ class Sims4ModUpdaterAPI:
             return {"ok": False, "error": "백업할 Mods 폴더 경로가 존재하지 않습니다."}
 
         try:
+            scan_target, scan_sub = self._resolve_scan_target(mods_folder)
             scanner = ModScanner(mods_folder)
-            units = scanner.scan_updatable_mod_units()
+            units = scanner.scan_updatable_mod_units(
+                target_subfolder=(scan_target if scan_sub else None)
+            )
             if not units:
                 return {"ok": False, "error": "백업할 스크립트/게임플레이 모드 파일이 없습니다."}
 
@@ -987,25 +1520,83 @@ class Sims4ModUpdaterAPI:
 
         unit = cached["unit"]
         entry = cached["entry"]
-        primary_path = Path(unit.get("primary_file_path") or unit.get("file_path") or "")
+        configured_mods = self.config_manager.mods_folder
         mods_folder = self._resolve_mods_folder()
 
-        target = primary_path.resolve() if primary_path.exists() else mods_folder
-        if not is_safe_subpath(target, mods_folder, allow_equal=True):
-            return {"ok": False, "error": "허용되지 않은 폴더 경로입니다."}
+        base_candidates: List[Path] = []
+        for b in (configured_mods, mods_folder):
+            if b is not None and str(b).strip():
+                base_candidates.append(b)
 
+        def _is_within_mods_logical_or_real(cand: Path) -> bool:
+            try:
+                cand_norm_case = os.path.normcase(os.path.normpath(os.path.abspath(str(cand))))
+            except Exception:
+                return False
+            for base_p in base_candidates:
+                try:
+                    if is_safe_subpath(cand, base_p, allow_equal=True):
+                        return True
+                except Exception:
+                    pass
+                try:
+                    base_norm_case = os.path.normcase(os.path.normpath(os.path.abspath(str(base_p))))
+                    if base_norm_case and os.path.commonpath([base_norm_case, cand_norm_case]) == base_norm_case:
+                        return True
+                except Exception:
+                    continue
+            return False
+
+        # 실제 존재하는 대상 파일 우선 선택 (대표 파일 -> 충돌 목록 -> 유닛 파일 -> Mods 폴더 폴백)
+        candidate_raws: List[str] = []
+        for raw_p in [unit.get("primary_file_path"), unit.get("file_path")]:
+            if raw_p:
+                candidate_raws.append(str(raw_p))
+        for cp in entry.get("conflictPaths") or []:
+            if cp:
+                candidate_raws.append(str(cp))
+        for uf in unit.get("unit_files") or []:
+            if uf:
+                candidate_raws.append(str(uf))
+
+        target_path: Optional[Path] = None
+        seen_invalid = False
+        for raw_c in candidate_raws:
+            norm_c = os.path.normpath(os.path.abspath(raw_c))
+            p_cand = Path(norm_c)
+            if not _is_within_mods_logical_or_real(p_cand):
+                seen_invalid = True
+                continue
+            if p_cand.exists() and p_cand.is_file():
+                target_path = p_cand
+                break
+
+        if target_path is None:
+            if seen_invalid:
+                return {"ok": False, "error": "허용되지 않은 폴더 경로입니다."}
+            fallback_dir = configured_mods if str(configured_mods).strip() and configured_mods.exists() else mods_folder
+            if not fallback_dir.exists() or not _is_within_mods_logical_or_real(fallback_dir):
+                return {"ok": False, "error": "허용되지 않은 폴더 경로입니다."}
+            target_path = Path(os.path.normpath(os.path.abspath(str(fallback_dir))))
+
+        norm_target = os.path.normpath(os.path.abspath(str(target_path))).replace('"', "")
         try:
             if sys.platform == "win32":
-                if target.is_file():
-                    subprocess.Popen(["explorer", f"/select,{str(target)}"])
+                if target_path.is_file():
+                    subprocess.Popen(f'explorer /select,"{norm_target}"')
                 else:
-                    os.startfile(str(target))
+                    os.startfile(norm_target)
             conflict_paths = entry.get("conflictPaths") or []
             if conflict_paths:
+                norm_base = os.path.normpath(os.path.abspath(str(configured_mods if str(configured_mods).strip() and configured_mods.exists() else mods_folder)))
                 rel_list = []
                 for cp in conflict_paths:
                     try:
-                        rel_list.append(str(Path(cp).resolve().relative_to(mods_folder)))
+                        norm_cp = os.path.normpath(os.path.abspath(str(cp)))
+                        if os.path.commonpath([os.path.normcase(norm_base), os.path.normcase(norm_cp)]) == os.path.normcase(norm_base):
+                            rel_list.append(os.path.relpath(norm_cp, norm_base))
+                        else:
+                            rel_list.append(str(Path(cp).resolve().relative_to(mods_folder)))
                     except Exception:
                         rel_list.append(cp)
                 msg = f"중복 파일 위치({len(rel_list)}곳): {' | '.join(rel_list)}"
@@ -1014,6 +1605,154 @@ class Sims4ModUpdaterAPI:
             return {"ok": True, "message": msg, "conflict_paths": conflict_paths}
         except Exception as exc:
             return {"ok": False, "error": str(exc)}
+
+    def set_mod_variant(
+        self,
+        mod_id: str,
+        variant_file_name: str,
+        selected_addons: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """[Endpoint 6-1] 택1 본체 옵션, 세부 선택 파일 및 RPO 배포 채널(선배포/무료)을 변경합니다."""
+        chosen_name = (variant_file_name or "").strip()
+        if not chosen_name:
+            return {"ok": False, "error": "선택된 옵션 파일명이 비어 있습니다."}
+
+        with self._cache_lock:
+            cached = self._mod_cache.get(mod_id)
+            if not cached:
+                return {"ok": False, "error": "모드 정보를 찾을 수 없습니다."}
+            update_info = cached.get("update_info") or {}
+            entry = cached.get("entry") or {}
+            unit = cached.get("unit") or {}
+            is_rpo_channel_mode = (
+                entry.get("optionModalMode") == "rpo_channel"
+                or chosen_name.lower().startswith("rpo_channel:")
+            )
+            is_ww_channel_mode = (
+                entry.get("optionModalMode") == "ww_channel"
+                or chosen_name.lower().startswith("ww_channel:")
+            )
+            is_channel_switch = is_rpo_channel_mode or is_ww_channel_mode
+            channel_unit_copy = dict(unit) if is_channel_switch else {}
+            channel_conflicts = list(entry.get("conflictPaths") or []) if is_channel_switch else []
+
+        if is_channel_switch:
+            if is_ww_channel_mode:
+                next_channel = "paid" if "paid" in chosen_name.lower() else "free"
+                self.config_manager.set_ww_channel(next_channel)
+            else:
+                next_channel = "free" if "free" in chosen_name.lower() else "early_access"
+                self.config_manager.set_rpo_channel(next_channel)
+            mods_folder = self._resolve_mods_folder()
+            updater = ModUpdater(
+                mods_folder=mods_folder,
+                manifest_path=self._resolve_manifest_path(),
+            )
+            dup_map: Dict[str, List[str]] = {}
+            if channel_conflicts:
+                p_name_low = Path(str(channel_unit_copy.get("primary_file_name") or channel_unit_copy.get("primary_file") or "")).name.lower()
+                if p_name_low:
+                    dup_map[p_name_low] = channel_conflicts
+            try:
+                idx_val = int(str(mod_id).split("_", 1)[0])
+            except Exception:
+                idx_val = 1
+            _, rebuilt = self._build_mod_entry(
+                idx=idx_val,
+                unit=channel_unit_copy,
+                updater=updater,
+                duplicate_map=dup_map,
+                check_remote=True,
+                manifest_ver_map=self._build_manifest_version_map(updater),
+            )
+            rebuilt["entry"]["id"] = mod_id
+            with self._cache_lock:
+                if mod_id in self._mod_cache:
+                    self._mod_cache[mod_id] = rebuilt
+                mods_list = [b["entry"] for b in self._mod_cache.values()]
+                cache_snapshot = dict(self._mod_cache)
+            summary = self._summarize_mods(mods_list)
+            if str(mods_folder).strip() and mods_folder.exists():
+                _, cur_scan_sub = self._resolve_scan_target(mods_folder)
+                self._save_daily_scan_cache(
+                    mods_folder, mods_list, summary, cache_snapshot, scan_subfolder=cur_scan_sub
+                )
+            if is_ww_channel_mode:
+                channel_label = (
+                    "선배포 버전 (Patreon v187.18 · 수동 다운로드)"
+                    if next_channel == "paid"
+                    else "무료 버전 (Wicked.cc v185k · 자동 업데이트)"
+                )
+            else:
+                channel_label = "무료 버전 (자동 업데이트)" if next_channel == "free" else "선배포 버전 (수동 확인)"
+            res_payload: Dict[str, Any] = {
+                "ok": True,
+                "entry": dict(rebuilt["entry"]),
+                "mods": mods_list,
+                "summary": summary,
+                "message": f"[{rebuilt['entry'].get('name', mod_id)}] 배포 옵션이 '{channel_label}'(으)로 저장되었습니다.",
+            }
+            if is_ww_channel_mode:
+                res_payload["ww_channel"] = next_channel
+            else:
+                res_payload["rpo_channel"] = next_channel
+            return res_payload
+
+        with self._cache_lock:
+            cached = self._mod_cache.get(mod_id)
+            if not cached:
+                return {"ok": False, "error": "모드 정보를 찾을 수 없습니다."}
+            update_info = cached.get("update_info") or {}
+            entry = cached.get("entry") or {}
+            unit = cached.get("unit") or {}
+            variant_choices = update_info.get("variant_choices") or entry.get("variantChoices") or []
+            matched = next(
+                (vc for vc in variant_choices if str(vc.get("file_name") or "").lower() == chosen_name.lower()),
+                None,
+            )
+            if not matched:
+                return {"ok": False, "error": "유효하지 않은 설치 옵션입니다."}
+
+            update_info["selected_variant"] = matched["file_name"]
+            entry["selectedVariant"] = matched["file_name"]
+
+            unit_names_low = {Path(uf).name.lower() for uf in unit.get("unit_files", [])}
+            if entry.get("primaryFile"):
+                unit_names_low.add(Path(str(entry["primaryFile"])).name.lower())
+
+            addon_changed = False
+            available_addons = update_info.get("optional_addons") or entry.get("optionalAddons") or []
+            if selected_addons is not None and available_addons:
+                allowed_map = {
+                    str(oa.get("file_name") or "").strip().lower(): str(oa.get("file_name") or "").strip()
+                    for oa in available_addons
+                    if isinstance(oa, dict) and oa.get("file_name")
+                }
+                clean_addons: List[str] = []
+                for req_fn in selected_addons:
+                    req_low = str(req_fn or "").strip().lower()
+                    if req_low in allowed_map and allowed_map[req_low] not in clean_addons:
+                        clean_addons.append(allowed_map[req_low])
+                update_info["selected_addons"] = list(clean_addons)
+                entry["selectedAddons"] = list(clean_addons)
+                installed_addons_low = {k for k in allowed_map if k in unit_names_low}
+                chosen_addons_low = {fn.lower() for fn in clean_addons}
+                addon_changed = chosen_addons_low != installed_addons_low
+
+            variant_changed = not self._is_variant_installed(matched, unit_names_low)
+            if (variant_changed or addon_changed) and entry.get("statusType") == "latest":
+                entry["statusType"] = "update"
+                entry["statusText"] = "옵션 변경"
+                entry["checked"] = True
+                entry["disabled"] = False
+
+            entry_copy = dict(entry)
+
+        return {
+            "ok": True,
+            "entry": entry_copy,
+            "message": f"[{entry_copy.get('name', mod_id)}] 설치 옵션 선택: {matched.get('label') or matched['file_name']}",
+        }
 
     def update_single_mod(self, mod_id: str) -> Dict[str, Any]:
         """[Endpoint 7] 갤러리 카드의 개별 [업데이트] 버튼 클릭 시 단일 모드를 업데이트합니다."""
@@ -1050,6 +1789,24 @@ class Sims4ModUpdaterAPI:
                     continue
 
                 entry = cached["entry"]
+                if entry.get("optionModalMode") == "rpo_channel" and self.config_manager.rpo_channel == "early_access":
+                    failed_names.append(f"{entry['name']}(수동확인)")
+                    self._emit_frontend_progress(
+                        completed=idx,
+                        total=total,
+                        log_message=f"[{entry['name']}] 선배포 버전 선택 상태여서 자동 다운로드를 건너뛰었습니다.",
+                        mode="update",
+                    )
+                    continue
+                if entry.get("optionModalMode") == "ww_channel" and self.config_manager.ww_channel == "paid":
+                    failed_names.append(f"{entry['name']}(수동확인)")
+                    self._emit_frontend_progress(
+                        completed=idx,
+                        total=total,
+                        log_message=f"[{entry['name']}] 유료 버전 선택 상태여서 자동 다운로드를 건너뛰었습니다.",
+                        mode="update",
+                    )
+                    continue
                 mod_cfg = cached["mod_cfg"]
                 mod_cfg["unit_files"] = list(cached["unit"].get("unit_files", []))
                 update_info = cached["update_info"]
@@ -1065,8 +1822,25 @@ class Sims4ModUpdaterAPI:
                     for unit_file in cached["unit"].get("unit_files", []):
                         backup_mgr.backup_item(Path(unit_file), session_dir)
 
+                    prev_selected_variant = str(
+                        (update_info or {}).get("selected_variant")
+                        or entry.get("selectedVariant")
+                        or ""
+                    ).strip()
+                    has_prev_addons = (
+                        bool(update_info) and ("selected_addons" in update_info) and (update_info.get("selected_addons") is not None)
+                    ) or bool(entry.get("optionalAddons"))
+                    prev_selected_addons = list(
+                        (update_info or {}).get("selected_addons")
+                        if (update_info and "selected_addons" in update_info and update_info.get("selected_addons") is not None)
+                        else (entry.get("selectedAddons") or [])
+                    )
                     if not update_info or not update_info.get("download_url"):
                         update_info = updater.check_mod_update(mod_cfg)
+                        if prev_selected_variant:
+                            update_info["selected_variant"] = prev_selected_variant
+                        if has_prev_addons and (update_info.get("optional_addons") or entry.get("optionalAddons")):
+                            update_info["selected_addons"] = prev_selected_addons
 
                     if update_info.get("requires_browser"):
                         failed_names.append(f"{entry['name']}(수동확인)")
@@ -1096,8 +1870,9 @@ class Sims4ModUpdaterAPI:
                                 else str(entry.get("currentVersion") or "최신버전")
                             )
 
-                        # page_url이 없는 전용 스크래퍼 모드도 mods_manifest.json에 최신 버전 기록 보장
-                        if not update_info.get("page_url") and raw_latest:
+                        # page_url 유무와 무관하게 업데이트 완료된 모드 파일들을 mods_manifest.json에 최신 버전·파일명 기준으로 확실히 기록
+                        pin_asset_name = str(update_info.get("asset_name") or "").strip()
+                        if not update_info.get("page_url") and (raw_latest or pin_asset_name):
                             fallback_page = str(
                                 entry.get("pageUrl")
                                 or mod_cfg.get("homepage")
@@ -1105,23 +1880,31 @@ class Sims4ModUpdaterAPI:
                                 or ""
                             ).strip()
                             if fallback_page and is_valid_https_url(fallback_page):
-                                pin_target = (
-                                    (installed_names[0] if installed_names else "")
-                                    or str(mod_cfg.get("name") or "")
-                                    or str(entry.get("primaryFile") or "")
-                                )
-                                if pin_target:
+                                pin_targets: List[str] = []
+                                for cand_pin in list(installed_names or []) + [
+                                    str(mod_cfg.get("name") or ""),
+                                    str(entry.get("primaryFile") or ""),
+                                ]:
+                                    c_clean = (cand_pin or "").strip()
+                                    if (
+                                        c_clean
+                                        and c_clean.lower().endswith((".package", ".ts4script"))
+                                        and all(c_clean.lower() != ex.lower() for ex in pin_targets)
+                                    ):
+                                        pin_targets.append(c_clean)
+                                for pin_target in pin_targets:
                                     try:
                                         updater.pin_verified_url(
                                             mod_cfg,
                                             fallback_page,
                                             raw_latest,
                                             local_file_name=pin_target,
+                                            asset_name=pin_asset_name,
                                         )
                                     except Exception:
                                         pass
 
-                        # 메모리 캐시 즉시 최신 상태로 전환 (업데이트 필요 -> 최신버전 이동)
+                        # 메모리 캐시 즉시 최신 상태로 전환 (업데이트 필요 -> 최신버전 이동, 스캔 목록에서 제외)
                         with self._cache_lock:
                             entry["currentVersion"] = resolved_latest
                             entry["latestVersion"] = resolved_latest
@@ -1129,12 +1912,19 @@ class Sims4ModUpdaterAPI:
                             entry["statusText"] = "최신버전"
                             entry["checked"] = False
                             entry["disabled"] = False
+                            entry["conflictPaths"] = []
                             mod_cfg["current_version"] = latest_tok or resolved_latest.lstrip("vV")
                             if mod_cfg.get("file_path"):
                                 new_fp = Path(str(mod_cfg["file_path"]))
                                 cached["unit"]["primary_file_path"] = str(new_fp)
                                 cached["unit"]["primary_file_name"] = new_fp.name
                                 entry["primaryFile"] = new_fp.name
+                                if any(
+                                    str(vc.get("file_name") or "").lower() == new_fp.name.lower()
+                                    for vc in (entry.get("variantChoices") or [])
+                                ):
+                                    entry["selectedVariant"] = new_fp.name
+                                    update_info["selected_variant"] = new_fp.name
                             # 업데이트 완료된 파일 경로들을 unit_files에 최신 반영하고 삭제된 구버전 파일 제거
                             updated_unit_files: List[str] = []
                             for old_uf in cached["unit"].get("unit_files", []):
@@ -1145,6 +1935,22 @@ class Sims4ModUpdaterAPI:
                                     updated_unit_files.append(new_ip)
                             if updated_unit_files:
                                 cached["unit"]["unit_files"] = updated_unit_files
+                            post_names_low = {Path(uf).name.lower() for uf in cached["unit"].get("unit_files", [])}
+                            if entry.get("primaryFile"):
+                                post_names_low.add(Path(str(entry["primaryFile"])).name.lower())
+                            for vc in (entry.get("variantChoices") or []):
+                                if isinstance(vc, dict):
+                                    vc["installed"] = self._is_variant_installed(vc, post_names_low)
+                                    if vc["installed"] and not entry.get("selectedVariant"):
+                                        entry["selectedVariant"] = vc.get("file_name", "")
+                            if entry.get("optionalAddons"):
+                                for oa in entry["optionalAddons"]:
+                                    if isinstance(oa, dict):
+                                        oa["installed"] = str(oa.get("file_name") or "").strip().lower() in post_names_low
+                                entry["selectedAddons"] = [
+                                    oa["file_name"] for oa in entry["optionalAddons"] if oa.get("installed")
+                                ]
+                                update_info["selected_addons"] = list(entry["selectedAddons"])
                             cached["update_info"] = dict(update_info, has_update=False)
                 except Exception:
                     failed_names.append(entry["name"])
@@ -1166,7 +1972,10 @@ class Sims4ModUpdaterAPI:
                 mods_list = [b["entry"] for b in self._mod_cache.values()]
                 cache_snapshot = dict(self._mod_cache)
             summary = self._summarize_mods(mods_list)
-            self._save_daily_scan_cache(mods_folder, mods_list, summary, cache_snapshot)
+            _, cur_scan_sub = self._resolve_scan_target(mods_folder)
+            self._save_daily_scan_cache(
+                mods_folder, mods_list, summary, cache_snapshot, scan_subfolder=cur_scan_sub
+            )
 
             suffix = " 심즈4를 실행합니다!" if launched else ""
             if failed_names:
@@ -1395,24 +2204,110 @@ class Sims4ModUpdaterAPI:
         return {"ok": False, "error": "심즈4 설치 경로(EA Games / Steam)를 찾을 수 없습니다."}
 
 
+def resolve_app_icon() -> Optional[Path]:
+    """소스 실행 및 PyInstaller 번들 환경 모두에서 전용 앱 아이콘(.ico) 경로를 탐색합니다."""
+    candidates = [
+        BASE_DIR / "ui" / "app_icon.ico",
+        BUNDLE_DIR / "ui" / "app_icon.ico",
+        BASE_DIR / "_internal" / "ui" / "app_icon.ico",
+        BASE_DIR / "app_icon.ico",
+        BUNDLE_DIR / "app_icon.ico",
+    ]
+    for candidate in candidates:
+        if candidate.exists() and candidate.is_file():
+            return candidate.resolve()
+    return None
+
+
+def _apply_windows_window_icon(window: Any, icon_path: Path) -> None:
+    """Windows 실행 창의 타이틀바 및 작업표시줄에 전용 .ico 아이콘을 적용합니다."""
+    if sys.platform != "win32" or not icon_path.exists():
+        return
+    try:
+        import ctypes
+
+        user32 = ctypes.windll.user32
+        icon_str = str(icon_path.resolve())
+        IMAGE_ICON = 1
+        LR_LOADFROMFILE = 0x0010
+        LR_DEFAULTSIZE = 0x0040
+        WM_SETICON = 0x0080
+        ICON_SMALL = 0
+        ICON_BIG = 1
+
+        hicon_big = user32.LoadImageW(None, icon_str, IMAGE_ICON, 48, 48, LR_LOADFROMFILE | LR_DEFAULTSIZE)
+        hicon_small = user32.LoadImageW(None, icon_str, IMAGE_ICON, 16, 16, LR_LOADFROMFILE | LR_DEFAULTSIZE)
+        if not hicon_big and not hicon_small:
+            return
+
+        hwnd = None
+        native_win = getattr(window, "native", None)
+        if native_win is not None:
+            handle_obj = getattr(native_win, "Handle", None)
+            if handle_obj is not None:
+                try:
+                    hwnd = int(handle_obj.ToInt64())
+                except Exception:
+                    try:
+                        hwnd = int(handle_obj)
+                    except Exception:
+                        hwnd = None
+        if not hwnd:
+            title_str = str(getattr(window, "title", "") or "")
+            if title_str:
+                hwnd = user32.FindWindowW(None, title_str)
+
+        if hwnd:
+            if hicon_small:
+                user32.SendMessageW(hwnd, WM_SETICON, ICON_SMALL, hicon_small)
+            if hicon_big:
+                user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, hicon_big)
+    except Exception:
+        pass
+
+
 def create_app_window() -> None:
     """pywebview 기반 심즈4 모드 자동 업데이터 데스크톱 창을 생성하고 실행합니다."""
+    import inspect
     import webview
 
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Sims4ModAutoUpdater.Desktop.App")
+        except Exception:
+            pass
+
     ui_entry = resolve_ui_entry()
+    icon_path = resolve_app_icon()
     api = Sims4ModUpdaterAPI(BASE_DIR)
 
     window = webview.create_window(
-        title="심즈4 모드 자동 업데이터 v0.1.5",
+        title="심즈4 모드 자동 업데이터 v0.1.6",
         url=str(ui_entry),
         js_api=api,
-        width=650,
-        height=730,
-        resizable=False,
+        width=760,
+        height=780,
+        min_size=(650, 700),
+        resizable=True,
         background_color="#EBF5FA",
     )
     api.set_window(window)
-    webview.start(debug=False)
+
+    if icon_path is not None and sys.platform == "win32":
+        try:
+            window.events.shown += lambda: _apply_windows_window_icon(window, icon_path)
+        except Exception:
+            pass
+
+    start_kwargs: Dict[str, Any] = {"debug": False}
+    if icon_path is not None:
+        try:
+            if "icon" in inspect.signature(webview.start).parameters:
+                start_kwargs["icon"] = str(icon_path)
+        except Exception:
+            pass
+    webview.start(**start_kwargs)
 
 
 def main() -> None:

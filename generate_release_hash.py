@@ -5,8 +5,8 @@
 
 사용 예시:
     python generate_release_hash.py
-    python generate_release_hash.py "배포용/Sims 4 Mod Auto Updater/dist/Sims4ModUpdater_v0.1.5.exe"
-    python generate_release_hash.py "배포용/Sims 4 Mod Auto Updater/dist/Sims4ModUpdater_v0.1.5.exe" -o "release_hash.txt"
+    python generate_release_hash.py "배포용/Sims 4 Mod Auto Updater/dist/Sims4ModUpdater_v0.1.6.exe"
+    python generate_release_hash.py "배포용/Sims 4 Mod Auto Updater/dist/Sims4ModUpdater_v0.1.6.exe" -o "release_hash.txt"
 """
 
 from __future__ import annotations

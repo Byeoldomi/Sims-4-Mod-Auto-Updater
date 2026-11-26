@@ -1,4 +1,5 @@
 import datetime
+import email.utils
 import hashlib
 import ipaddress
 import logging
@@ -1118,6 +1119,16 @@ def download_file(
                     f.write(chunk)
                     if progress_callback and total_size > 0:
                         progress_callback(downloaded, total_size)
+        last_mod = response.headers.get("Last-Modified")
+        if last_mod and dest_path.exists():
+            try:
+                lm_dt = email.utils.parsedate_to_datetime(last_mod)
+                if lm_dt is not None:
+                    lm_ts = lm_dt.timestamp()
+                    if lm_ts > 0:
+                        os.utime(dest_path, (lm_ts, lm_ts))
+            except Exception:
+                pass
     except Exception:
         safe_remove(dest_path)
         raise
@@ -1247,33 +1258,128 @@ def normalize_mod_filename_key(filename: str) -> str:
     ext = p.suffix.lower()
     stem = p.stem
 
-    # 1) 점(.)으로 구분된 날짜/버전 제거 (단, 1.75x 같은 배수 표기는 제외)
+    # 0) 로드 순서 우선순위용 선행 특수기호(!, _, ~ 등) 및 스타일 변형 번호(_v1~_v3 on canvas_frame_override) 정규화
+    stem = re.sub(r"^[!_~\s]+", "", stem)
     stem = re.sub(
-        r"(?:^|[\s_.\-\[\(])(?:201[4-9]|202[0-9])[\.\-_](?:0?[1-9]|1[0-2])[\.\-_](?:0?[1-9]|[12][0-9]|3[01])(?=$|[^0-9])",
-        " ",
+        r"(?<=canvas_frame_override)_v([123])(?=$|[^a-zA-Z0-9])",
+        r"__cfostyle\1__",
         stem,
+        flags=re.IGNORECASE,
     )
+
+    # 1) 괄호로 감싸진 순수 날짜/버전/핫픽스 블록 전체 제거 (예: '(v1.1)', '[v1.1]', '[20260315]', '(2026.05.13)' -> 여닫는 괄호 동시 제거)
     stem = re.sub(
-        r"(?:^|[\s_.\-\[\(])(?:0?[1-9]|[12][0-9]|3[01])[\.\-_](?:0?[1-9]|1[0-2])[\.\-_](?:201[4-9]|202[0-9])(?=$|[^0-9])",
-        " ",
-        stem,
-    )
-    stem = re.sub(
-        r"(?:^|[\s_.\-\[\(])(?:v|ver|version|a|b)?\.?\s*[0-9]+(?:\.[0-9]+)+[a-wyz]?(?=$|[^a-zA-Z0-9.xX])",
+        r"[\[\(]\s*(?:"
+        r"(?:201[4-9]|202[0-9])[\.\-_]?(?:0?[1-9]|1[0-2])[\.\-_]?(?:0?[1-9]|[12][0-9]|3[01])|"
+        r"(?:0?[1-9]|[12][0-9]|3[01])[\.\-_](?:0?[1-9]|1[0-2])[\.\-_](?:201[4-9]|202[0-9]|[12][0-9])|"
+        r"[0-3][0-9][\.\-_][0-3][0-9][\.\-_][0-3][0-9]|"
+        r"2[0-9](?:0[1-9]|1[0-2])(?:0[1-9]|[12][0-9]|3[01])"
+        r")\s*[\]\)]",
         " ",
         stem,
         flags=re.IGNORECASE,
     )
-    # 2) 명시적 v/ver 접두사가 붙은 단일 숫자 버전 제거 (예: _v2, _v4, _v42, _v2a, _v185k)
     stem = re.sub(
-        r"(?:^|[\s_.\-\[\(]|(?<=[a-zA-Z]))(?:v|ver|version)\.?\s*[0-9]+[a-wyz]?(?=$|[^a-zA-Z0-9.xX])",
+        r"[\[\(]\s*(?:"
+        r"(?:v|ver|version|alpha|beta|rc|hotfix|hf)\.?\s*[0-9]+(?:\.[0-9]+)*[a-wyz]?|"
+        r"[ab][0-9]+(?:\.[0-9]+)+[a-wyz]?|"
+        r"[0-9]+(?:\.[0-9]+)+[a-wyz]?|"
+        r"[0-9]{2,4}[a-z]|"
+        r"(?:hotfix|hf|patch)\s*[0-9]*"
+        r")(?:\s*(?:hotfix|hf|patch)\s*[0-9]*)?\s*[\]\)]",
         " ",
         stem,
         flags=re.IGNORECASE,
     )
-    # 3) 대괄호 안의 순수 버전/날짜 제거 (예: [20260315], [v1.1])
+
+    # 2) 바람별 통합한글화(WAMTIK) 스타일 버전 정규화 (예: V98G8 -> g, V97.8R -> r, -FF 여부는 유지)
+    stem = re.sub(
+        r"(?:^|(?<=[\s_.\-\[\(]))v[0-9]+(?:\.[0-9]+)?([gbpr])[0-9]*(?=$|[^a-zA-Z0-9.])",
+        r" \1 ",
+        stem,
+        flags=re.IGNORECASE,
+    )
+
+    # 3) 날짜 표기 제거 (구분자 미소비 lookbehind 사용으로 인접 괄호/하이픈 훼손 방지)
+    # 3-a) YYYY.MM.DD / DD.MM.YYYY / MM.DD.YYYY
+    stem = re.sub(
+        r"(?:^|(?<=[\s_.\-\[\(]))(?:201[4-9]|202[0-9])[\.\-_](?:0?[1-9]|1[0-2])[\.\-_](?:0?[1-9]|[12][0-9]|3[01])(?=$|[^0-9])",
+        " ",
+        stem,
+    )
+    stem = re.sub(
+        r"(?:^|(?<=[\s_.\-\[\(]))(?:0?[1-9]|[12][0-9]|3[01])[\.\-_](?:0?[1-9]|1[0-2])[\.\-_](?:201[4-9]|202[0-9])(?=$|[^0-9])",
+        " ",
+        stem,
+    )
+    # 3-b) 2자리 연도 날짜 (예: 26.03.15, 27.09.25)
+    stem = re.sub(
+        r"(?:^|(?<=[\s_.\-\[\(]))[0-3][0-9][\.\-_][0-3][0-9][\.\-_][0-3][0-9](?=$|[^0-9.])",
+        " ",
+        stem,
+    )
+    # 3-c) 8자리 YYYYMMDD / 구분자 뒤 6자리 YYMMDD
+    stem = re.sub(
+        r"(?:^|(?<=[\s_.\-\[\(]))(?:201[4-9]|202[0-9])(?:0[1-9]|1[0-2])(?:0[1-9]|[12][0-9]|3[01])(?=$|[^0-9])",
+        " ",
+        stem,
+    )
+    stem = re.sub(
+        r"(?<=[\s_.\-\[\(])(?:2[0-9])(?:0[1-9]|1[0-2])(?:0[1-9]|[12][0-9]|3[01])(?=$|[^0-9])",
+        " ",
+        stem,
+    )
+    # 3-d) 영문 월 포함 날짜 (예: Oct_23_2026, 23_Oct_2026, Nov-2026)
+    _MONTH_PAT = r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    stem = re.sub(
+        rf"(?:^|(?<=[\s_.\-\[\(])){_MONTH_PAT}[\s_.\-]+(?:0?[1-9]|[12][0-9]|3[01])(?:[\s_.\-,]+(?:201[4-9]|202[0-9]))?(?=$|[^a-zA-Z0-9])",
+        " ",
+        stem,
+        flags=re.IGNORECASE,
+    )
+    stem = re.sub(
+        rf"(?:^|(?<=[\s_.\-\[\(]))(?:0?[1-9]|[12][0-9]|3[01])[\s_.\-]+{_MONTH_PAT}[\s_.\-]+(?:201[4-9]|202[0-9])(?=$|[^a-zA-Z0-9])",
+        " ",
+        stem,
+        flags=re.IGNORECASE,
+    )
+    stem = re.sub(
+        rf"(?:^|(?<=[\s_.\-\[\(])){_MONTH_PAT}[\s_.\-]+(?:201[4-9]|202[0-9])(?=$|[^a-zA-Z0-9])",
+        " ",
+        stem,
+        flags=re.IGNORECASE,
+    )
+
+    # 4) 점(.)으로 구분된 버전 제거 (a0.5, b1.0, 0.1, v1.972 등 / 단, 1.75x 같은 배수 표기 제외)
+    stem = re.sub(
+        r"(?:^|(?<=[\s_.\-\[\(]))(?:(?:v|ver|version|alpha|beta|rc)\.?\s*|[ab])?[0-9]+(?:\.[0-9]+)+(?:[a-wyz]|[\s_\-]*(?:alpha|beta|rc|hf|hotfix)[0-9]*)?(?=$|[^a-zA-Z0-9.xX])",
+        " ",
+        stem,
+        flags=re.IGNORECASE,
+    )
+    # 5) 명시적 v/ver/version/alpha/beta/rc/hf 접두사가 붙은 단일 숫자 버전 제거 (예: _v2, _v4, _v185k, ChatPackv2, alpha1)
+    stem = re.sub(
+        r"(?:^|(?<=[\s_.\-\[\(]))(?:v|ver|version|alpha|beta|rc|hotfix|hf)\.?\s*[0-9]+[a-wyz]?(?=$|[^a-zA-Z0-9.xX])",
+        " ",
+        stem,
+        flags=re.IGNORECASE,
+    )
+    stem = re.sub(
+        r"(?<=[a-zA-Z])(?:v|ver|version)\.?[0-9]+[a-wyz]?(?=$|[^a-zA-Z0-9.xX])",
+        " ",
+        stem,
+        flags=re.IGNORECASE,
+    )
+    stem = re.sub(
+        r"(?:^|(?<=[\s_.\-\[\(]))(?:hotfix|hf)(?=$|[^a-zA-Z0-9.xX])",
+        " ",
+        stem,
+        flags=re.IGNORECASE,
+    )
+    # 6) 빈 괄호 정리 및 스타일 번호 복원
     stem = re.sub(r"\[\s*\]", " ", stem)
     stem = re.sub(r"\(\s*\)", " ", stem)
+    stem = re.sub(r"__cfostyle([123])__", r"_v\1", stem, flags=re.IGNORECASE)
 
     # 구분자 정규화 (공백/언더바/하이픈/점은 '_'로 통일)
     stem = re.sub(r"[\s_.\-]+", "_", stem).strip("_").lower()
@@ -1344,6 +1450,7 @@ def _select_mods_for_installation(
     target_filename: Optional[str],
     overwrite_mode: str,
     existing_norm_keys: Optional[set[str]] = None,
+    force_include_names: Optional[set[str]] = None,
 ) -> List[Path]:
     """화이트리스트 검증을 통과한 임시 폴더 내 모드 파일들 중 overwrite_mode 정책에 따라
     실제 Mods 폴더로 이동시킬 최종 대상 파일 목록을 선별합니다.
@@ -1352,22 +1459,33 @@ def _select_mods_for_installation(
     if not whitelisted_files:
         return []
 
+    force_low = {str(n).strip().lower() for n in (force_include_names or set()) if str(n).strip()}
+
+    def _with_forced(selected: List[Path]) -> List[Path]:
+        if not force_low:
+            return selected
+        out = list(selected)
+        for wf in whitelisted_files:
+            if wf.name.lower() in force_low and wf not in out:
+                out.append(wf)
+        return out
+
     target_ext = Path(target_filename).suffix.lower() if target_filename else ""
 
     if overwrite_mode == "single" and target_filename:
         exact_matches = [f for f in whitelisted_files if f.name.lower() == target_filename.lower()]
         if exact_matches:
-            return [exact_matches[0]]
+            return _with_forced([exact_matches[0]])
         target_norm = normalize_mod_filename_key(target_filename)
         if target_norm:
             norm_matches = [f for f in whitelisted_files if normalize_mod_filename_key(f.name) == target_norm]
             if norm_matches:
-                return [norm_matches[0]]
+                return _with_forced([norm_matches[0]])
         if target_ext:
             same_ext = [f for f in whitelisted_files if f.suffix.lower() == target_ext]
             if same_ext:
-                return [same_ext[0]]
-        return whitelisted_files
+                return _with_forced([same_ext[0]])
+        return _with_forced(whitelisted_files)
 
     if overwrite_mode == "all":
         norm_keys = set(existing_norm_keys or set())
@@ -1376,11 +1494,22 @@ def _select_mods_for_installation(
             if nk:
                 norm_keys.add(nk)
 
+        existing_rpo_slots: set[Tuple[str, str]] = set()
+        for ex_name in existing_names_lower:
+            m_rpo_ex = re.search(r"lumpinou_rpo_collection_(m\d+)_", ex_name)
+            if m_rpo_ex:
+                existing_rpo_slots.add((m_rpo_ex.group(1), Path(ex_name).suffix.lower()))
+
         installed_matches = [
             f
             for f in whitelisted_files
             if f.name.lower() in existing_names_lower
             or (norm_keys and normalize_mod_filename_key(f.name) in norm_keys)
+            or (
+                existing_rpo_slots
+                and (m_rpo_f := re.search(r"lumpinou_rpo_collection_(m\d+)_", f.name.lower()))
+                and (m_rpo_f.group(1), f.suffix.lower()) in existing_rpo_slots
+            )
         ]
         has_choose_one = any(
             any(kw in str(f).lower() for kw in _OPTION_FOLDER_KEYWORDS)
@@ -1398,27 +1527,30 @@ def _select_mods_for_installation(
             # 선택형 옵션이 아닌 핵심 .package 파일이 아카이브에 존재하면 함께 포함시켜 스크립트-패키지 버전 불일치를 방지합니다.
             matched_pkgs = [f for f in installed_matches if f.suffix.lower() == ".package"]
             matched_scrs = [f for f in installed_matches if f.suffix.lower() == ".ts4script"]
-            if matched_scrs and not matched_pkgs and not has_choose_one:
-                core_pkgs = [
-                    f
-                    for f in whitelisted_files
-                    if f.suffix.lower() == ".package" and not _is_option_or_addon_filename(f.name)
-                ]
+            has_core_pkg_matched = any(not _is_option_or_addon_filename(f.name) for f in matched_pkgs)
+            core_pkgs = [
+                f
+                for f in whitelisted_files
+                if f.suffix.lower() == ".package" and not _is_option_or_addon_filename(f.name)
+            ]
+            if (matched_scrs and not matched_pkgs and not has_choose_one) or (
+                not has_core_pkg_matched and len(core_pkgs) == 1
+            ):
                 for cp in core_pkgs:
                     if cp not in installed_matches:
                         installed_matches.append(cp)
-            return installed_matches
+            return _with_forced(installed_matches)
         if not installed_matches and target_filename and (len(whitelisted_files) > 4 or has_choose_one):
             exact_m = [f for f in whitelisted_files if f.name.lower() == target_filename.lower()]
             if exact_m:
-                return exact_m
+                return _with_forced(exact_m)
             target_norm = normalize_mod_filename_key(target_filename)
             if target_norm:
                 norm_m = [f for f in whitelisted_files if normalize_mod_filename_key(f.name) == target_norm]
                 if norm_m:
-                    return norm_m
+                    return _with_forced(norm_m)
 
-    return whitelisted_files
+    return _with_forced(whitelisted_files)
 
 
 def _resolve_install_dest_path(
@@ -1465,6 +1597,222 @@ def _resolve_install_dest_path(
     return Path(os.path.abspath(os.path.join(str(target_dir_resolved), clean_name)))
 
 
+def _is_variant_or_edition_protected_file(filename: str) -> bool:
+    """카탈로그 ID 기반 자동 개명 교체에서 제외해야 하는 변형/모듈/에디션 파일인지 판별합니다."""
+    low = (filename or "").lower()
+    if _is_option_or_addon_filename(low):
+        return True
+    if "canvas_frame_override_v" in low:
+        return True
+    if re.search(r"lumpinou_rpo_collection_m\d+_", low):
+        return True
+    if "wamtik" in low:
+        return True
+    return False
+
+
+def _lookup_catalog_id_safe(filename: str) -> str:
+    """순환 임포트를 피해 check_known_catalog에서 모드 고유 카탈로그 식별자(matched_catalog)를 조회합니다."""
+    try:
+        from src.finder import check_known_catalog
+        cat = check_known_catalog(filename)
+        if isinstance(cat, dict) and cat.get("matched_catalog"):
+            return str(cat["matched_catalog"]).strip()
+    except Exception:
+        pass
+    return ""
+
+
+def find_superseded_mod_files(
+    incoming_names: List[str],
+    target_dir_resolved: Path,
+    mods_root_resolved: Optional[Path] = None,
+    known_existing_files: Optional[List[Path]] = None,
+    selected_file_path: Optional[Path] = None,
+    include_subdirs: bool = False,
+    expected_catalog_id: Optional[str] = None,
+    protected_paths: Optional[List[Path]] = None,
+) -> Tuple[List[Path], Dict[str, Path]]:
+    """새 버전 파일 배치 전, 카탈로그 고유 식별자 및 정규화 파일명 패턴을 기준으로
+    로컬 폴더(target_dir_resolved 및 known_existing_files) 내 기존 구버전 파일을 먼저 탐색합니다.
+    반환값: (제거할 기존 구버전 파일 Path 목록, 새 파일명(소문자) -> 기존 파일 부모 디렉터리 힌트 맵)
+    """
+    if not incoming_names:
+        return [], {}
+
+    safe_root = (mods_root_resolved if mods_root_resolved is not None else target_dir_resolved).resolve()
+    target_dir_res = target_dir_resolved.resolve()
+    protected_res: set[Path] = set()
+    for pp in protected_paths or []:
+        try:
+            protected_res.add(pp.resolve())
+        except OSError:
+            continue
+
+    raw_candidates: List[Path] = []
+    if target_dir_res.exists():
+        iterator = target_dir_res.rglob("*") if include_subdirs else target_dir_res.iterdir()
+        for f in iterator:
+            raw_candidates.append(f)
+
+    unit_files: List[Path] = []
+    for kf in known_existing_files or []:
+        raw_candidates.append(kf)
+        unit_files.append(kf)
+    if selected_file_path is not None:
+        raw_candidates.append(selected_file_path)
+        unit_files.append(selected_file_path)
+
+    unit_res_set: set[Path] = set()
+    for uf in unit_files:
+        try:
+            if uf.exists() and uf.is_file() and not uf.is_symlink():
+                unit_res_set.add(uf.resolve())
+        except OSError:
+            continue
+
+    candidates: List[Path] = []
+    seen_res: set[Path] = set()
+    for cand in raw_candidates:
+        try:
+            if not cand.exists() or not cand.is_file() or cand.is_symlink():
+                continue
+            if cand.suffix.lower() not in ALLOWED_MOD_WHITELIST_EXTENSIONS:
+                continue
+            cand_res = cand.resolve()
+            if cand_res in seen_res or cand_res in protected_res:
+                continue
+            if not is_safe_subpath(cand_res, safe_root, allow_equal=False):
+                continue
+            seen_res.add(cand_res)
+            candidates.append(cand)
+        except OSError:
+            continue
+
+    if not candidates:
+        return [], {}
+
+    exp_cat = (expected_catalog_id or "").strip()
+    incoming_meta: List[Dict[str, Any]] = []
+    incoming_core_by_cat_ext: Dict[Tuple[str, str], List[str]] = {}
+    incoming_core_by_ext: Dict[str, List[str]] = {}
+
+    for inc in incoming_names:
+        clean_inc = _normalize_leaf_filename(inc)
+        if not clean_inc:
+            continue
+        inc_low = clean_inc.lower()
+        inc_ext = Path(clean_inc).suffix.lower()
+        if inc_ext not in ALLOWED_MOD_WHITELIST_EXTENSIONS:
+            continue
+        inc_nk = normalize_mod_filename_key(clean_inc)
+        inc_rpo = re.search(r"lumpinou_rpo_collection_(m\d+)_", inc_low)
+        inc_special = _is_variant_or_edition_protected_file(clean_inc)
+        inc_cat = _lookup_catalog_id_safe(clean_inc) or exp_cat
+        incoming_meta.append(
+            {
+                "name": clean_inc,
+                "low": inc_low,
+                "ext": inc_ext,
+                "nk": inc_nk,
+                "rpo_slot": inc_rpo.group(1) if inc_rpo else "",
+                "special": inc_special,
+                "cat": inc_cat,
+            }
+        )
+        if not inc_special:
+            incoming_core_by_ext.setdefault(inc_ext, []).append(inc_low)
+            if inc_cat:
+                incoming_core_by_cat_ext.setdefault((inc_cat, inc_ext), []).append(inc_low)
+
+    cand_meta: List[Dict[str, Any]] = []
+    target_core_nks_by_cat_ext: Dict[Tuple[str, str], set[str]] = {}
+    unit_core_nks_by_ext: Dict[str, set[str]] = {}
+
+    for cand in candidates:
+        cand_res = cand.resolve()
+        cand_low = cand.name.lower()
+        cand_ext = cand.suffix.lower()
+        cand_nk = normalize_mod_filename_key(cand.name)
+        cand_rpo = re.search(r"lumpinou_rpo_collection_(m\d+)_", cand_low)
+        cand_special = _is_variant_or_edition_protected_file(cand.name)
+        cand_cat = _lookup_catalog_id_safe(cand.name)
+        in_unit = cand_res in unit_res_set
+        cand_info = {
+            "path": cand,
+            "res": cand_res,
+            "low": cand_low,
+            "ext": cand_ext,
+            "nk": cand_nk,
+            "rpo_slot": cand_rpo.group(1) if cand_rpo else "",
+            "special": cand_special,
+            "cat": cand_cat,
+            "in_unit": in_unit,
+        }
+        cand_meta.append(cand_info)
+        if not cand_special:
+            if cand_cat and is_safe_subpath(cand_res, target_dir_res, allow_equal=False):
+                target_core_nks_by_cat_ext.setdefault((cand_cat, cand_ext), set()).add(cand_nk or cand_low)
+            if in_unit:
+                unit_core_nks_by_ext.setdefault(cand_ext, set()).add(cand_nk or cand_low)
+
+    superseded: List[Path] = []
+    seen_superseded: set[Path] = set()
+    dest_parent_hints: Dict[str, Path] = {}
+
+    for c_info in cand_meta:
+        matched_inc: Optional[Dict[str, Any]] = None
+        for inc_m in incoming_meta:
+            if c_info["ext"] != inc_m["ext"]:
+                continue
+
+            # 1) 정확히 일치 또는 버전/날짜 정규화 키 일치
+            if c_info["low"] == inc_m["low"] or (inc_m["nk"] and c_info["nk"] == inc_m["nk"]):
+                matched_inc = inc_m
+                break
+
+            # 2) RPO Collection 모듈 슬롯(M00~M19) 일치
+            if inc_m["rpo_slot"] and c_info["rpo_slot"] == inc_m["rpo_slot"]:
+                matched_inc = inc_m
+                break
+
+            # 3) 카탈로그 고유 식별자 또는 업데이트 대상 단일 코어 유닛 개명 교체
+            if not c_info["special"] and not inc_m["special"]:
+                inc_cat = inc_m["cat"]
+                cand_cat = c_info["cat"] or (exp_cat if c_info["in_unit"] else "")
+                if (
+                    inc_cat
+                    and cand_cat == inc_cat
+                    and len(incoming_core_by_cat_ext.get((inc_cat, inc_m["ext"]), [])) == 1
+                ):
+                    target_nks = target_core_nks_by_cat_ext.get((inc_cat, inc_m["ext"]), set())
+                    unit_nks = unit_core_nks_by_ext.get(inc_m["ext"], set())
+                    if len(target_nks) <= 1 or (c_info["in_unit"] and len(unit_nks) <= 1):
+                        matched_inc = inc_m
+                        break
+
+                if (
+                    c_info["in_unit"]
+                    and len(incoming_core_by_ext.get(inc_m["ext"], [])) == 1
+                    and len(unit_core_nks_by_ext.get(inc_m["ext"], set())) <= 1
+                ):
+                    matched_inc = inc_m
+                    break
+
+        if matched_inc is not None:
+            cand_p = c_info["path"]
+            if c_info["res"] not in seen_superseded:
+                seen_superseded.add(c_info["res"])
+                superseded.append(cand_p)
+            try:
+                if is_safe_subpath(cand_p.parent, target_dir_res, allow_equal=True):
+                    dest_parent_hints.setdefault(matched_inc["low"], cand_p.parent)
+            except OSError:
+                pass
+
+    return superseded, dest_parent_hints
+
+
 def _verify_and_move_whitelisted_files(
     selected_files: List[Path],
     archive_path: Path,
@@ -1472,16 +1820,23 @@ def _verify_and_move_whitelisted_files(
     target_dir_resolved: Path,
     existing_rel_map: Optional[Dict[str, Path]] = None,
     existing_norm_rel_map: Optional[Dict[str, Path]] = None,
+    pre_remove_callback: Optional[Callable[[Path], None]] = None,
+    known_existing_files: Optional[List[Path]] = None,
+    selected_file_path: Optional[Path] = None,
+    include_subdirs: bool = False,
+    mods_root_resolved: Optional[Path] = None,
+    expected_catalog_id: Optional[str] = None,
+    protected_paths: Optional[List[Path]] = None,
 ) -> List[Path]:
-    """선별된 화이트리스트 파일(.package, .ts4script)의 바이너리 헤더 및 경로 안전성을 최종 확인한 뒤,
-    임시 폴더에서 실제 심즈 4 Mods 폴더(target_dir_resolved)로 안전하게 이동(shutil.move)시킵니다.
+    """선별된 화이트리스트 파일(.package, .ts4script)의 바이너리 헤더 및 경로 안전성을 전수 검증한 뒤,
+    로컬 폴더 내 구버전/동일 카탈로그 파일을 먼저 백업 및 안전 제거하고 새 버전 파일을 배치합니다.
     """
-    moved_files: List[Path] = []
+    verified_files: List[Path] = []
     for src_file in selected_files:
         if not is_whitelisted_mod_file(src_file, ALLOWED_MOD_WHITELIST_EXTENSIONS):
             continue
 
-        # 확장자만 .package / .ts4script로 위장한 PE 실행 파일('MZ') 2차 차단
+        # 1단계: 확장자만 .package / .ts4script로 위장한 PE 실행 파일('MZ') 사전 차단 (로컬 파일 손상 전 중단)
         with open(src_file, "rb") as sf:
             magic = sf.read(4)
         if magic.startswith(b"MZ"):
@@ -1492,13 +1847,35 @@ def _verify_and_move_whitelisted_files(
                 reason="허용 확장자로 위장된 Windows 실행 파일(PE MZ 헤더)이 감지되었습니다.",
                 is_dangerous_ext=True,
             )
+        verified_files.append(src_file)
 
-        clean_name = _normalize_leaf_filename(src_file.name)
+    if not verified_files:
+        return []
+
+    incoming_names = [_normalize_leaf_filename(sf.name) for sf in verified_files]
+    superseded_files, dest_parent_hints = find_superseded_mod_files(
+        incoming_names=incoming_names,
+        target_dir_resolved=target_dir_resolved,
+        mods_root_resolved=mods_root_resolved,
+        known_existing_files=known_existing_files,
+        selected_file_path=selected_file_path,
+        include_subdirs=include_subdirs,
+        expected_catalog_id=expected_catalog_id,
+        protected_paths=protected_paths,
+    )
+
+    merged_rel_map: Dict[str, Path] = dict(existing_rel_map or {})
+    for inc_low, hint_parent in dest_parent_hints.items():
+        if inc_low not in merged_rel_map and is_safe_subpath(hint_parent, target_dir_resolved, allow_equal=True):
+            merged_rel_map[inc_low] = hint_parent / inc_low
+
+    planned_moves: List[Tuple[Path, Path]] = []
+    for src_file in verified_files:
         dest_file = _resolve_install_dest_path(
             src_file=src_file,
             staging_dir=staging_dir,
             target_dir_resolved=target_dir_resolved,
-            existing_rel_map=existing_rel_map,
+            existing_rel_map=merged_rel_map,
             existing_norm_rel_map=existing_norm_rel_map,
         )
         if not is_safe_subpath(dest_file, target_dir_resolved):
@@ -1508,11 +1885,32 @@ def _verify_and_move_whitelisted_files(
                 offending_entry=src_file.name,
                 reason=f"최종 이동 경로('{dest_file}')가 대상 Mods 폴더('{target_dir_resolved}') 바깥을 가리킵니다.",
             )
+        planned_moves.append((src_file, dest_file))
 
-        dest_file.parent.mkdir(parents=True, exist_ok=True)
-        # 동일 하위 폴더 옵션 등에서 같은 파일명이 중복 선택된 경우 덮어쓰기 후 이동
+    # 2단계: 새 버전 파일 배치 전 기존 구버전/동일 대상 파일 먼저 백업 및 안전 제거
+    removed_res: set[Path] = set()
+    for old_f in superseded_files:
+        try:
+            old_res = old_f.resolve()
+            if old_res in removed_res:
+                continue
+            removed_res.add(old_res)
+        except OSError:
+            pass
+        if pre_remove_callback is not None:
+            pre_remove_callback(old_f)
+        safe_remove(old_f)
+
+    for _, dest_file in planned_moves:
         if dest_file.exists() or dest_file.is_symlink():
+            if pre_remove_callback is not None and dest_file.exists():
+                pre_remove_callback(dest_file)
             safe_remove(dest_file)
+
+    # 3단계: 검증된 새 버전 파일 배치
+    moved_files: List[Path] = []
+    for src_file, dest_file in planned_moves:
+        dest_file.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(src_file), str(dest_file))
         if dest_file not in moved_files:
             moved_files.append(dest_file)
@@ -1557,6 +1955,12 @@ def extract_zip(
     temp_work_dir: Optional[Path] = None,
     known_existing_files: Optional[List[Path]] = None,
     include_subdirs: bool = False,
+    force_include_names: Optional[set[str]] = None,
+    pre_remove_callback: Optional[Callable[[Path], None]] = None,
+    selected_file_path: Optional[Path] = None,
+    mods_root_resolved: Optional[Path] = None,
+    expected_catalog_id: Optional[str] = None,
+    protected_paths: Optional[List[Path]] = None,
 ) -> list[Path]:
     """ZIP / RAR / 7Z 압축 파일을 디스크에 추출하기 전 엔트리 헤더 전체를 보안 검증(경로 이탈 및 위험 확장자 차단)하고,
     임시 작업 폴더에 먼저 압축을 푼 뒤 화이트리스트 확장자(.package, .ts4script) 파일만 실제 대상 폴더(target_dir)로
@@ -1639,6 +2043,13 @@ def extract_zip(
                     staged_path.parent.mkdir(parents=True, exist_ok=True)
                     with zf.open(member, "r") as src_f, open(staged_path, "wb") as dst_f:
                         shutil.copyfileobj(src_f, dst_f)
+                    try:
+                        if member.date_time and member.date_time[0] >= 1980:
+                            entry_ts = datetime.datetime(*member.date_time[:6]).timestamp()
+                            if entry_ts > 0:
+                                os.utime(staged_path, (entry_ts, entry_ts))
+                    except Exception:
+                        pass
                     extracted_in_stage.append(staged_path)
 
             if violation_reason is not None:
@@ -1660,6 +2071,7 @@ def extract_zip(
                 target_filename=target_filename,
                 overwrite_mode=overwrite_mode,
                 existing_norm_keys=existing_norm_keys,
+                force_include_names=force_include_names,
             )
             return _verify_and_move_whitelisted_files(
                 selected_files=selected_to_move,
@@ -1668,6 +2080,13 @@ def extract_zip(
                 target_dir_resolved=target_dir_resolved,
                 existing_rel_map=existing_rel_map,
                 existing_norm_rel_map=existing_norm_rel_map,
+                pre_remove_callback=pre_remove_callback,
+                known_existing_files=known_existing_files,
+                selected_file_path=selected_file_path,
+                include_subdirs=include_subdirs,
+                mods_root_resolved=mods_root_resolved,
+                expected_catalog_id=expected_catalog_id,
+                protected_paths=protected_paths,
             )
         finally:
             # 화이트리스트로 이동되지 않은 나머지 불필요한 모든 파일 및 임시 스테이징 폴더 즉시 폐기
@@ -1749,6 +2168,7 @@ def extract_zip(
             target_filename=target_filename,
             overwrite_mode=overwrite_mode,
             existing_norm_keys=existing_norm_keys,
+            force_include_names=force_include_names,
         )
         return _verify_and_move_whitelisted_files(
             selected_files=selected_to_move,
@@ -1757,6 +2177,13 @@ def extract_zip(
             target_dir_resolved=target_dir_resolved,
             existing_rel_map=existing_rel_map,
             existing_norm_rel_map=existing_norm_rel_map,
+            pre_remove_callback=pre_remove_callback,
+            known_existing_files=known_existing_files,
+            selected_file_path=selected_file_path,
+            include_subdirs=include_subdirs,
+            mods_root_resolved=mods_root_resolved,
+            expected_catalog_id=expected_catalog_id,
+            protected_paths=protected_paths,
         )
     finally:
         # 이동되지 않은 모든 비화이트리스트 파일 및 임시 폴더 즉시 폐기

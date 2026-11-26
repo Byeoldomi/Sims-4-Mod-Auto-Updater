@@ -4,6 +4,8 @@ XML Tuning 식별자, Python 바이트코드 내장 URL, 제작자 태그 등)�
 """
 
 import copy
+import datetime
+import email.utils
 import html
 import json
 import re
@@ -68,18 +70,56 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["turbodriver_wickedwhims", "wickedwhims_scripts", "wickedwhims_tuning"],
+        "keywords": [
+            "turbodriver_wickedwhims_scripts.ts4script",
+            "turbodriver_wickedwhims_tuning.package",
+            "turbodriver_wickedwhims",
+            "wickedwhims_scripts",
+            "wickedwhims_tuning",
+            "wickedwhims.ts4script",
+            "wickedwhims.package",
+        ],
         "name": "WickedWhims",
         "creator": "TURBODRIVER",
         "mod_title": "WickedWhims",
         "version": "185k",
+        "requires_option_modal": True,
+        "option_modal_mode": "ww_channel",
+        "option_modal_prompt": "WickedWhims 배포 버전을 선택해 주세요. (무료 버전 v185k 자동 업데이트 / 선배포 버전 v187.18 수동 다운로드)",
+        "option_presets": [
+            {
+                "file_name": "ww_channel:free",
+                "channel": "free",
+                "label": "무료 버전 (Wicked.cc v185k · 자동 업데이트)",
+                "description": "공식 무료 배포판(v185k) 기준으로 버전을 비교하고 자동 업데이트를 활성화합니다.",
+            },
+            {
+                "file_name": "ww_channel:paid",
+                "channel": "paid",
+                "label": "선배포 버전 (Patreon v187.18 · 수동 다운로드)",
+                "description": "Patreon 선배포 버전(v187.18) 기준으로 자동 다운로드를 실행하지 않고 '수동 확인' 상태를 유지합니다.",
+            },
+        ],
+        "release_notes": "WickedWhims 무료 공개 배포판(v185k) · 자동 업데이트 지원",
         "links": [
             ("Wicked.cc (공식)", "WickedWhims - WickedCC | TURBODRIVER", "https://wicked.cc/mods/TURBODRIVER/wickedwhims"),
             ("Itch.io", "TURBODRIVER Itch.io", "https://turbodriver.itch.io/wickedwhims")
-        ]
+        ],
+        "paid_version": "187.18",
+        "paid_links": [
+            ("Patreon (선배포)", "WickedWhims v187.18 | TURBODRIVER", "https://www.patreon.com/wickedwoohoo/posts/wickedwhims-v187-134827399"),
+            ("Patreon 채널", "TURBODRIVER Official Patreon", "https://www.patreon.com/wickedwoohoo")
+        ],
     },
     {
-        "keywords": ["wonderfulwhims", "turbodriver_wonderfulwhims", "wonderfulwhims_scripts", "wonderfulwhims_tuning"],
+        "keywords": [
+            "turbodriver_wonderfulwhims_scripts.ts4script",
+            "turbodriver_wonderfulwhims_tuning.package",
+            "wonderfulwhims",
+            "turbodriver_wonderfulwhims",
+            "wonderfulwhims_scripts",
+            "wonderfulwhims_tuning",
+        ],
         "name": "WonderfulWhims",
         "creator": "TURBODRIVER",
         "mod_title": "WonderfulWhims",
@@ -90,11 +130,30 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["more_cas_columns", "more columns in cas"],
+        "keywords": [
+            "more_cas_columns_(3_columns).package",
+            "more_cas_columns_(4_columns).package",
+            "more_cas_columns_(5_columns).package",
+            "more_cas_columns_(6_columns).package",
+            "more_cas_columns_(3_columns)",
+            "more_cas_columns_(4_columns)",
+            "more_cas_columns_(5_columns)",
+            "more_cas_columns_(6_columns)",
+            "more_cas_columns",
+            "more columns in cas",
+        ],
         "name": "More Columns in CAS",
         "creator": "Weerbesu",
         "mod_title": "More Columns in CAS",
         "version": "1.38",
+        "requires_option_modal": True,
+        "option_modal_prompt": "CAS(심 만들기) 화면에 표시할 열 개수 옵션을 선택해 주세요. (동시 설치 불가 · 1개 선택)",
+        "option_presets": [
+            {"file_name": "More_CAS_Columns_(3_Columns).package", "label": "3열 (3 Columns)"},
+            {"file_name": "More_CAS_Columns_(4_Columns).package", "label": "4열 (4 Columns)"},
+            {"file_name": "More_CAS_Columns_(5_Columns).package", "label": "5열 (5 Columns)"},
+            {"file_name": "More_CAS_Columns_(6_Columns).package", "label": "6열 (6 Columns)"},
+        ],
         "links": [
             ("Patreon (공식)", "More Columns in CAS | Weerbesu", "https://www.patreon.com/weerbesu/posts/more-columns-in-27751117"),
             ("Patreon 채널", "Weerbesu Official Patreon", "https://www.patreon.com/weerbesu")
@@ -381,12 +440,15 @@ KNOWN_CATALOG = [
     },
     {
         "keywords": [
+            "littlemssam_asktocookbakegrill.package",
+            "littlemssam_asktocookbakegrill.ts4script",
             "littlemssam_asktocookbakegrill",
             "asktocookbakegrill",
             "ask_to_cook_bake_grill",
             "ask to cook/bake/grill/mix drink",
             "ask to cook bake grill mix drink",
             "ask-to-cook-bake-grill-mix-drink",
+            "asktocookbake",
         ],
         "name": "Ask to Cook/Bake/Grill/Mix Drink!",
         "creator": "LittleMsSam",
@@ -399,6 +461,7 @@ KNOWN_CATALOG = [
     },
     {
         "keywords": [
+            "littlemssam_heatupleftovers.package",
             "littlemssam_heatupleftovers",
             "heatupleftovers",
             "heat_up_leftovers",
@@ -416,6 +479,7 @@ KNOWN_CATALOG = [
     },
     {
         "keywords": [
+            "littlemssam_rsm_bg_fooddrinksasclutter.package",
             "littlemssam_rsm_bg_fooddrinksasclutter",
             "fooddrinksasclutter",
             "food_drinks_as_clutter",
@@ -489,9 +553,9 @@ KNOWN_CATALOG = [
             "wake up animation overhaul",
             "rsm-wake-up-animation-overhaul",
         ],
-        "name": "RSM - Wake Up Animation Overhaul",
+        "name": "Wake Up Animation Overhaul",
         "creator": "LittleMsSam",
-        "mod_title": "RSM - Wake Up Animation Overhaul",
+        "mod_title": "Wake Up Animation Overhaul",
         "override_mod_title": True,
         "version": "2025.07.08",
         "links": [
@@ -563,6 +627,7 @@ KNOWN_CATALOG = [
     },
     {
         "keywords": [
+            "frequentlybasic_flavoredmemories.package",
             "frequentlybasic_flavoredmemories",
             "flavoredmemories",
             "flavored_memories",
@@ -739,6 +804,1124 @@ KNOWN_CATALOG = [
     },
     {
         "keywords": [
+            "simkatu_reading_override_v3.package",
+            "simkatu_reading_override.package",
+            "simkatu_reading_override",
+            "reading_override",
+            "reading override",
+            "reading-override",
+            "simkatu_animations_addon_loungechair.package",
+            "simkatu_animations_addon_loungechair",
+            "simkatu_animations_addon_murphybed_sp16.package",
+            "simkatu_animations_addon_murphybed_sp16",
+        ],
+        "name": "Reading Override",
+        "creator": "simkatu",
+        "mod_title": "Reading Override",
+        "override_mod_title": True,
+        "version": "3",
+        "links": [
+            ("Patreon (공식)", "reading override (v3) | simkatu", "https://www.patreon.com/simkatu/posts/reading-override-174169741"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_eating_at_the_table_animation_override.package",
+            "simkatu_eating_at_the_table.package",
+            "simkatu_eating_at_table.package",
+            "simkatu_eating_at_the_table",
+            "simkatu_eating_at_table",
+            "eating_at_the_table_animation_override",
+            "eating at the table animation override",
+            "eating-at-table",
+        ],
+        "name": "Eating at the Table Animation Override",
+        "creator": "simkatu",
+        "mod_title": "Eating at the Table Animation Override",
+        "override_mod_title": True,
+        "version": "2025.07.26",
+        "links": [
+            ("Patreon (공식)", "eating at the table animation override | simkatu", "https://www.patreon.com/simkatu/posts/eating-at-table-134998014"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_functional_mini_easels.package",
+            "simkatu_functional_mini_easels",
+            "functional_mini_easels",
+            "functional mini easels",
+        ],
+        "name": "Painting Animation Override - Functional Mini Easels",
+        "creator": "simkatu",
+        "mod_title": "Painting Animation Override - Functional Mini Easels",
+        "override_mod_title": True,
+        "version": "2026.08.02",
+        "links": [
+            ("Patreon (공식)", "painting animation override (Functional Mini Easels) | simkatu", "https://www.patreon.com/simkatu/posts/painting-mini-130600688"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_canvas_frame_override_v1.package",
+            "simkatu_canvas_frame_override_v2.package",
+            "simkatu_canvas_frame_override_v3.package",
+            "simkatu_canvas_frame_override_v1",
+            "simkatu_canvas_frame_override_v2",
+            "simkatu_canvas_frame_override_v3",
+            "simkatu_canvas_frame_override",
+            "canvas_frame_override",
+            "canvas frame override",
+        ],
+        "name": "Painting Animation Override - Canvas Frame Override",
+        "creator": "simkatu",
+        "mod_title": "Painting Animation Override - Canvas Frame Override",
+        "override_mod_title": True,
+        "version": "2026.08.02",
+        "links": [
+            ("Patreon (공식)", "painting animation override (Canvas Frame Override) | simkatu", "https://www.patreon.com/simkatu/posts/painting-mini-130600688"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_painting_animation_override.package",
+            "simkatu_painting_animation_override_gender_neutral.package",
+            "simkatu_painting_override.package",
+            "simkatu_painting_animation_override_gender_neutral",
+            "simkatu_painting_animation_override",
+            "simkatu_painting_override",
+            "simkatu_painting",
+            "painting_animation_override",
+            "painting animation override",
+            "painting-animation-override",
+        ],
+        "name": "Painting Animation Override",
+        "creator": "simkatu",
+        "mod_title": "Painting Animation Override",
+        "override_mod_title": True,
+        "version": "2026.08.02",
+        "links": [
+            ("Patreon (공식)", "painting animation override | simkatu", "https://www.patreon.com/simkatu/posts/painting-mini-130600688"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_compute_animation_override.package",
+            "simkatu_computer_animation_override.package",
+            "simkatu_compute_animation_override",
+            "simkatu_computer_animation_override",
+            "compute_animation_override",
+            "computer_animation_override",
+            "computer animation override",
+            "computer-animation-override",
+        ],
+        "name": "Computer Animation Override",
+        "creator": "simkatu",
+        "mod_title": "Computer Animation Override",
+        "override_mod_title": True,
+        "version": "2025.06.25",
+        "links": [
+            ("Patreon (공식)", "computer animation override | simkatu", "https://www.patreon.com/simkatu/posts/computer-126595678"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_phone_calls_animations_override.package",
+            "simkatu_phone_call_animation_override.package",
+            "simkatu_phone_calls_animations_override",
+            "simkatu_phone_call_animation_override",
+            "phone_calls_animations_override",
+            "phone_call_animation_override",
+            "phone call animations override",
+            "phone call animation override",
+            "phone-call-animations-override",
+        ],
+        "name": "Phone Call Animation Override",
+        "creator": "simkatu",
+        "mod_title": "Phone Call Animation Override",
+        "override_mod_title": True,
+        "version": "2025.06.04",
+        "links": [
+            ("Patreon (공식)", "phone call animations override | simkatu", "https://www.patreon.com/simkatu/posts/phone-call-118902550"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_writing_animation_override.package",
+            "simkatu_writing_animation_override",
+            "writing_animation_override",
+            "writing animation override",
+            "writing-animation-override",
+            "writing-override",
+        ],
+        "name": "Writing Animation Override",
+        "creator": "simkatu",
+        "mod_title": "Writing Animation Override",
+        "override_mod_title": True,
+        "version": "2024.10.16",
+        "links": [
+            ("Patreon (공식)", "writing animation override | simkatu", "https://www.patreon.com/simkatu/posts/writing-override-113770138"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_relaxed_tv_watching_override.package",
+            "simkatu_relaxed_tv_watching_override",
+            "simkatu_relaxed_tv_watching_animation_override",
+            "relaxed_tv_watching_override",
+            "relaxed tv watching animations override",
+            "relaxed tv watching animation override",
+            "relaxed tv watching override",
+            "relaxed-tv-watching",
+        ],
+        "name": "Relaxed TV Watching Animation Override",
+        "creator": "simkatu",
+        "mod_title": "Relaxed TV Watching Animation Override",
+        "override_mod_title": True,
+        "version": "2026.10.30",
+        "links": [
+            ("Patreon (공식)", "relaxed tv watching animations override | simkatu", "https://www.patreon.com/simkatu/posts/relaxed-tv-113487807"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_singing_animation_with_microphone.package",
+            "simkatu_singing_animation_with_microphone",
+            "simkatu_override_of_singing_animation_with_microphone.package",
+            "simkatu_override_of_singing_animation_with_microphone",
+            "simkatu_singing_with_microphone.package",
+            "simkatu_singing_with_microphone",
+            "simkatu_singing_override.package",
+            "simkatu_singing_override",
+            "override_of_singing_animation_with_microphone",
+            "override of singing animation with microphone",
+            "singing_animation_with_microphone",
+            "singing animation with microphone",
+            "singing_with_microphone_override",
+            "override-of-with-107265096",
+        ],
+        "name": "Override of Singing Animation with Microphone",
+        "creator": "simkatu",
+        "mod_title": "Override of Singing Animation with Microphone",
+        "override_mod_title": True,
+        "version": "2024.07.01",
+        "links": [
+            ("Patreon (공식)", "override of singing animation with microphone | simkatu", "https://www.patreon.com/simkatu/posts/override-of-with-107265096"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_tryonweddingpromoutfits_wardrobeplatform_addon.package",
+            "simkatu_tryonweddingpromoutfits_wardrobeplatform_addon",
+            "tryonweddingpromoutfits_wardrobeplatform_addon",
+            "wardrobeplatform_addon",
+            "wardrobe platform addon",
+            "try on wedding & prom outfits - addon",
+            "try on wedding and prom outfits - addon",
+        ],
+        "name": "Try on Wedding & Prom Outfits - Addon",
+        "creator": "simkatu",
+        "mod_title": "Try on Wedding & Prom Outfits - Addon",
+        "override_mod_title": True,
+        "version": "2026.10.26",
+        "links": [
+            ("Patreon (공식)", "try on wedding & prom outfits | simkatu", "https://www.patreon.com/simkatu/posts/try-on-wedding-166429206"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_tryonweddingpromoutfits_alllots_v1.package",
+            "simkatu_tryonweddingpromoutfits_retailthriftlots_v2.package",
+            "simkatu_tryonweddingpromoutfits",
+            "tryonweddingpromoutfits",
+            "try on wedding & prom outfits",
+            "try on wedding and prom outfits",
+            "try-on-wedding-166429206",
+        ],
+        "name": "Try on Wedding & Prom Outfits",
+        "creator": "simkatu",
+        "mod_title": "Try on Wedding & Prom Outfits",
+        "override_mod_title": True,
+        "version": "2026.10.26",
+        "requires_option_modal": True,
+        "option_modal_prompt": "설치할 부지 적용 버전을 선택해 주세요. (allLots_v1 / retailThriftLots_v2 중 1개 선택 · 동시 설치 불가)",
+        "option_presets": [
+            {
+                "file_name": "simkatu_tryOnWeddingPromOutfits_allLots_v1.package",
+                "label": "allLots_v1 (모든 부지 적용)",
+                "match_tokens": ["alllots_v1"],
+            },
+            {
+                "file_name": "simkatu_tryOnWeddingPromOutfits_retailThriftLots_v2.package",
+                "label": "retailThriftLots_v2 (상점 · 중고매장 부지 전용)",
+                "match_tokens": ["retailthriftlots_v2"],
+            },
+        ],
+        "links": [
+            ("Patreon (공식)", "try on wedding & prom outfits | simkatu", "https://www.patreon.com/simkatu/posts/try-on-wedding-166429206"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_selfcare_washface.package",
+            "simkatu_selfcare_washface",
+            "selfcare_washface",
+            "washface",
+            "selfcare - wash face",
+        ],
+        "name": "Selfcare - Wash Face",
+        "creator": "simkatu",
+        "mod_title": "Selfcare - Wash Face",
+        "override_mod_title": True,
+        "version": "2026.08.31",
+        "links": [
+            ("Patreon (공식)", "wash face and sanitize hands | simkatu", "https://www.patreon.com/simkatu/posts/wash-face-and-159477437"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_selfcare_handsanitizer.package",
+            "simkatu_selfcare_handsanitizer",
+            "selfcare_handsanitizer",
+            "handsanitizer",
+            "selfcare - hand sanitizer",
+        ],
+        "name": "Selfcare - Hand Sanitizer",
+        "creator": "simkatu",
+        "mod_title": "Selfcare - Hand Sanitizer",
+        "override_mod_title": True,
+        "version": "2026.08.31",
+        "links": [
+            ("Patreon (공식)", "wash face and sanitize hands | simkatu", "https://www.patreon.com/simkatu/posts/wash-face-and-159477437"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_selfcare_addon_purchasefromcomputer.package",
+            "simkatu_selfcare_addon_purchasefromcomputer",
+            "selfcare_addon_purchasefromcomputer",
+            "purchasefromcomputer",
+            "purchase from computer",
+            "selfcare - addon - purchase from computer",
+        ],
+        "name": "Selfcare - Addon - Purchase From Computer",
+        "creator": "simkatu",
+        "mod_title": "Selfcare - Addon - Purchase From Computer",
+        "override_mod_title": True,
+        "version": "2026.08.31",
+        "links": [
+            ("Patreon (공식)", "wash face and sanitize hands | simkatu", "https://www.patreon.com/simkatu/posts/wash-face-and-159477437"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_selfcare_wallsanitizer_gettowork_override.package",
+            "simkatu_selfcare_wallsanitizer_gettowork_override",
+            "simkatu_selfcare_wallsanitizer_gettowork",
+            "wallsanitizer_gettowork",
+            "selfcare - wall sanitizer - get to work",
+        ],
+        "name": "Selfcare - Wall Sanitizer - Get To Work",
+        "creator": "simkatu",
+        "mod_title": "Selfcare - Wall Sanitizer - Get To Work",
+        "override_mod_title": True,
+        "version": "2026.08.31",
+        "links": [
+            ("Patreon (공식)", "wash face and sanitize hands | simkatu", "https://www.patreon.com/simkatu/posts/wash-face-and-159477437"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_selfcare_wallsanitizer_basegame.package",
+            "simkatu_selfcare_wallsanitizer_basegame",
+            "wallsanitizer_basegame",
+            "simkatu_selfcare_wallsanitizer",
+            "wallsanitizer",
+            "selfcare - wall sanitizer - base game",
+        ],
+        "name": "Selfcare - Wall Sanitizer - Base Game",
+        "creator": "simkatu",
+        "mod_title": "Selfcare - Wall Sanitizer - Base Game",
+        "override_mod_title": True,
+        "version": "2026.08.31",
+        "links": [
+            ("Patreon (공식)", "wash face and sanitize hands | simkatu", "https://www.patreon.com/simkatu/posts/wash-face-and-159477437"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_mirrorphoto_posepack_female.package",
+            "simkatu_mirrorphoto_posepack_female",
+            "mirrorphoto_posepack_female",
+            "posepack_female",
+            "mirror photo posepack female",
+            "mirror selfie - mirror photo posepack female",
+        ],
+        "name": "Mirror Selfie - Mirror Photo Posepack Female",
+        "creator": "simkatu",
+        "mod_title": "Mirror Selfie - Mirror Photo Posepack Female",
+        "override_mod_title": True,
+        "version": "2026.08.31",
+        "links": [
+            ("Patreon (공식)", "mirror selfie | simkatu", "https://www.patreon.com/simkatu/posts/mirror-selfie-146833653"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_mirrorphoto_posepack_male.package",
+            "simkatu_mirrorphoto_posepack_male",
+            "mirrorphoto_posepack_male",
+            "posepack_male",
+            "mirror photo posepack male",
+            "mirror selfie - mirror photo posepack male",
+        ],
+        "name": "Mirror Selfie - Mirror Photo Posepack Male",
+        "creator": "simkatu",
+        "mod_title": "Mirror Selfie - Mirror Photo Posepack Male",
+        "override_mod_title": True,
+        "version": "2026.08.31",
+        "links": [
+            ("Patreon (공식)", "mirror selfie | simkatu", "https://www.patreon.com/simkatu/posts/mirror-selfie-146833653"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_mirrorphoto_phone.package",
+            "simkatu_mirrorphoto_phone",
+            "mirrorphoto_phone",
+            "mirror photo phone",
+            "mirror selfie - mirror photo phone",
+        ],
+        "name": "Mirror Selfie - Mirror Photo Phone",
+        "creator": "simkatu",
+        "mod_title": "Mirror Selfie - Mirror Photo Phone",
+        "override_mod_title": True,
+        "version": "2026.08.31",
+        "links": [
+            ("Patreon (공식)", "mirror selfie | simkatu", "https://www.patreon.com/simkatu/posts/mirror-selfie-146833653"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_mirrorphoto_v2_genderneutral.package",
+            "simkatu_mirrorphoto_v2_genderneutral",
+            "mirrorphoto_v2_genderneutral",
+            "mirror selfie - mirror photo v2",
+            "mirror photo v2",
+        ],
+        "name": "Mirror Selfie - Mirror Photo v2",
+        "creator": "simkatu",
+        "mod_title": "Mirror Selfie - Mirror Photo v2",
+        "override_mod_title": True,
+        "version": "2026.08.31",
+        "requires_option_modal": True,
+        "option_modal_prompt": "설치할 Mirror Photo 버전을 선택해 주세요. (mirrorphoto 기본 / v2 genderneutral 중 1개 선택 · 동시 설치 불가)",
+        "option_presets": [
+            {
+                "file_name": "simkatu_mirrorphoto.package",
+                "label": "mirrorphoto (기본 버전 · 택1)",
+                "match_tokens": ["simkatu_mirrorphoto.package"],
+            },
+            {
+                "file_name": "simkatu_mirrorphoto_v2_genderneutral.package",
+                "label": "mirrorphoto_v2_genderneutral (성별 무관 v2 · 택1)",
+                "match_tokens": ["mirrorphoto_v2_genderneutral"],
+            },
+        ],
+        "links": [
+            ("Patreon (공식)", "mirror selfie | simkatu", "https://www.patreon.com/simkatu/posts/mirror-selfie-146833653"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_mirrorphoto.package",
+            "simkatu_mirrorphoto",
+            "mirrorphoto",
+            "mirror selfie - mirror photo",
+            "mirror-selfie-146833653",
+        ],
+        "name": "Mirror Selfie - Mirror Photo",
+        "creator": "simkatu",
+        "mod_title": "Mirror Selfie - Mirror Photo",
+        "override_mod_title": True,
+        "version": "2026.08.31",
+        "requires_option_modal": True,
+        "option_modal_prompt": "설치할 Mirror Photo 버전을 선택해 주세요. (mirrorphoto 기본 / v2 genderneutral 중 1개 선택 · 동시 설치 불가)",
+        "option_presets": [
+            {
+                "file_name": "simkatu_mirrorphoto.package",
+                "label": "mirrorphoto (기본 버전 · 택1)",
+                "match_tokens": ["simkatu_mirrorphoto.package"],
+            },
+            {
+                "file_name": "simkatu_mirrorphoto_v2_genderneutral.package",
+                "label": "mirrorphoto_v2_genderneutral (성별 무관 v2 · 택1)",
+                "match_tokens": ["mirrorphoto_v2_genderneutral"],
+            },
+        ],
+        "links": [
+            ("Patreon (공식)", "mirror selfie | simkatu", "https://www.patreon.com/simkatu/posts/mirror-selfie-146833653"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_read_in_bed.package",
+            "simkatu_read_in_bed",
+            "simkatu_readinbed.package",
+            "simkatu_readinbed",
+            "read_in_bed",
+            "read in bed",
+            "readinbed",
+            "read-in-bed-128394840",
+        ],
+        "name": "Read in Bed",
+        "creator": "simkatu",
+        "mod_title": "Read in Bed",
+        "override_mod_title": True,
+        "version": "2026.08.31",
+        "links": [
+            ("Patreon (공식)", "read in bed | simkatu", "https://www.patreon.com/simkatu/posts/read-in-bed-128394840"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_music_listening_interactions_autonomy_off.package",
+            "simkatu_music_listening_interactions_autonomy_off",
+            "music_listening_interactions_autonomy_off",
+            "simkatu_music_listening_interactions.package",
+            "simkatu_music_listening_interactions",
+            "music_listening_interactions",
+            "new music listening interactions",
+            "music listening interactions",
+            "new-music-114984579",
+        ],
+        "name": "Music Listening Interactions",
+        "creator": "simkatu",
+        "mod_title": "Music Listening Interactions",
+        "override_mod_title": True,
+        "version": "2026.03.20",
+        "requires_option_modal": True,
+        "option_modal_prompt": "설치할 Music Listening Interactions 버전을 선택해 주세요. (기본 버전 / Autonomy Off 중 1개 선택 · 동시 설치 불가)",
+        "option_presets": [
+            {
+                "file_name": "simkatu_music_listening_interactions.package",
+                "label": "music_listening_interactions (기본 버전 · 택1)",
+                "match_tokens": ["simkatu_music_listening_interactions.package"],
+            },
+            {
+                "file_name": "simkatu_music_listening_interactions_autonomy_off.package",
+                "label": "music_listening_interactions_autonomy_off (자율성 끄기 · 택1)",
+                "match_tokens": ["music_listening_interactions_autonomy_off"],
+            },
+        ],
+        "links": [
+            ("Patreon (공식)", "new music listening interactions | simkatu", "https://www.patreon.com/simkatu/posts/new-music-114984579"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_cry_mod_v2.package",
+            "simkatu_cry_mod_v2",
+            "simkatu_cry_mod.package",
+            "simkatu_cry_mod",
+            "cry_mod_v2",
+            "cry_mod",
+            "cry mod",
+            "cry-mod-v-2-141863817",
+        ],
+        "name": "Cry Mod",
+        "creator": "simkatu",
+        "mod_title": "Cry Mod",
+        "override_mod_title": True,
+        "version": "2",
+        "links": [
+            ("Patreon (공식)", "cry mod v.2 | simkatu", "https://www.patreon.com/simkatu/posts/cry-mod-v-2-141863817"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_nap_on_the_table_more_energy.package",
+            "simkatu_nap_on_the_table_more_energy",
+            "nap_on_the_table_more_energy",
+            "simkatu_nap_on_the_table.package",
+            "simkatu_nap_on_the_table",
+            "nap_on_the_table",
+            "nap on the table",
+            "nap-on-table-112677899",
+        ],
+        "name": "Nap on the Table",
+        "creator": "simkatu",
+        "mod_title": "Nap on the Table",
+        "override_mod_title": True,
+        "version": "2026.05.15",
+        "requires_option_modal": True,
+        "option_modal_prompt": "설치할 Nap on the Table 버전을 선택해 주세요. (기본 버전 / More Energy 중 1개 선택 · 동시 설치 불가)",
+        "option_presets": [
+            {
+                "file_name": "simkatu_nap_on_the_table.package",
+                "label": "nap_on_the_table (기본 버전 · 택1)",
+                "match_tokens": ["simkatu_nap_on_the_table.package"],
+            },
+            {
+                "file_name": "simkatu_nap_on_the_table_more_energy.package",
+                "label": "nap_on_the_table_more_energy (에너지 회복 증가 · 택1)",
+                "match_tokens": ["nap_on_the_table_more_energy"],
+            },
+        ],
+        "links": [
+            ("Patreon (공식)", "nap on the table | simkatu", "https://www.patreon.com/simkatu/posts/nap-on-table-112677899"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_mod_endless_grief_with_autonomy.package",
+            "simkatu_mod_endless_grief_with_autonomy",
+            "simkatu_mod_endless_grief_without_autonomy.package",
+            "simkatu_mod_endless_grief_without_autonomy",
+            "endless_grief_with_autonomy",
+            "endless_grief_without_autonomy",
+            "simkatu_mod_endless_grief",
+            "endless_grief",
+            "endless grief",
+            "endless-grief-111074342",
+        ],
+        "name": "Endless Grief",
+        "creator": "simkatu",
+        "mod_title": "Endless Grief",
+        "override_mod_title": True,
+        "version": "2026.03.20",
+        "requires_option_modal": True,
+        "option_modal_prompt": "설치할 Endless Grief 버전을 선택해 주세요. (With Autonomy / Without Autonomy 중 1개 선택 · 동시 설치 불가)",
+        "option_presets": [
+            {
+                "file_name": "simkatu_mod_endless_grief_with_autonomy.package",
+                "label": "endless_grief_with_autonomy (자율성 켜기 · 택1)",
+                "match_tokens": ["endless_grief_with_autonomy"],
+            },
+            {
+                "file_name": "simkatu_mod_endless_grief_without_autonomy.package",
+                "label": "endless_grief_without_autonomy (자율성 끄기 · 택1)",
+                "match_tokens": ["endless_grief_without_autonomy"],
+            },
+        ],
+        "links": [
+            ("Patreon (공식)", "endless grief | simkatu", "https://www.patreon.com/simkatu/posts/endless-grief-111074342"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_group_announcements.package",
+            "simkatu_group_announcements",
+            "group_announcements",
+            "group announcements",
+            "group-165200366",
+        ],
+        "name": "Group Announcements",
+        "creator": "simkatu",
+        "mod_title": "Group Announcements",
+        "override_mod_title": True,
+        "version": "2026.07.31",
+        "links": [
+            ("Patreon (공식)", "group announcements | simkatu", "https://www.patreon.com/simkatu/posts/group-165200366"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_cuddle_while_watching_tv.package",
+            "simkatu_cuddle_while_watching_tv",
+            "cuddle_while_watching_tv",
+            "cuddle while watching tv",
+            "cuddle-while-tv-161199341",
+        ],
+        "name": "Cuddle While Watching TV",
+        "creator": "simkatu",
+        "mod_title": "Cuddle While Watching TV",
+        "override_mod_title": True,
+        "version": "2026.08.31",
+        "links": [
+            ("Patreon (공식)", "cuddle while watching tv | simkatu", "https://www.patreon.com/simkatu/posts/cuddle-while-tv-161199341"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_intimate_lap_kiss.package",
+            "simkatu_intimate_lap_kiss",
+            "intimate_lap_kiss",
+            "intimate lap kiss",
+            "intimate-lap-156435424",
+        ],
+        "name": "Intimate Lap Kiss",
+        "creator": "simkatu",
+        "mod_title": "Intimate Lap Kiss",
+        "override_mod_title": True,
+        "version": "2026.04.24",
+        "links": [
+            ("Patreon (공식)", "intimate lap kiss | simkatu", "https://www.patreon.com/simkatu/posts/intimate-lap-156435424"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_hangout_and_chat_on_bed.package",
+            "simkatu_hangout_and_chat_on_bed",
+            "hangout_and_chat_on_bed",
+            "hang_out_and_chat_on_the_bed",
+            "hang out and chat on the bed",
+            "hangout and chat on bed",
+            "hang-out-and-on-143636880",
+        ],
+        "name": "Hang Out and Chat on the Bed",
+        "creator": "simkatu",
+        "mod_title": "Hang Out and Chat on the Bed",
+        "override_mod_title": True,
+        "version": "2026.07.03",
+        "links": [
+            ("Patreon (공식)", "hang out and chat on the bed | simkatu", "https://www.patreon.com/simkatu/posts/hang-out-and-on-143636880"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_interaction_ask_to_learn_how_to_kiss.package",
+            "simkatu_interaction_ask_to_learn_how_to_kiss",
+            "interaction_ask_to_learn_how_to_kiss",
+            "ask_to_learn_how_to_kiss",
+            "ask to learn how to kiss",
+            "new-interaction-109317608",
+        ],
+        "name": "Ask to Learn How to Kiss",
+        "creator": "simkatu",
+        "mod_title": "Ask to Learn How to Kiss",
+        "override_mod_title": True,
+        "version": "2025.04.07",
+        "links": [
+            ("Patreon (공식)", "new interaction \"ask to learn how to kiss\" | simkatu", "https://www.patreon.com/simkatu/posts/new-interaction-109317608"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_show_off_the_baby.package",
+            "simkatu_show_off_the_baby",
+            "show_off_the_baby",
+            "show off the baby",
+            "show-off-baby-145686121",
+        ],
+        "name": "Show Off the Baby",
+        "creator": "simkatu",
+        "mod_title": "Show Off the Baby",
+        "override_mod_title": True,
+        "version": "2025.12.12",
+        "links": [
+            ("Patreon (공식)", "show off the baby | simkatu", "https://www.patreon.com/simkatu/posts/show-off-baby-145686121"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_dance_with_baby_in_arms.package",
+            "simkatu_dance_with_baby_in_arms",
+            "dance_with_baby_in_arms",
+            "dance with baby in arms",
+            "dance-with-baby-132101139",
+        ],
+        "name": "Dance with Baby in Arms",
+        "creator": "simkatu",
+        "mod_title": "Dance with Baby in Arms",
+        "override_mod_title": True,
+        "version": "2025.06.23",
+        "links": [
+            ("Patreon (공식)", "dance with baby in arms | simkatu", "https://www.patreon.com/simkatu/posts/dance-with-baby-132101139"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_nap_with_baby_in_bed_v2_more_energy.package",
+            "simkatu_nap_with_baby_in_bed_v2_more_energy",
+            "nap_with_baby_in_bed_v2_more_energy",
+            "simkatu_nap_with_baby_in_bed.package",
+            "simkatu_nap_with_baby_in_bed",
+            "nap_with_baby_in_bed",
+            "nap with baby in bed",
+            "nap-with-baby-in-137123858",
+        ],
+        "name": "Nap With Baby in Bed",
+        "creator": "simkatu",
+        "mod_title": "Nap With Baby in Bed",
+        "override_mod_title": True,
+        "version": "2026.04.18",
+        "requires_option_modal": True,
+        "option_modal_prompt": "설치할 Nap With Baby in Bed 버전을 선택해 주세요. (기본 버전 / v2 More Energy 중 1개 선택 · 동시 설치 불가)",
+        "option_presets": [
+            {
+                "file_name": "simkatu_nap_with_baby_in_bed.package",
+                "label": "nap_with_baby_in_bed (기본 버전 · 택1)",
+                "match_tokens": ["simkatu_nap_with_baby_in_bed.package"],
+            },
+            {
+                "file_name": "simkatu_nap_with_baby_in_bed_v2_more_energy.package",
+                "label": "nap_with_baby_in_bed_v2_more_energy (에너지 회복 증가 v2 · 택1)",
+                "match_tokens": ["nap_with_baby_in_bed_v2_more_energy"],
+            },
+        ],
+        "links": [
+            ("Patreon (공식)", "nap with baby in bed | simkatu", "https://www.patreon.com/simkatu/posts/nap-with-baby-in-137123858"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_nap_with_infant.package",
+            "simkatu_nap_with_infant",
+            "nap_with_infant",
+            "take a nap with infant",
+            "take a nap with a infant",
+            "take a nap with an infant",
+            "take-nap-with-116027318",
+        ],
+        "name": "Take a Nap with Infant",
+        "creator": "simkatu",
+        "mod_title": "Take a Nap with Infant",
+        "override_mod_title": True,
+        "version": "2025.02.25",
+        "links": [
+            ("Patreon (공식)", "take a nap with infant | simkatu", "https://www.patreon.com/simkatu/posts/take-nap-with-116027318"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_nap_with_toddler.package",
+            "simkatu_nap_with_toddler",
+            "nap_with_toddler",
+            "take a nap with a toddler",
+            "take a nap with toddler",
+            "take-nap-with-172527464",
+        ],
+        "name": "Take a Nap with a Toddler",
+        "creator": "simkatu",
+        "mod_title": "Take a Nap with a Toddler",
+        "override_mod_title": True,
+        "version": "2026.10.17",
+        "links": [
+            ("Patreon (공식)", "take a nap with a toddler | simkatu", "https://www.patreon.com/simkatu/posts/take-nap-with-172527464"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_nap_with_child.package",
+            "simkatu_nap_with_child",
+            "nap_with_child",
+            "take a nap with a child",
+            "take a nap with child",
+            "take-nap-with-171262356",
+        ],
+        "name": "Take a Nap with a Child",
+        "creator": "simkatu",
+        "mod_title": "Take a Nap with a Child",
+        "override_mod_title": True,
+        "version": "2026.10.02",
+        "links": [
+            ("Patreon (공식)", "take a nap with a child | simkatu", "https://www.patreon.com/simkatu/posts/take-nap-with-171262356"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_infant_lap_interactions.package",
+            "simkatu_infant_lap_interactions",
+            "infant_lap_interactions",
+            "infant lap interactions",
+            "lap reading for infants & reading while infants nap on laps",
+            "lap reading for infants",
+            "reading while infants nap on laps",
+            "lap-reading-for-121264123",
+        ],
+        "name": "Lap Reading for Infants & Reading While Infants Nap on Laps",
+        "creator": "simkatu",
+        "mod_title": "Lap Reading for Infants & Reading While Infants Nap on Laps",
+        "override_mod_title": True,
+        "version": "2025.11.26",
+        "links": [
+            ("Patreon (공식)", "lap reading for infants & reading while infants nap on laps | simkatu", "https://www.patreon.com/simkatu/posts/lap-reading-for-121264123"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_read_snuggle_toddlerbed.package",
+            "simkatu_read_snuggle_toddlerbed",
+            "read_snuggle_toddlerbed",
+            "read and snuggle on toddler bed",
+            "read-and-snuggle-139398872",
+        ],
+        "name": "Read and Snuggle on Toddler Bed",
+        "creator": "simkatu",
+        "mod_title": "Read and Snuggle on Toddler Bed",
+        "override_mod_title": True,
+        "version": "2025.09.21",
+        "links": [
+            ("Patreon (공식)", "read and snuggle on toddler bed | simkatu", "https://www.patreon.com/simkatu/posts/read-and-snuggle-139398872"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_infants_toddlers_play_toys_on_highchairs_cribs.package",
+            "simkatu_infants_toddlers_play_toys_on_highchairs_cribs",
+            "infants_toddlers_play_toys_on_highchairs_cribs",
+            "play_toys_on_highchairs_cribs",
+            "playing with toys on highchairs and cribs",
+            "playing with toys on high chair and cribs",
+            "playing-with-on-132837938",
+        ],
+        "name": "Playing with Toys on Highchairs and Cribs",
+        "creator": "simkatu",
+        "mod_title": "Playing with Toys on Highchairs and Cribs",
+        "override_mod_title": True,
+        "version": "2026.02.14",
+        "links": [
+            ("Patreon (공식)", "playing with toys on highchairs and cribs | simkatu", "https://www.patreon.com/simkatu/posts/playing-with-on-132837938"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_override_gradeschool_homework.package",
+            "simkatu_override_gradeschool_homework",
+            "override_gradeschool_homework",
+            "gradeschool_homework",
+            "homework override",
+        ],
+        "name": "Homework Override",
+        "creator": "simkatu",
+        "mod_title": "Homework Override",
+        "override_mod_title": True,
+        "version": "2026.03.20",
+        "links": [
+            ("Patreon (공식)", "kids interaction pack + homework override | simkatu", "https://www.patreon.com/simkatu/posts/kids-interaction-125422688"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_kids_interactions_pack_v1_ea_homework.package",
+            "simkatu_kids_interactions_pack_v1_ea_homework",
+            "simkatu_kids_interactions_pack_v2_custom_homework.package",
+            "simkatu_kids_interactions_pack_v2_custom_homework",
+            "kids_interactions_pack_v1_ea_homework",
+            "kids_interactions_pack_v2_custom_homework",
+            "kids_interactions_pack",
+            "kids interaction pack",
+            "kids-interaction-125422688",
+        ],
+        "name": "Kids Interaction Pack",
+        "creator": "simkatu",
+        "mod_title": "Kids Interaction Pack",
+        "override_mod_title": True,
+        "version": "2026.03.20",
+        "requires_option_modal": True,
+        "option_modal_prompt": "설치할 Kids Interaction Pack 버전을 선택해 주세요. (v1 EA Homework / v2 Custom Homework 중 1개 선택 · 동시 설치 불가)",
+        "option_presets": [
+            {
+                "file_name": "simkatu_kids_interactions_pack_v1_ea_homework.package",
+                "label": "kids_interactions_pack_v1_ea_homework (EA 기본 숙제 버전 · 택1)",
+                "match_tokens": ["v1_ea_homework"],
+            },
+            {
+                "file_name": "simkatu_kids_interactions_pack_v2_custom_homework.package",
+                "label": "kids_interactions_pack_v2_custom_homework (커스텀 숙제 버전 · 택1)",
+                "match_tokens": ["v2_custom_homework"],
+            },
+        ],
+        "links": [
+            ("Patreon (공식)", "kids interaction pack + homework override | simkatu", "https://www.patreon.com/simkatu/posts/kids-interaction-125422688"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_givemedicine_v1_sickness_gtw.package",
+            "simkatu_givemedicine_v1_sickness_gtw",
+            "simkatu_givemedicine_v2_sickness_ailments_gtw_ebn.package",
+            "simkatu_givemedicine_v2_sickness_ailments_gtw_ebn",
+            "givemedicine_v1_sickness_gtw",
+            "givemedicine_v2_sickness_ailments_gtw_ebn",
+            "simkatu_givemedicine",
+            "give medicine to treat sickness and ailments",
+            "give-medicine-to-160426834",
+        ],
+        "name": "Give Medicine to Treat Sickness and Ailments",
+        "creator": "simkatu",
+        "mod_title": "Give Medicine to Treat Sickness and Ailments",
+        "override_mod_title": True,
+        "version": "2026.06.07",
+        "requires_option_modal": True,
+        "option_modal_prompt": "설치할 Give Medicine 버전을 선택해 주세요. (v1 Sickness GTW / v2 Sickness & Ailments GTW+EBN 중 1개 선택 · 동시 설치 불가)",
+        "option_presets": [
+            {
+                "file_name": "simkatu_giveMedicine_v1_sickness_GTW.package",
+                "label": "giveMedicine_v1_sickness_GTW (질병 전용 · GTW · 택1)",
+                "match_tokens": ["v1_sickness_gtw"],
+            },
+            {
+                "file_name": "simkatu_giveMedicine_v2_sickness_ailments_GTW_EBN.package",
+                "label": "giveMedicine_v2_sickness_ailments_GTW_EBN (질병+질환 · GTW+EBN · 택1)",
+                "match_tokens": ["v2_sickness_ailments_gtw_ebn"],
+            },
+        ],
+        "links": [
+            ("Patreon (공식)", "give medicine to treat sickness and ailments | simkatu", "https://www.patreon.com/simkatu/posts/give-medicine-to-160426834"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_functional_pacifier_v2.package",
+            "simkatu_functional_pacifier_v2",
+            "simkatu_functional_pacifier.package",
+            "simkatu_functional_pacifier",
+            "functional_pacifier_v2",
+            "functional_pacifier",
+            "functional pacifier",
+            "functional-2-0-119983715",
+        ],
+        "name": "Functional Pacifier",
+        "creator": "simkatu",
+        "mod_title": "Functional Pacifier",
+        "override_mod_title": True,
+        "version": "2",
+        "links": [
+            ("Patreon (공식)", "functional pacifier 2.0 | simkatu", "https://www.patreon.com/simkatu/posts/functional-2-0-119983715"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_functional_stroller_syb_helios.package",
+            "simkatu_functional_stroller_syb_helios",
+            "functional_stroller_syb_helios",
+            "functional stroller_syb_helios",
+            "syb_helios",
+            "functional strollers by syboulette - helios",
+        ],
+        "name": "Functional Strollers By Syboulette - Helios",
+        "creator": "simkatu",
+        "mod_title": "Functional Strollers By Syboulette - Helios",
+        "override_mod_title": True,
+        "version": "2026.03.25",
+        "links": [
+            ("Patreon (공식)", "functional strollers by syboulette | simkatu", "https://www.patreon.com/simkatu/posts/functional-by-152419156"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_functional_stroller_syb_charles.package",
+            "simkatu_functional_stroller_syb_charles",
+            "functional_stroller_syb_charles",
+            "functional stroller_syb_charles",
+            "syb_charles",
+            "functional strollers by syboulette - charles",
+        ],
+        "name": "Functional Strollers By Syboulette - Charles",
+        "creator": "simkatu",
+        "mod_title": "Functional Strollers By Syboulette - Charles",
+        "override_mod_title": True,
+        "version": "2026.03.25",
+        "links": [
+            ("Patreon (공식)", "functional strollers by syboulette | simkatu", "https://www.patreon.com/simkatu/posts/functional-by-152419156"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_functional_stroller_syb_enchanted_dreams.package",
+            "simkatu_functional_stroller_syb_enchanted_dreams",
+            "functional_stroller_syb_enchanted_dreams",
+            "functional stroller_syb_enchanted_dreams",
+            "syb_enchanted_dreams",
+            "functional strollers by syboulette - enchanted dreams",
+        ],
+        "name": "Functional Strollers By Syboulette - Enchanted Dreams",
+        "creator": "simkatu",
+        "mod_title": "Functional Strollers By Syboulette - Enchanted Dreams",
+        "override_mod_title": True,
+        "version": "2026.03.25",
+        "links": [
+            ("Patreon (공식)", "functional strollers by syboulette | simkatu", "https://www.patreon.com/simkatu/posts/functional-by-152419156"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_functional_stroller_gameanim_override.package",
+            "simkatu_functional_stroller_gameanim_override",
+            "functional_stroller_gameanim_override",
+            "functional stroller - animation override",
+            "functional stroller animation override",
+        ],
+        "name": "Functional Stroller - Animation Override",
+        "creator": "simkatu",
+        "mod_title": "Functional Stroller - Animation Override",
+        "override_mod_title": True,
+        "version": "2026.03.07",
+        "links": [
+            ("Patreon (공식)", "functional stroller for infants | simkatu", "https://www.patreon.com/simkatu/posts/functional-for-149952231"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
+            "simkatu_functional_stroller.package",
+            "simkatu_functional_stroller",
+            "functional_stroller",
+            "functional stroller for infants",
+            "functional stroller",
+            "functional-for-149952231",
+        ],
+        "name": "Functional Stroller",
+        "creator": "simkatu",
+        "mod_title": "Functional Stroller",
+        "override_mod_title": True,
+        "version": "2026.03.07",
+        "links": [
+            ("Patreon (공식)", "functional stroller for infants | simkatu", "https://www.patreon.com/simkatu/posts/functional-for-149952231"),
+            ("Patreon 채널", "simkatu Official Patreon", "https://www.patreon.com/simkatu")
+        ]
+    },
+    {
+        "keywords": [
             "simplyanjuta_nomakeupnoacc_onrandomizedsims.package",
             "simplyanjuta_nomakeupnoacc_onrandomizedsims",
             "nomakeupnoacc_onrandomizedsims",
@@ -814,9 +1997,9 @@ KNOWN_CATALOG = [
         "name": "Sims 4 AI Chat BYOK Addon",
         "creator": "lvl2032",
         "mod_title": "Sims 4 AI Chat BYOK Addon",
-        "version": "2.4.3",
+        "version": "2.6.1 (핫픽스)",
         "links": [
-            ("디시인사이드", "AI Chat 애드온 BYOK 배포", "https://gall.dcinside.com/mgallery/board/view/?id=sims&no=281508")
+            ("제작자 공식 사이트", "S4m AI Chat BYOK 공식 배포 페이지", "https://s4m-byok.prmptplus.chatgpt.site/")
         ]
     },
     {
@@ -824,9 +2007,9 @@ KNOWN_CATALOG = [
         "name": "Sims 4 AI Chat",
         "creator": "VirtualConsciousnessLabs",
         "mod_title": "Sims 4 AI Chat",
-        "version": "2.5.0",
+        "version": "2.6.1",
         "links": [
-            ("제작자 공식 사이트", "Sims 4 AI Chat v2.5.0 | Virtual Consciousness Labs", "https://sims4ai.virtualconscious.com/#install"),
+            ("제작자 공식 사이트", "Sims 4 AI Chat v2.6.1 | Virtual Consciousness Labs", "https://sims4ai.virtualconscious.com/#install"),
             ("Patreon 채널", "Virtual Consciousness Labs Official Patreon", "https://www.patreon.com/VirtualConsciousnessLabs")
         ]
     },
@@ -902,7 +2085,7 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["xmlinjector", "xml_injector", "scumbumbo"],
+        "keywords": ["xmlinjector_script.ts4script", "xmlinjector", "xml_injector", "xml injector", "scumbumbo"],
         "name": "XML Injector",
         "creator": "Scumbumbo",
         "mod_title": "XML Injector",
@@ -913,30 +2096,59 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["lumpinou_rpo_collection", "rpo_collection_m"],
+        "keywords": [
+            "lumpinou_rpo_collection_m00_corelibrary_required.ts4script",
+            "lumpinou_rpo_collection",
+            "rpo_collection_m",
+            "rpo_collection",
+            "relationship & pregnancy overhaul",
+            "relationship and pregnancy overhaul",
+        ],
         "name": "Relationship & Pregnancy Overhaul (RPO Collection)",
         "creator": "Lumpinou",
         "mod_title": "Relationship & Pregnancy Overhaul (RPO Collection)",
         "version": "3",
         "is_early_access": True,
+        "requires_option_modal": True,
+        "option_modal_mode": "rpo_channel",
+        "option_modal_prompt": "RPO Collection에 적용할 배포 버전을 선택해 주세요. 선택한 옵션은 로컬 설정에 저장되어 다음 실행 시에도 유지됩니다.",
+        "option_presets": [
+            {
+                "file_name": "rpo_channel:early_access",
+                "channel": "early_access",
+                "label": "선배포 버전 (Patreon Early Access · 수동 확인)",
+                "description": "자동 다운로드를 실행하지 않고 기존의 '수동 확인' 상태를 유지합니다.",
+            },
+            {
+                "file_name": "rpo_channel:free",
+                "channel": "free",
+                "label": "무료 버전 (공식 무료 공개 배포판 · 자동 업데이트)",
+                "description": "무료 공개 배포판 기준으로 버전을 비교하고 자동 업데이트를 활성화합니다.",
+            },
+        ],
         "release_notes": "얼리 액세스(선배포) 버전 · Patreon 수동 다운로드 안내 (RPO v3)",
         "links": [
             ("Patreon (선배포)", "[Early Access] RPO v3 - Debuting \"Extra Opinions\" & Heavy Duty background changes | Lumpinou", "https://www.patreon.com/lumpinou/posts/early-access-rpo-174694816"),
             ("Patreon 채널", "Lumpinou Official Patreon", "https://www.patreon.com/lumpinou")
-        ]
+        ],
+        "free_version": "2.986",
+        "free_links": [
+            ("Patreon (무료 공개)", "[Mod] Relationship & Pregnancy Overhaul, ALL-FILES-IN-ONE-CLICK | Lumpinou", "https://www.patreon.com/lumpinou/posts/mod-relationship-75983577"),
+            ("Patreon 채널", "Lumpinou Official Patreon", "https://www.patreon.com/lumpinou")
+        ],
     },
     {
-        "keywords": ["lumpinou_toolbox", "lumpinous_toolbox", "lumpinou's toolbox"],
+        "keywords": ["lumpinou_toolbox.ts4script", "lumpinou_toolbox", "lumpinous_toolbox", "lumpinou's toolbox"],
         "name": "Lumpinou's Toolbox",
         "creator": "Lumpinou",
         "mod_title": "Lumpinou's Toolbox (Script Library)",
-        "version": "5",
+        "version": "6",
         "links": [
             ("Patreon (공식)", "[Mod] Lumpinou's Toolbox - Script Library-Mod - Sims 4", "https://www.patreon.com/lumpinou/posts/mod-lumpinous-4-86658397")
         ]
     },
     {
-        "keywords": ["contextualsocialinteractions", "contextual_social_interactions", "lumpinou_contextualsocialinteractions"],
+        "keywords": ["lumpinou_contextualsocialinteractions.package", "contextualsocialinteractions", "contextual_social_interactions", "contextual social interactions", "lumpinou_contextualsocialinteractions"],
         "name": "Lumpinou_ContextualSocialInteractions",
         "creator": "Lumpinou",
         "mod_title": "Contextual Social Interactions",
@@ -946,13 +2158,55 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["talentsweaknesses", "talents_weaknesses", "talentsandweaknesses"],
+        "keywords": ["talentsweaknesses_core_(required).package", "talentsweaknesses", "talents_weaknesses", "talentsandweaknesses", "talents & weaknesses", "talents and weaknesses"],
         "name": "Lumpinou Talents & Weaknesses",
         "creator": "Lumpinou",
         "mod_title": "Talents & Weaknesses",
         "version": "2026.04.03",
         "links": [
             ("Patreon (공식)", "[Mod] Talents & Weaknesses | Lumpinou", "https://www.patreon.com/lumpinou/posts/mod-talents-51561971")
+        ]
+    },
+    {
+        "keywords": [
+            "lumpinou_firstimpressions_withtimedecay_3days_(required).package",
+            "lumpinou_firstimpressions_notimedecay_(required).package",
+            "lumpinou_firstimpressions_notimedecay_(donotdelete).package",
+            "lumpinou_firstimpressions",
+            "firstimpressions",
+            "first_impressions",
+            "first impressions",
+        ],
+        "name": "First Impressions",
+        "creator": "Lumpinou",
+        "mod_title": "First Impressions",
+        "version": "1",
+        "requires_option_modal": True,
+        "option_modal_prompt": "First Impressions 본체 버전(택1)과 함께 설치할 세부 옵션 파일을 선택해 주세요.",
+        "option_presets": [
+            {
+                "file_name": "Lumpinou_FirstImpressions_WithTimeDecay_3days.zip",
+                "label": "WithTimeDecay (3일 경과 시 첫인상 소멸 · 기본)",
+                "match_tokens": ["withtimedecay"],
+            },
+            {
+                "file_name": "Lumpinou_FirstImpressions_NoTimeDecay.zip",
+                "label": "NoTimeDecay (시간 경과 소멸 없음 · 새 감정 발생 시만 변경)",
+                "match_tokens": ["notimedecay"],
+            },
+        ],
+        "optional_addons": [
+            {
+                "file_name": "Lumpinou_FirstImpressions_Optional_IntroTypeMatters.package",
+                "label": "IntroTypeMatters (첫인사 유형이 첫인상에 영향 · 선택)",
+            },
+            {
+                "file_name": "Lumpinou_FirstImpressions_Optional_PostConversationMoodlets.package",
+                "label": "PostConversationMoodlets (대화 후 첫인상 무드렛 부여 · 선택)",
+            },
+        ],
+        "links": [
+            ("Patreon (공식)", "[Mod] First Impressions | Lumpinou", "https://www.patreon.com/lumpinou/posts/mod-first-sims-4-44832679")
         ]
     },
     {
@@ -1120,6 +2374,250 @@ KNOWN_CATALOG = [
         "version": "2025.09.27",
         "links": [
             ("SimFileShare", "DISL_TO_NoOutfitChangePromoted | Down-In-Simsland", "https://www.simfileshare.net/download/5174540/")
+        ]
+    },
+    {
+        "keywords": [
+            "disl_c_fireandwood.package",
+            "disl_c_fireandwood",
+            "fireandwood",
+            "fire and wood",
+            "castaway life - fire and wood",
+        ],
+        "name": "Castaway Life - Fire and Wood",
+        "creator": "Down-In-Simsland",
+        "mod_title": "Castaway Life - Fire and Wood",
+        "override_mod_title": True,
+        "version": "2025.09.27",
+        "links": [
+            ("SimFileShare", "DISL_C_FireAndWood | Down-In-Simsland", "https://www.simfileshare.net/download/5194316/"),
+            ("Tumblr (공식)", "Castaway Life | Down-In-Simsland", "https://down-in-simsland.tumblr.com/post/769961699450175488/castaway-life"),
+        ]
+    },
+    {
+        "keywords": [
+            "disl_c_beachtreasures.package",
+            "disl_c_beachtreasures",
+            "beachtreasures",
+            "beach treasures",
+            "castaway life - beach treasures",
+        ],
+        "name": "Castaway Life - Beach Treasures",
+        "creator": "Down-In-Simsland",
+        "mod_title": "Castaway Life - Beach Treasures",
+        "override_mod_title": True,
+        "version": "2025.07.19",
+        "links": [
+            ("SimFileShare", "DISL_C_BeachTreasures | Down-In-Simsland", "https://www.simfileshare.net/download/5194317/"),
+            ("Tumblr (공식)", "Castaway Life | Down-In-Simsland", "https://down-in-simsland.tumblr.com/post/769961699450175488/castaway-life"),
+        ]
+    },
+    {
+        "keywords": [
+            "disl_c_phonebattery.package",
+            "disl_c_phonebattery.ts4script",
+            "disl_c_phonebattery.zip",
+            "disl_c_phonebattery",
+            "phonebattery",
+            "phone battery",
+            "castaway life - phone battery",
+        ],
+        "name": "Castaway Life - Phone Battery",
+        "creator": "Down-In-Simsland",
+        "mod_title": "Castaway Life - Phone Battery",
+        "override_mod_title": True,
+        "version": "2025.02.27",
+        "links": [
+            ("SimFileShare", "DISL_C_PhoneBattery | Down-In-Simsland", "https://www.simfileshare.net/download/5194320/"),
+            ("Tumblr (공식)", "Castaway Life | Down-In-Simsland", "https://down-in-simsland.tumblr.com/post/769961699450175488/castaway-life"),
+        ]
+    },
+    {
+        "keywords": [
+            "disl_c_dyecreationwooldyeing.package",
+            "disl_c_dyecreationwooldyeing",
+            "dyecreationwooldyeing",
+            "dye creation and wool dyeing",
+            "castaway life - dye creation and wool dyeing",
+        ],
+        "name": "Castaway Life - Dye Creation and Wool Dyeing",
+        "creator": "Down-In-Simsland",
+        "mod_title": "Castaway Life - Dye Creation and Wool Dyeing",
+        "override_mod_title": True,
+        "version": "2025.03.08",
+        "links": [
+            ("SimFileShare", "DISL_C_DyeCreationWoolDyeing | Down-In-Simsland", "https://www.simfileshare.net/download/5194319/"),
+            ("Tumblr (공식)", "Castaway Life | Down-In-Simsland", "https://down-in-simsland.tumblr.com/post/769961699450175488/castaway-life"),
+        ]
+    },
+    {
+        "keywords": [
+            "disl_c_campfirefood.package",
+            "disl_c_campfirefood",
+            "campfirefood",
+            "campfire food replacement",
+            "castaway life - campfire food replacement",
+        ],
+        "name": "Castaway Life - Campfire Food Replacement",
+        "creator": "Down-In-Simsland",
+        "mod_title": "Castaway Life - Campfire Food Replacement",
+        "override_mod_title": True,
+        "version": "2025.09.27",
+        "links": [
+            ("SimFileShare", "DISL_C_CampfireFood | Down-In-Simsland", "https://www.simfileshare.net/download/5194318/"),
+            ("Tumblr (공식)", "Castaway Life | Down-In-Simsland", "https://down-in-simsland.tumblr.com/post/769961699450175488/castaway-life"),
+        ]
+    },
+    {
+        "keywords": [
+            "disl_c_showersink.package",
+            "disl_c_showersink",
+            "showersink",
+            "shower at sink",
+            "castaway life - shower at sink",
+        ],
+        "name": "Castaway Life - Shower at Sink",
+        "creator": "Down-In-Simsland",
+        "mod_title": "Castaway Life - Shower at Sink",
+        "override_mod_title": True,
+        "version": "2025.03.08",
+        "links": [
+            ("SimFileShare", "DISL_C_ShowerSink | Down-In-Simsland", "https://www.simfileshare.net/download/5186477/"),
+            ("Tumblr (공식)", "Castaway Life | Down-In-Simsland", "https://down-in-simsland.tumblr.com/post/769961699450175488/castaway-life"),
+        ]
+    },
+    {
+        "keywords": [
+            "disl_diy_core.package",
+            "disl_diy_core.ts4script",
+            "disl_diy_core.zip",
+            "disl_diy_core",
+            "do it yourself - core mod",
+            "do it yourself core mod",
+        ],
+        "name": "Do it Yourself - Core Mod",
+        "creator": "Down-In-Simsland",
+        "mod_title": "Do it Yourself - Core Mod",
+        "override_mod_title": True,
+        "version": "2025.02.27",
+        "links": [
+            ("SimFileShare", "DISL_DIY_Core | Down-In-Simsland", "https://www.simfileshare.net/download/5194803/"),
+            ("Tumblr (공식)", "Do it Yourself | Down-In-Simsland", "https://down-in-simsland.tumblr.com/post/769961661885038592/do-it-yourself"),
+        ]
+    },
+    {
+        "keywords": [
+            "disl_diy_fabricationwoodworkingtable.package",
+            "disl_diy_fabricationwoodworkingtable",
+            "fabricationwoodworkingtable",
+            "fabrication at the woodworking table",
+            "do it yourself - fabrication at the woodworking table",
+        ],
+        "name": "Do it Yourself - Fabrication at the Woodworking Table",
+        "creator": "Down-In-Simsland",
+        "mod_title": "Do it Yourself - Fabrication at the Woodworking Table",
+        "override_mod_title": True,
+        "version": "2026.02.14",
+        "links": [
+            ("SimFileShare", "DISL_DIY_FabricationWoodworkingTable | Down-In-Simsland", "https://www.simfileshare.net/download/5194806/"),
+            ("Tumblr (공식)", "Do it Yourself | Down-In-Simsland", "https://down-in-simsland.tumblr.com/post/769961661885038592/do-it-yourself"),
+        ]
+    },
+    {
+        "keywords": [
+            "disl_diy_morewoodworks.package",
+            "disl_diy_morewoodworks",
+            "morewoodworks",
+            "more woodworks",
+            "do it yourself - more woodworks",
+        ],
+        "name": "Do it Yourself - More Woodworks",
+        "creator": "Down-In-Simsland",
+        "mod_title": "Do it Yourself - More Woodworks",
+        "override_mod_title": True,
+        "version": "2026.02.14",
+        "links": [
+            ("SimFileShare", "DISL_DIY_MoreWoodworks | Down-In-Simsland", "https://www.simfileshare.net/download/5194804/"),
+            ("Tumblr (공식)", "Do it Yourself | Down-In-Simsland", "https://down-in-simsland.tumblr.com/post/769961661885038592/do-it-yourself"),
+        ]
+    },
+    {
+        "keywords": [
+            "disl_diy_morefabrication.package",
+            "disl_diy_morefabrication",
+            "morefabrication",
+            "more fabrication",
+            "do it yourself - more fabrication",
+        ],
+        "name": "Do it Yourself - More Fabrication",
+        "creator": "Down-In-Simsland",
+        "mod_title": "Do it Yourself - More Fabrication",
+        "override_mod_title": True,
+        "version": "2026.02.18",
+        "links": [
+            ("SimFileShare", "DISL_DIY_MoreFabrication | Down-In-Simsland", "https://www.simfileshare.net/download/5194805/"),
+            ("Tumblr (공식)", "Do it Yourself | Down-In-Simsland", "https://down-in-simsland.tumblr.com/post/769961661885038592/do-it-yourself"),
+        ]
+    },
+    {
+        "keywords": [
+            "disl_diy_moreknits.package",
+            "disl_diy_moreknits",
+            "moreknits",
+            "more knits",
+            "do it yourself - more knits",
+        ],
+        "name": "Do it Yourself - More Knits",
+        "creator": "Down-In-Simsland",
+        "mod_title": "Do it Yourself - More Knits",
+        "override_mod_title": True,
+        "version": "2026.02.14",
+        "links": [
+            ("SimFileShare", "DISL_DIY_MoreKnits | Down-In-Simsland", "https://www.simfileshare.net/download/5194807/"),
+            ("Tumblr (공식)", "Do it Yourself | Down-In-Simsland", "https://down-in-simsland.tumblr.com/post/769961661885038592/do-it-yourself"),
+        ]
+    },
+    {
+        "keywords": [
+            "[kuttoe] homeregions.zip",
+            "[kuttoe] homeregions.package",
+            "[kuttoe] homeregions.ts4script",
+            "[kuttoe] homeregions",
+            "kuttoe_homeregions",
+            "homeregions",
+            "home regions",
+            "keep sims in home region",
+            "keep-sims-in-home-region",
+        ],
+        "name": "Home Regions",
+        "creator": "Kuttoe",
+        "mod_title": "Home Regions",
+        "override_mod_title": True,
+        "version": "2026.11.21",
+        "links": [
+            ("Itch.io (공식)", "Home Regions | Kuttoe", "https://kuttoe.itch.io/keep-sims-in-home-region"),
+            ("Itch.io 채널", "Kuttoe Official Itch.io", "https://kuttoe.itch.io/"),
+        ]
+    },
+    {
+        "keywords": [
+            "[kuttoe] newcivicpolicies.zip",
+            "[kuttoe] newcivicpolicies.package",
+            "[kuttoe] newcivicpolicies.ts4script",
+            "[kuttoe] newcivicpolicies",
+            "kuttoe_newcivicpolicies",
+            "newcivicpolicies",
+            "new civic policies",
+            "new-civic-policies",
+        ],
+        "name": "New Civic Policies",
+        "creator": "Kuttoe",
+        "mod_title": "New Civic Policies",
+        "override_mod_title": True,
+        "version": "2026.07.02",
+        "links": [
+            ("Itch.io (공식)", "New Civic Policies | Kuttoe", "https://kuttoe.itch.io/new-civic-policies"),
+            ("Itch.io 채널", "Kuttoe Official Itch.io", "https://kuttoe.itch.io/"),
         ]
     },
     {
@@ -1299,7 +2797,13 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["simmattically_refreshedmainmenu_standalone_homeview", "refreshedmainmenu_standalone_homeview"],
+        "keywords": [
+            "simmattically_refreshedmainmenu_standalone_homeview.package",
+            "simmattically_refreshedmainmenu_standalone_homeview",
+            "refreshedmainmenu_standalone_homeview",
+            "refreshed main menu: homeview",
+            "refreshed main menu homeview",
+        ],
         "name": "Refreshed Main Menu: Homeview",
         "creator": "SimMattically",
         "mod_title": "Refreshed Main Menu: Homeview",
@@ -1497,16 +3001,54 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["walkingbounce", "walking bounce", "walking bounces"],
-        "name": "WalkingBounce",
+        "keywords": [
+            "tmex-betterbuildbuy.ts4script",
+            "tmex-betterbuildbuy.package",
+            "tmex-betterbuildbuy",
+            "tmex_betterbuildbuy",
+            "betterbuildbuy",
+            "better_buildbuy",
+            "better buildbuy",
+            "better build buy",
+            "better_build_buy",
+        ],
+        "name": "Better BuildBuy",
+        "creator": "TwistedMexi",
+        "mod_title": "Better BuildBuy",
+        "version": "4.5",
+        "links": [
+            ("Patreon (공식)", "Better BuildBuy v4.5 | TwistedMexi", "https://www.patreon.com/TwistedMexi/posts/better-buildbuy-135871452"),
+            ("Patreon 채널", "TwistedMexi Official Patreon", "https://www.patreon.com/TwistedMexi")
+        ]
+    },
+    {
+        "keywords": ["walkingbounce.package", "walkingbounce", "walking bounce", "walking bounces", "bouncing sims 4"],
+        "name": "Walking Bounce",
         "creator": "Bouncing Sims 4",
-        "mod_title": "Bouncing Sims 4 (WalkingBounce)",
+        "mod_title": "Walking Bounce",
+        "override_mod_title": True,
         "version": "2026.11.10",
         "is_paid": True,
         "release_notes": "유료 상품이어서 자동 다운로드가 불가능합니다. (Patreon 공식 링크)",
         "links": [
             ("Patreon (유료 상품)", "Bouncing Sims 4 | WalkingBounce", "https://www.patreon.com/TonicSims/posts/bouncing-sims-4-174891794")
         ]
+    },
+    {
+        "keywords": [
+            "sulsul_ai_mod",
+            "sulsul ai mod",
+            "sulsul_ai",
+            "mod sulsul ai",
+        ],
+        "name": "SulSul AI Mod",
+        "creator": "sulsul",
+        "mod_title": "SulSul AI Mod",
+        "override_mod_title": True,
+        "version": "",
+        "is_unreleased": True,
+        "release_notes": "미출시 상태 모드로 업데이트 대상에서 제외됩니다.",
+        "links": [],
     },
     {
         "keywords": [
@@ -1646,37 +3188,153 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["!wamtik-v97.8r-ff", "_wamtik-v97.8r-ff", "wamtik-v97.8r-ff"],
-        "name": "!WAMTIK-V97.8R-FF",
+        "keywords": [
+            "wlpo-livedrag.zip",
+            "wlpo-livedrag",
+            "wlpo_livedragall.package",
+            "wlpo_livedragall",
+            "wlpo_livedrag",
+            "livedrag.zip",
+            "livedragall.package",
+            "livedragall",
+            "livedrag",
+            "생활 구매 향상 모드 애드온",
+        ],
+        "name": "생활 구매 향상 모드 애드온",
+        "creator": "바람별",
+        "mod_title": "생활 구매 향상 모드 애드온",
+        "override_mod_title": True,
+        "version": "V13.1",
+        "requires_option_modal": True,
+        "option_modal_prompt": "설치할 생활 구매 향상 모드 애드온 버전을 선택해 주세요. (분리버전 LiveDrag.zip / 통합버전 LiveDragAll.package 중 1개 선택 · 동시 설치 불가)",
+        "option_presets": [
+            {
+                "file_name": "WLPO-LiveDrag.zip",
+                "label": "LiveDrag.zip (분리버전 · 택1)",
+                "match_tokens": ["wlpo-livedrag", "livedrag.zip", "livedrag"],
+            },
+            {
+                "file_name": "WLPO_LiveDragAll.package",
+                "label": "LiveDragAll.package (통합버전 · 택1)",
+                "match_tokens": ["livedragall"],
+            },
+        ],
+        "links": [
+            ("네이버 블로그 (무료)", "V13.1 생활 구매 향상 모드 | 바람별", "https://blog.naver.com/wwwindystar/222803448393")
+        ]
+    },
+    {
+        "keywords": [
+            "wlpo.package",
+            "wlpo-nocc.package",
+            "wlpo_nocc.package",
+            "wlpo-all.package",
+            "wlpo_all.package",
+            "wlpo_nocc",
+            "wlpo-nocc",
+            "wlpo-all",
+            "wlpo_all",
+            "wlpo",
+            "생활 구매 향상 모드",
+            "222803448393",
+        ],
+        "name": "생활 구매 향상 모드",
+        "creator": "바람별",
+        "mod_title": "생활 구매 향상 모드",
+        "override_mod_title": True,
+        "version": "V13.1",
+        "requires_option_modal": True,
+        "option_modal_prompt": "설치할 생활 구매 향상 모드 코어 버전을 선택해 주세요. (WLPO 기본 / WLPO_NOCC 태그 미수정 / WLPO-ALL 통합 중 1개 선택 · 동시 설치 불가)",
+        "option_presets": [
+            {
+                "file_name": "WLPO.package",
+                "label": "WLPO (기본 · 택1)",
+                "match_tokens": ["wlpo.package"],
+            },
+            {
+                "file_name": "WLPO-NOCC.package",
+                "label": "WLPO_NOCC (태그 미수정 · 택1)",
+                "match_tokens": ["wlpo-nocc", "wlpo_nocc"],
+            },
+            {
+                "file_name": "WLPO-ALL.package",
+                "label": "WLPO-ALL (전체 통합 · 택1)",
+                "match_tokens": ["wlpo-all", "wlpo_all"],
+            },
+        ],
+        "links": [
+            ("네이버 블로그 (무료)", "V13.1 생활 구매 향상 모드 | 바람별", "https://blog.naver.com/wwwindystar/222803448393")
+        ]
+    },
+    {
+        "keywords": [
+            "sorter.package",
+            "sorter.ts4script",
+            "sorterv21",
+            "sorterv20",
+            "sorterv19",
+            "sorterv",
+            "파이 메뉴 정렬 모드",
+            "파이메뉴 정렬 모드",
+            "222905723480",
+        ],
+        "name": "파이 메뉴 정렬 모드",
+        "creator": "바람별",
+        "mod_title": "파이 메뉴 정렬 모드",
+        "override_mod_title": True,
+        "version": "V21",
+        "links": [
+            ("네이버 블로그 (무료)", "V21 파이 메뉴 정렬 모드 | 바람별", "https://blog.naver.com/wwwindystar/222905723480")
+        ]
+    },
+    {
+        "keywords": [
+            "personalityturnons.package",
+            "personalityturnons",
+            "호불호 수정 모드",
+            "호불호 수정",
+        ],
+        "name": "호불호 수정 모드",
+        "creator": "바람별",
+        "mod_title": "호불호 수정 모드",
+        "override_mod_title": True,
+        "version": "2026.06.05",
+        "links": [
+            ("네이버 블로그 (무료)", "호불호 수정 모드 (2026.06.05) | 바람별", "https://blog.naver.com/wwwindystar/222905723480")
+        ]
+    },
+    {
+        "keywords": ["!wamtik-v97.9r-ff", "_wamtik-v97.9r-ff", "wamtik-v97.9r-ff", "!wamtik-v97.8r-ff", "_wamtik-v97.8r-ff", "wamtik-v97.8r-ff"],
+        "name": "!WAMTIK-V97.9R-FF",
         "creator": "바람별",
         "mod_title": "바람별 공식 한글화 모드 빨간맛 (성씨-이름 FF)",
-        "version": "V97.8R",
+        "version": "V97.9R",
         "release_notes": "바람별 공식 한글화 모드 공개버전 빨간맛 · 풀네임 성씨-이름(FF) 표시 버전 (Patreon 무료 공개)",
         "links": [
-            ("Patreon (공식)", "통합한글화모음 V97.8R | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-58263282"),
+            ("Patreon (공식)", "통합한글화모음 V97.9R | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-58263282"),
             ("Postype", "바람별의 포스타입 (Postype)", "https://www.postype.com/@wwwindystar"),
             ("네이버 블로그", "바람별의 심즈 4 네이버 블로그", "https://blog.naver.com/wwwindystar")
         ]
     },
     {
-        "keywords": ["!wamtik-v97.8r", "_wamtik-v97.8r", "wamtik-v97.8r"],
-        "name": "!WAMTIK-V97.8R",
+        "keywords": ["!wamtik-v97.9r", "_wamtik-v97.9r", "wamtik-v97.9r", "!wamtik-v97.8r", "_wamtik-v97.8r", "wamtik-v97.8r"],
+        "name": "!WAMTIK-V97.9R",
         "creator": "바람별",
         "mod_title": "바람별 공식 한글화 모드 빨간맛",
-        "version": "V97.8R",
+        "version": "V97.9R",
         "release_notes": "바람별 공식 한글화 모드 공개버전 빨간맛 · 기본 이름 표시 버전 (Patreon 무료 공개)",
         "links": [
-            ("Patreon (공식)", "통합한글화모음 V97.8R | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-58263282"),
+            ("Patreon (공식)", "통합한글화모음 V97.9R | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-58263282"),
             ("Postype", "바람별의 포스타입 (Postype)", "https://www.postype.com/@wwwindystar"),
             ("네이버 블로그", "바람별의 심즈 4 네이버 블로그", "https://blog.naver.com/wwwindystar")
         ]
     },
     {
-        "keywords": ["!wamtik-v97.8-ff", "_wamtik-v97.8-ff", "wamtik-v97.8-ff"],
-        "name": "!WAMTIK-V97.8-FF",
+        "keywords": ["!wamtik-v97.9-ff", "_wamtik-v97.9-ff", "wamtik-v97.9-ff", "!wamtik-v97.8-ff", "_wamtik-v97.8-ff", "wamtik-v97.8-ff"],
+        "name": "!WAMTIK-V97.9-FF",
         "creator": "바람별",
         "mod_title": "바람별 공식 한글화 모드 (성씨-이름 FF)",
-        "version": "V97.8",
+        "version": "V97.9",
         "release_notes": "바람별 공식 한글화 모드 · 풀네임 성씨-이름(FF) 표시 버전 (네이버 블로그 무료 공개)",
         "links": [
             ("네이버 블로그 참고 (무료)", "바람별 심즈 4 공식 한글화 모드", "https://blog.naver.com/wwwindystar/220460594769"),
@@ -1685,11 +3343,11 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["!wamtik-v97.8", "_wamtik-v97.8", "wamtik-v97.8"],
-        "name": "!WAMTIK-V97.8",
+        "keywords": ["!wamtik-v97.9", "_wamtik-v97.9", "wamtik-v97.9", "!wamtik-v97.8", "_wamtik-v97.8", "wamtik-v97.8"],
+        "name": "!WAMTIK-V97.9",
         "creator": "바람별",
         "mod_title": "바람별 공식 한글화 모드",
-        "version": "V97.8",
+        "version": "V97.9",
         "release_notes": "바람별 공식 한글화 모드 · 기본 이름 표시 버전 (네이버 블로그 무료 공개)",
         "links": [
             ("네이버 블로그 참고 (무료)", "바람별 심즈 4 공식 한글화 모드", "https://blog.naver.com/wwwindystar/220460594769"),
@@ -1698,67 +3356,67 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["_wamtik-v98p8-ff", "!wamtik-v98p8-ff", "wamtik-v98p8-ff"],
-        "name": "_WAMTIK-V98P8-FF",
+        "keywords": ["_wamtik-v98-alpha-ff", "!wamtik-v98-alpha-ff", "wamtik-v98-alpha-ff", "_wamtik-v98p8-ff", "!wamtik-v98p8-ff", "wamtik-v98p8-ff"],
+        "name": "_WAMTIK-V98-alpha-FF",
         "creator": "바람별",
         "mod_title": "바람별 한글화 모드 순한맛 (성씨-이름 FF)",
-        "version": "V98P8",
+        "version": "V98-alpha",
         "is_early_access": True,
         "release_notes": "바람별 한글화 모드 순한맛(순결버전) · 풀네임 성씨-이름(FF) 표시 버전 (후원자 전용 · 수동 다운로드 안내)",
         "links": [
-            ("Postype", "통합한글화모음 V98P8 순결버전 (Postype)", "https://www.postype.com/@wwwindystar/post/9789832"),
+            ("Postype", "통합한글화모음 V98-alpha 순결버전 (Postype)", "https://www.postype.com/@wwwindystar/post/9789832"),
             ("Patreon (후원자 전용)", "바람별 ZIMS 통합 한글화 (Patreon)", "https://www.patreon.com/cw/wwindystarZIMS"),
             ("네이버 블로그", "바람별의 심즈 4 네이버 블로그", "https://blog.naver.com/wwwindystar")
         ]
     },
     {
-        "keywords": ["_wamtik-v98p8", "!wamtik-v98p8", "wamtik-v98p8"],
-        "name": "_WAMTIK-V98P8",
+        "keywords": ["_wamtik-v98-alpha", "!wamtik-v98-alpha", "wamtik-v98-alpha", "_wamtik-v98p8", "!wamtik-v98p8", "wamtik-v98p8"],
+        "name": "_WAMTIK-V98-alpha",
         "creator": "바람별",
         "mod_title": "바람별 한글화 모드 순한맛",
-        "version": "V98P8",
+        "version": "V98-alpha",
         "is_early_access": True,
         "release_notes": "바람별 한글화 모드 순한맛(순결버전) · 기본 이름 표시 버전 (후원자 전용 · 수동 다운로드 안내)",
         "links": [
-            ("Postype", "통합한글화모음 V98P8 순결버전 (Postype)", "https://www.postype.com/@wwwindystar/post/9789832"),
+            ("Postype", "통합한글화모음 V98-alpha 순결버전 (Postype)", "https://www.postype.com/@wwwindystar/post/9789832"),
             ("Patreon (후원자 전용)", "바람별 ZIMS 통합 한글화 (Patreon)", "https://www.patreon.com/cw/wwindystarZIMS"),
             ("네이버 블로그", "바람별의 심즈 4 네이버 블로그", "https://blog.naver.com/wwwindystar")
         ]
     },
     {
-        "keywords": ["!wamtik-v98b8-ff", "_wamtik-v98b8-ff", "wamtik-v98b8-ff"],
-        "name": "!WAMTIK-V98B8-FF",
+        "keywords": ["!wamtik-v98r-alpha-ff", "_wamtik-v98r-alpha-ff", "wamtik-v98r-alpha-ff", "!wamtik-v98b8-ff", "_wamtik-v98b8-ff", "wamtik-v98b8-ff"],
+        "name": "!WAMTIK-V98R-alpha-FF",
         "creator": "바람별",
         "mod_title": "바람별 한글화 모드 베타버전 빨간맛 (성씨-이름 FF)",
-        "version": "V98B8",
+        "version": "V98R-alpha",
         "is_early_access": True,
         "release_notes": "베타버전 빨간맛 · 풀네임 성씨-이름(FF) 표시 버전 (후원자 전용 · 수동 다운로드 안내)",
         "links": [
-            ("Patreon (후원자 전용)", "통합한글화모음 V98B8 | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-69805432"),
+            ("Patreon (후원자 전용)", "통합한글화모음 V98R-alpha | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-69805432"),
             ("Postype", "바람별의 포스타입 (Postype)", "https://www.postype.com/@wwwindystar"),
             ("네이버 블로그", "바람별의 심즈 4 네이버 블로그", "https://blog.naver.com/wwwindystar")
         ]
     },
     {
-        "keywords": ["!wamtik-v98b8", "_wamtik-v98b8", "wamtik-v98b8"],
-        "name": "!WAMTIK-V98B8",
+        "keywords": ["!wamtik-v98r-alpha", "_wamtik-v98r-alpha", "wamtik-v98r-alpha", "!wamtik-v98b8", "_wamtik-v98b8", "wamtik-v98b8"],
+        "name": "!WAMTIK-V98R-alpha",
         "creator": "바람별",
         "mod_title": "바람별 한글화 모드 베타버전 빨간맛",
-        "version": "V98B8",
+        "version": "V98R-alpha",
         "is_early_access": True,
         "release_notes": "베타버전 빨간맛 · 기본 이름 표시 버전 (후원자 전용 · 수동 다운로드 안내)",
         "links": [
-            ("Patreon (후원자 전용)", "통합한글화모음 V98B8 | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-69805432"),
+            ("Patreon (후원자 전용)", "통합한글화모음 V98R-alpha | 바람별 ZIMS", "https://www.patreon.com/wwindystarZIMS/posts/tonghabhangeulhw-69805432"),
             ("Postype", "바람별의 포스타입 (Postype)", "https://www.postype.com/@wwwindystar"),
             ("네이버 블로그", "바람별의 심즈 4 네이버 블로그", "https://blog.naver.com/wwwindystar")
         ]
     },
     {
-        "keywords": ["!wamtik-v98g8-ff", "_wamtik-v98g8-ff", "wamtik-v98g8-ff"],
-        "name": "!WAMTIK-V98G8-FF",
+        "keywords": ["!wamtik-v98g10-ff", "_wamtik-v98g10-ff", "wamtik-v98g10-ff", "!wamtik-v98g8-ff", "_wamtik-v98g8-ff", "wamtik-v98g8-ff"],
+        "name": "!WAMTIK-V98G10-FF",
         "creator": "바람별",
         "mod_title": "바람별 한글화 모드 (성씨-이름 FF)",
-        "version": "V98G8",
+        "version": "V98G10",
         "is_early_access": True,
         "release_notes": "선배포모드 번역이 추가되는 광역후원자 버전 · 풀네임 성씨-이름(FF) 표시 (수동 다운로드 안내)",
         "links": [
@@ -1768,11 +3426,11 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["!wamtik-v98g8", "_wamtik-v98g8", "wamtik-v98g8", "wamtik", "바람별", "바람별한글화"],
-        "name": "!WAMTIK-V98G8",
+        "keywords": ["!wamtik-v98g10", "_wamtik-v98g10", "wamtik-v98g10", "!wamtik-v98g8", "_wamtik-v98g8", "wamtik-v98g8", "wamtik", "바람별", "바람별한글화"],
+        "name": "!WAMTIK-V98G10",
         "creator": "바람별",
         "mod_title": "바람별 한글화 모드",
-        "version": "V98G8",
+        "version": "V98G10",
         "is_early_access": True,
         "release_notes": "선배포모드 번역이 추가되는 광역후원자 버전 (수동 다운로드 안내)",
         "links": [
@@ -1800,6 +3458,7 @@ RELIABLE_DOMAINS = [
     ("loverslab.com", "LoversLab"),
     ("deaderpool-mccc.com", "Deaderpool MCCC"),
     ("sims4ai.virtualconscious.com", "Sims 4 AI Official"),
+    ("s4m-byok.prmptplus.chatgpt.site", "S4m AI Chat BYOK Official"),
     ("github.com", "GitHub"),
     ("sims4studio.com", "Sims 4 Studio"),
     ("seebee.de", "ichschaf Sims 4 Mods"),
@@ -1951,6 +3610,12 @@ def extract_version_from_filename(filename: str) -> str:
     if not filename:
         return ""
     stem = re.sub(r"\.(?:package|ts4script|zip|rar|7z)$", "", filename, flags=re.IGNORECASE)
+    stem = re.sub(
+        r"(?<=canvas_frame_override)_v[123]$|(?<=alllots)_v1$|(?<=retailthriftlots)_v2$|(?<=mirrorphoto)_v2(?=_genderneutral|$)",
+        "",
+        stem,
+        flags=re.IGNORECASE,
+    )
     # 1) 명시적 v / ver / version 접두사가 있는 버전 (예: v4, v1.1, v2.986, v2a, V2.3, ChatPackv2_BabiesFamily)
     # 파이썬 정규식에서 언더바(_)는 단어 문자(\w)이므로 \b 대신 (?=$|[^a-zA-Z0-9.]) 경계를 사용합니다.
     m_v = re.search(
@@ -1961,8 +3626,8 @@ def extract_version_from_filename(filename: str) -> str:
     if m_v:
         raw_v = m_v.group(1).lstrip("vV")
         return f"v{raw_v}"
-    # 1-b) 바람별 통합한글화모음 스타일 버전 (예: V98G8, V98B8, V98P8, V97G5 등)
-    m_vg = re.search(r"(?:^|[\s_\-\[\(])(V[0-9]+[GBPR][0-9]+)(?=$|[^a-zA-Z0-9.])", stem, flags=re.IGNORECASE)
+    # 1-b) 바람별 통합한글화모음 스타일 버전 (예: V98G8, V98B8, V98P8, V97.8R, V97.9R, V98R 등)
+    m_vg = re.search(r"(?:^|[\s_\-\[\(])(V[0-9]+(?:\.[0-9]+)?[GBPR][0-9]*)(?=$|[^a-zA-Z0-9.])", stem, flags=re.IGNORECASE)
     if m_vg:
         return m_vg.group(1).upper()
 
@@ -1971,26 +3636,28 @@ def extract_version_from_filename(filename: str) -> str:
     if date_ver:
         return date_ver
 
-    # 3) 점이 포함된 일반 버전 숫자 (예: 0.1, 0.1.0, a0.2.4, 1.8, 2026.1.1 - 단 배수 표기 1.75x 제외)
+    # 3) 점이 포함된 일반 버전 숫자 (예: 0.1, 0.1.0, a0.5, a0.2.4, b1.0, 1.8, 2026.1.1 - 단 배수 표기 1.75x 제외)
     m_dot = re.search(
-        r"(?:^|[\s_\-\[\(])[ab]?([0-9]+\.[0-9]+(?:\.[0-9]+)*[a-wyz]?)(?=$|[^a-zA-Z0-9.xX가-힣])",
+        r"(?:^|[\s_\-\[\(])([ab])?([0-9]+\.[0-9]+(?:\.[0-9]+)*[a-wyz]?)(?=$|[^a-zA-Z0-9.xX가-힣])",
         stem,
         flags=re.IGNORECASE,
     )
     if m_dot:
-        raw_dot = m_dot.group(1)
-        return f"v{raw_dot}"
+        ab_prefix = (m_dot.group(1) or "").lower()
+        raw_dot = m_dot.group(2)
+        return f"{ab_prefix}{raw_dot}" if ab_prefix else f"v{raw_dot}"
 
-    # 4) 폴더/파일명 끝에 대괄호로 표기된 버전 (예: GSM MCCC [2026.1.1], GSM WickedWhims [185k], GM SomeMod [4])
+    # 4) 폴더/파일명 끝에 대괄호로 표기된 버전 (예: GSM MCCC [2026.1.1], GSM WickedWhims [185k], GM SomeMod [4], [a0.5])
     # 단, 'GSM-[1]', 'GSM_[1]', 'GSM [1]'처럼 폴더 순번만 적힌 경우는 제외
     if not re.match(r"^(?:[\d\-]+[\.\s_\-]*)?(?:GSM|GM|MOD)[\s_\-]*\[\s*\d+\s*\]\s*$", stem, flags=re.IGNORECASE):
         m_bracket_end = re.search(
-            r"\[\s*(?:v|ver|version)?\.?\s*([0-9]+(?:\.[0-9]+)*[a-z]?)\s*\]\s*$",
+            r"\[\s*(?:([ab])|(?:v|ver|version)?\.?)\s*([0-9]+(?:\.[0-9]+)*[a-z]?)\s*\]\s*$",
             stem,
             flags=re.IGNORECASE,
         )
         if m_bracket_end:
-            return f"v{m_bracket_end.group(1)}"
+            b_ab = (m_bracket_end.group(1) or "").lower()
+            return f"{b_ab}{m_bracket_end.group(2)}" if b_ab else f"v{m_bracket_end.group(2)}"
     return ""
 
 
@@ -2170,7 +3837,15 @@ def _extract_from_single_ts4script(path: Path) -> Dict[str, Any]:
                             if m_mc:
                                 info["version"] = m_mc.group(1).decode("ascii", "ignore")
                         elif "wickedwhims" in e_low and ("version" in e_low or "main" in e_low or "init" in e_low):
-                            m_ww = re.search(rb"(?<![a-zA-Z0-9.])v?(1[789][0-9][a-z]?)(?![a-zA-Z0-9.])", data, flags=re.IGNORECASE)
+                            m_ww = re.search(
+                                rb"(?<![a-zA-Z0-9.])v?(1[789][0-9](?:\.[0-9]+|[a-z]))(?![a-zA-Z0-9.])",
+                                data,
+                                flags=re.IGNORECASE,
+                            ) or re.search(
+                                rb"(?<![a-zA-Z0-9.])v(1[789][0-9])(?![a-zA-Z0-9.])",
+                                data,
+                                flags=re.IGNORECASE,
+                            )
                             if m_ww:
                                 info["version"] = m_ww.group(1).decode("ascii", "ignore")
                         elif "wonderfulwhims" in e_low and ("version" in e_low or "main" in e_low or "init" in e_low):
@@ -2629,6 +4304,14 @@ def _extract_mod_file_metadata_uncached(p: Path) -> Dict[str, Any]:
     result["root_tunings"] = pkg_info.get("root_tunings", [])[:5]
     result["modules"] = scr_info.get("modules", [])[:5]
 
+    if not result["version"] and scr_info.get("modules"):
+        for mod_name_entry in scr_info.get("modules", [])[:5]:
+            m_rpo_mod_ver = re.match(r"^Lumpinou_RPO(\d+)_", str(mod_name_entry or ""), flags=re.IGNORECASE)
+            if m_rpo_mod_ver:
+                result["version"] = m_rpo_mod_ver.group(1)
+                result["binary_version"] = m_rpo_mod_ver.group(1)
+                break
+
     inf_creator, inf_mod = _parse_tuning_and_module_clues(result["root_tunings"], result["modules"])
 
     # 파일명 자체에 명시된 [제작자], 모드명, 버전(예: v4, v1.1) 및 카탈로그 매칭 정보로 누락 필드 보완
@@ -2728,28 +4411,66 @@ def split_camel_case(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def check_known_catalog(raw_name: str) -> Optional[Dict[str, Any]]:
+def check_known_catalog(
+    raw_name: str,
+    rpo_channel: Optional[str] = None,
+    ww_channel: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
     """핵심 코어 모드 카탈로그(MCCC, WickedWhims 본체, 바람별 한글화 등)와 정확히 일치하는지 확인합니다."""
     if not raw_name:
         return None
     name_lower = raw_name.lower()
     clean = re.sub(r"[^a-zA-Z0-9가-힣]", "", name_lower)
+    rpo_mode = str(rpo_channel or "").strip().lower()
+    ww_mode = str(ww_channel or "").strip().lower()
     for item, kw_pairs in _get_compiled_catalog():
         for kw_lower, clean_kw in kw_pairs:
             if kw_lower in name_lower or (len(clean_kw) >= 6 and clean_kw in clean):
+                is_rpo_free = (
+                    item.get("name") == "Relationship & Pregnancy Overhaul (RPO Collection)"
+                    and rpo_mode == "free"
+                )
+                is_ww_paid = (
+                    item.get("name") == "WickedWhims"
+                    and ww_mode == "paid"
+                )
+                if is_rpo_free:
+                    links = item.get("free_links") or item.get("links") or []
+                    resolved_ver = item.get("free_version", item.get("version", ""))
+                    resolved_paid = bool(item.get("is_paid", False))
+                    resolved_ea = False
+                    resolved_notes = "무료 공개 배포판 기준 버전 비교 및 자동 업데이트 활성화"
+                elif is_ww_paid:
+                    links = item.get("paid_links") or item.get("links") or []
+                    resolved_ver = item.get("paid_version", item.get("version", ""))
+                    resolved_paid = True
+                    resolved_ea = True
+                    resolved_notes = "선배포(Patreon) 버전 · 수동 다운로드 안내 (WickedWhims v187.18)"
+                else:
+                    links = item.get("links") or []
+                    resolved_ver = item.get("version", "")
+                    resolved_paid = bool(item.get("is_paid", False))
+                    resolved_ea = bool(item.get("is_early_access", False))
+                    resolved_notes = item.get("release_notes", "")
                 return {
                     "found": True,
-                    "primary_url": item["links"][0][2],
-                    "source_name": item["links"][0][0],
-                    "candidate_links": item["links"],
+                    "primary_url": links[0][2] if links else "",
+                    "source_name": links[0][0] if links else "미출시 모드",
+                    "candidate_links": links,
                     "matched_catalog": item["name"],
                     "creator": item.get("creator", ""),
                     "mod_title": item.get("mod_title", item["name"]),
                     "override_mod_title": bool(item.get("override_mod_title", False)),
-                    "version": item.get("version", ""),
-                    "is_paid": bool(item.get("is_paid", False)),
-                    "is_early_access": bool(item.get("is_early_access", False)),
-                    "release_notes": item.get("release_notes", ""),
+                    "version": resolved_ver,
+                    "is_paid": resolved_paid,
+                    "is_early_access": resolved_ea,
+                    "is_unreleased": bool(item.get("is_unreleased", False)),
+                    "requires_option_modal": bool(item.get("requires_option_modal", False)),
+                    "option_modal_mode": item.get("option_modal_mode", ""),
+                    "option_modal_prompt": item.get("option_modal_prompt", ""),
+                    "option_presets": list(item.get("option_presets") or []),
+                    "optional_addons": list(item.get("optional_addons") or []),
+                    "release_notes": resolved_notes,
                     "query": raw_name,
                 }
     return None
@@ -3344,6 +5065,8 @@ def find_direct_mod_page(
     mod_or_file_name: str,
     file_path: Optional[str] = None,
     folder_name: Optional[str] = None,
+    rpo_channel: Optional[str] = None,
+    ww_channel: Optional[str] = None,
 ) -> Dict[str, Any]:
     """모드 파일(.package / .ts4script) 내부의 메타데이터 및 파일명을 분석하여 실제 공식 배포 페이지를 반환합니다.
     1순위: 파일 내부 바이너리/매니페스트(LlamaLogic ModFileManifest, .pyc, XML Tuning)에 내장된 공식 URL (100% 정확)
@@ -3355,18 +5078,25 @@ def find_direct_mod_page(
     file_meta = extract_mod_file_metadata(file_path)
 
     # 2. 핵심 코어 모드 카탈로그 확인 (파일명 우선, 매칭 없을 시 내부 식별명 및 폴더명 보조 확인)
-    catalog_res = check_known_catalog(mod_or_file_name)
+    catalog_res = check_known_catalog(mod_or_file_name, rpo_channel=rpo_channel, ww_channel=ww_channel)
     if not catalog_res and file_meta.get("manifest_name"):
-        catalog_res = check_known_catalog(file_meta["manifest_name"])
+        catalog_res = check_known_catalog(file_meta["manifest_name"], rpo_channel=rpo_channel, ww_channel=ww_channel)
     if not catalog_res and file_meta.get("inferred_mod"):
         creator_hint = file_meta.get("inferred_creator") or ""
-        catalog_res = check_known_catalog(f"{creator_hint} {file_meta['inferred_mod']}".strip())
+        catalog_res = check_known_catalog(
+            f"{creator_hint} {file_meta['inferred_mod']}".strip(),
+            rpo_channel=rpo_channel,
+            ww_channel=ww_channel,
+        )
     if not catalog_res and folder_name:
-        catalog_res = check_known_catalog(folder_name)
+        catalog_res = check_known_catalog(folder_name, rpo_channel=rpo_channel, ww_channel=ww_channel)
     if catalog_res:
         if catalog_res.get("version") and not file_meta.get("version"):
             file_meta["version"] = catalog_res["version"]
-        catalog_res["extracted_meta"] = file_meta
+        if catalog_res.get("matched_catalog") == "Relationship & Pregnancy Overhaul (RPO Collection)" and (rpo_channel or "").strip().lower() == "free":
+            catalog_res["extracted_meta"] = file_meta
+        else:
+            catalog_res["extracted_meta"] = file_meta
         catalog_res["is_verified_source"] = True
         catalog_res["diagnostics"] = {
             "match_stage": "known_catalog",
@@ -3488,6 +5218,15 @@ def _match_score_mod_name(target: str, candidate: str) -> int:
         score += 40
     if "cas tuning add-on" in t_low and "hands close up" not in t_low and "stand still constructor" in cand_low:
         score += 150
+    t_compact = re.sub(r"[^a-zA-Z0-9가-힣]+", "", split_camel_case(t_no_ver).lower())
+    cand_compact = re.sub(r"[^a-zA-Z0-9가-힣]+", "", c_clean)
+    if "facialoverlay" in t_compact:
+        if "facialoverlay" in cand_compact:
+            score += 80
+        elif any(other in cand_compact for other in ("werewolf", "motive", "asymcelebsocial", "uimood", "standingidle")):
+            score -= 50
+    if "talents" in t_compact and "weaknesses" in t_compact and "talents" in cand_compact and "weaknesses" in cand_compact:
+        score += 60
     return score
 
 
@@ -3537,7 +5276,7 @@ def _inspect_curseforge_mod_page(
 
             if candidates:
                 candidates.sort(key=lambda x: (x[0], x[3]), reverse=True)
-                _, best_fn, best_fid, _, best_disp = candidates[0]
+                _, best_fn, best_fid, best_uploaded_at, best_disp = candidates[0]
                 s_id = str(best_fid)
                 if len(s_id) <= 4:
                     part1, part2 = s_id, "0"
@@ -3553,6 +5292,21 @@ def _inspect_curseforge_mod_page(
                     or extract_version_from_filename(title)
                 )
                 ver_str = fn_ver.lstrip("vV") if fn_ver else ""
+                if not ver_str and best_uploaded_at:
+                    cat_cf = check_known_catalog(target_mod_name) or check_known_catalog(best_fn) or {}
+                    cat_cf_ver = str(cat_cf.get("version") or "").strip().lstrip("vV")
+                    has_explicit_non_date_ver = bool(
+                        cat_cf_ver and not re.match(r"^20\d{2}\.\d{2}\.\d{2}$", cat_cf_ver)
+                    )
+                    if not has_explicit_non_date_ver:
+                        try:
+                            iso_s = str(best_uploaded_at).strip().replace("Z", "+00:00")
+                            dt_cf = datetime.datetime.fromisoformat(iso_s)
+                            utc_str = dt_cf.astimezone(datetime.timezone.utc).strftime("%Y.%m.%d")
+                            kst_str = dt_cf.astimezone(datetime.timezone(datetime.timedelta(hours=9))).strftime("%Y.%m.%d")
+                            ver_str = cat_cf_ver if cat_cf_ver in (utc_str, kst_str) else kst_str
+                        except Exception:
+                            pass
 
                 return {
                     "status": "free_direct",
@@ -3966,6 +5720,7 @@ def _inspect_simfileshare_page(
         try:
             status_code = r.status_code
             cd_hdr = r.headers.get("Content-Disposition") or ""
+            last_mod_hdr = r.headers.get("Last-Modified") or ""
             final_dl = r.url or cdn_dl
         finally:
             r.close()
@@ -3979,10 +5734,26 @@ def _inspect_simfileshare_page(
         if not fname:
             fname = target_mod_name if "." in target_mod_name else f"sfs_{sfs_id}.package"
         fn_ver = extract_version_from_filename(fname)
+        ver_str = fn_ver.lstrip("vV") if fn_ver else ""
+        if not ver_str and last_mod_hdr:
+            cat_sfs = check_known_catalog(target_mod_name) or check_known_catalog(fname) or {}
+            cat_sfs_ver = str(cat_sfs.get("version") or "").strip().lstrip("vV")
+            has_explicit_non_date_ver = bool(
+                cat_sfs_ver and not re.match(r"^20\d{2}\.\d{2}\.\d{2}$", cat_sfs_ver)
+            )
+            if not has_explicit_non_date_ver:
+                try:
+                    dt_sfs = email.utils.parsedate_to_datetime(last_mod_hdr)
+                    if dt_sfs is not None:
+                        utc_str = dt_sfs.astimezone(datetime.timezone.utc).strftime("%Y.%m.%d")
+                        kst_str = dt_sfs.astimezone(datetime.timezone(datetime.timedelta(hours=9))).strftime("%Y.%m.%d")
+                        ver_str = cat_sfs_ver if cat_sfs_ver in (utc_str, kst_str) else kst_str
+                except Exception:
+                    pass
         return {
             "status": "free_direct",
             "title": fname,
-            "version": fn_ver.lstrip("vV") if fn_ver else "",
+            "version": ver_str,
             "file_name": fname,
             "download_url": final_dl,
             "page_url": f"https://www.simfileshare.net/download/{sfs_id}/",
@@ -4385,6 +6156,7 @@ def _inspect_naver_blog_page(
     validate_https_url(url, allow_fragment=True, purpose="네이버 블로그 포스트 조회")
     try:
         fetch_url = url
+        log_no = ""
         m_nb = re.search(r"blog\.naver\.com/([a-zA-Z0-9_-]+)/(\d+)", url)
         if m_nb:
             blog_id, log_no = m_nb.group(1), m_nb.group(2)
@@ -4441,8 +6213,137 @@ def _inspect_naver_blog_page(
         if candidates:
             candidates.sort(key=lambda x: x[0], reverse=True)
             _, best_fn, best_dl, best_ver = candidates[0]
+            variant_choices: List[Dict[str, Any]] = []
+            requires_option_modal = False
+
+            if str(log_no) == "222803448393":
+                t_222_low = (target_mod_name or "").lower()
+                is_addon_222 = (
+                    "livedrag" in t_222_low
+                    or "애드온" in t_222_low
+                    or "분리버전" in t_222_low
+                    or "통합버전" in t_222_low
+                )
+                if is_addon_222:
+                    addon_cands = sorted(
+                        [(fn, dl, v) for _, fn, dl, v in candidates if "livedrag" in fn.lower()],
+                        key=lambda x: (1 if "livedragall" in x[0].lower() else 0, x[0].lower()),
+                    )
+                    seen_222_a: set[str] = set()
+                    for v_fn, v_dl, _ in addon_cands:
+                        if v_fn.lower() in seen_222_a:
+                            continue
+                        seen_222_a.add(v_fn.lower())
+                        is_all = "livedragall" in v_fn.lower()
+                        variant_choices.append({
+                            "file_name": v_fn,
+                            "download_url": v_dl,
+                            "label": (
+                                "LiveDragAll.package (통합버전 · 택1)"
+                                if is_all
+                                else "LiveDrag.zip (분리버전 · 택1)"
+                            ),
+                            "match_tokens": ["livedragall"] if is_all else ["wlpo-livedrag", "livedrag.zip", "livedrag"],
+                        })
+                    if variant_choices:
+                        requires_option_modal = True
+                        pref_a = (
+                            1
+                            if ("livedragall" in t_222_low or "통합" in t_222_low) and len(variant_choices) > 1
+                            else 0
+                        )
+                        best_fn = variant_choices[pref_a]["file_name"]
+                        best_dl = variant_choices[pref_a]["download_url"]
+                else:
+                    core_cands = sorted(
+                        [
+                            (fn, dl, v)
+                            for _, fn, dl, v in candidates
+                            if "livedrag" not in fn.lower() and "wlpo" in fn.lower()
+                        ],
+                        key=lambda x: (
+                            0
+                            if x[0].lower() == "wlpo.package"
+                            else (1 if "nocc" in x[0].lower() else (2 if "all" in x[0].lower() else 3)),
+                            x[0].lower(),
+                        ),
+                    )
+                    seen_222_c: set[str] = set()
+                    for v_fn, v_dl, _ in core_cands:
+                        if v_fn.lower() in seen_222_c:
+                            continue
+                        seen_222_c.add(v_fn.lower())
+                        fn_l = v_fn.lower()
+                        if "nocc" in fn_l:
+                            v_lbl = "WLPO_NOCC (태그 미수정 · 택1)"
+                            v_toks = ["wlpo-nocc", "wlpo_nocc"]
+                        elif "all" in fn_l:
+                            v_lbl = "WLPO-ALL (전체 통합 · 택1)"
+                            v_toks = ["wlpo-all", "wlpo_all"]
+                        else:
+                            v_lbl = "WLPO (기본 · 택1)"
+                            v_toks = ["wlpo.package"]
+                        variant_choices.append({
+                            "file_name": v_fn,
+                            "download_url": v_dl,
+                            "label": v_lbl,
+                            "match_tokens": v_toks,
+                        })
+                    if variant_choices:
+                        requires_option_modal = True
+                        pref_c = 0
+                        if "nocc" in t_222_low:
+                            pref_c = next(
+                                (i for i, vc in enumerate(variant_choices) if "nocc" in vc["file_name"].lower()),
+                                0,
+                            )
+                        elif "wlpo-all" in t_222_low or "wlpo_all" in t_222_low:
+                            pref_c = next(
+                                (i for i, vc in enumerate(variant_choices) if "all" in vc["file_name"].lower()),
+                                0,
+                            )
+                        best_fn = variant_choices[pref_c]["file_name"]
+                        best_dl = variant_choices[pref_c]["download_url"]
+                best_ver = best_ver or "13.1"
+            elif str(log_no) == "222905723480":
+                t_2229_low = (target_mod_name or "").lower()
+                is_turnons_2229 = (
+                    "personalityturnons" in t_2229_low
+                    or "turnons" in t_2229_low
+                    or "호불호" in t_2229_low
+                )
+                if is_turnons_2229:
+                    turnons_cands = [
+                        (fn, dl, v)
+                        for _, fn, dl, v in candidates
+                        if "personalityturnons" in fn.lower() or "turnons" in fn.lower()
+                    ]
+                    if turnons_cands:
+                        best_fn, best_dl, _ = turnons_cands[0]
+                        body_txt = soup.get_text(" ", strip=True)
+                        idx_turnons = body_txt.find("호불호 수정")
+                        section_txt = body_txt[idx_turnons:] if idx_turnons >= 0 else body_txt
+                        m_upd = re.search(r"업데이트\s*(\d{4})[./-](\d{1,2})[./-](\d{1,2})", section_txt)
+                        if m_upd:
+                            best_ver = f"{m_upd.group(1)}.{int(m_upd.group(2)):02d}.{int(m_upd.group(3)):02d}"
+                        else:
+                            best_ver = "2026.06.05"
+                else:
+                    sorter_cands = [(fn, dl, v) for _, fn, dl, v in candidates if "sorter" in fn.lower()]
+                    if sorter_cands:
+                        sorter_cands.sort(
+                            key=lambda x: tuple(int(n) for n in re.findall(r"\d+", x[2] or x[0])),
+                            reverse=True,
+                        )
+                        best_fn, best_dl, best_ver = sorter_cands[0]
+                        best_ver = best_ver or (title_ver.lstrip("vV") if title_ver else "") or "21"
+
             validate_https_url(best_dl, allow_fragment=True, purpose="네이버 블로그 첨부파일 다운로드 URL")
-            if (target_base_low and (best_fn.lower() == target_base_low or best_fn.lower().lstrip("!_~ ") == target_base_norm)) or "wamtik" in best_fn.lower():
+            if (
+                str(log_no) in ("222803448393", "222905723480")
+                or (target_base_low and (best_fn.lower() == target_base_low or best_fn.lower().lstrip("!_~ ") == target_base_norm))
+                or "wamtik" in best_fn.lower()
+            ):
                 matched_all_files = [(best_fn, best_dl)]
             else:
                 matched_all_files = [(fn, dl) for _, fn, dl, _ in candidates]
@@ -4454,6 +6355,8 @@ def _inspect_naver_blog_page(
                 "download_url": best_dl,
                 "page_url": url,
                 "all_files": matched_all_files,
+                "variant_choices": variant_choices if len(variant_choices) > 1 else [],
+                "requires_option_modal": requires_option_modal,
             }
 
         # 2) 본문 내 외부 배포 HTTPS 링크(Google Drive, SimFileShare, MediaFire, Dropbox 등) 보조 탐색
@@ -4761,6 +6664,76 @@ def inspect_remote_mod_page(
             return pt_res
         return {"status": "browser_required", "page_url": url}
 
+    if "s4m-byok.prmptplus.chatgpt.site" in u_lower:
+        try:
+            r_byok = _cached_safe_https_get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=timeout)
+            if r_byok.status_code == 200:
+                raw_html = getattr(r_byok, "content", b"") or r_byok.text
+                soup_byok = BeautifulSoup(raw_html, "html.parser")
+                page_title = soup_byok.title.get_text(" ", strip=True) if soup_byok.title else "S4m AI Chat BYOK"
+                dl_a = (
+                    soup_byok.select_one("aside.latest a.button.primary[href]")
+                    or soup_byok.select_one("details.version-group article.release-row a[href]")
+                    or soup_byok.select_one("a[href$='.ts4script']")
+                )
+                if dl_a and dl_a.get("href"):
+                    direct_dl = urllib.parse.urljoin(url, dl_a["href"].strip())
+                    if is_valid_https_url(direct_dl):
+                        fname = (
+                            (dl_a.get("download") or "").strip()
+                            or urllib.parse.unquote(urllib.parse.urlparse(direct_dl).path.split("/")[-1]).strip()
+                            or "Sims4_AIChat_BYOK_Addon.ts4script"
+                        )
+                        ver_str = ""
+                        first_group = soup_byok.select_one("details.version-group")
+                        if first_group is not None:
+                            summary_el = first_group.select_one("summary")
+                            summary_txt = summary_el.get_text(" ", strip=True) if summary_el else ""
+                            m_v = re.search(r"([0-9]+\.[0-9]+(?:\.[0-9]+)*[a-z]?)", summary_txt)
+                            if m_v:
+                                base_v = m_v.group(1)
+                                rows = first_group.select("article.release-row")
+                                ver_str = f"{base_v} (핫픽스)" if len(rows) >= 2 else base_v
+                        if not ver_str:
+                            for sel in ("section.hero .tags", "aside.latest"):
+                                el = soup_byok.select_one(sel)
+                                if el is not None:
+                                    m_v2 = re.search(
+                                        r"(?:원본|AI\s*Chat)\s*v?([0-9]+\.[0-9]+(?:\.[0-9]+)*[a-z]?)",
+                                        el.get_text(" ", strip=True),
+                                        flags=re.IGNORECASE,
+                                    )
+                                    if m_v2:
+                                        ver_str = m_v2.group(1)
+                                        break
+                        remote_file_size = 0
+                        try:
+                            r_sz = safe_https_get(direct_dl, headers={"User-Agent": headers["User-Agent"]}, stream=True, timeout=6)
+                            try:
+                                cl_raw = str(r_sz.headers.get("Content-Length") or "").strip()
+                                if cl_raw.isdigit():
+                                    remote_file_size = int(cl_raw)
+                            finally:
+                                r_sz.close()
+                        except NetworkSecurityError:
+                            raise
+                        except Exception:
+                            pass
+                        return {
+                            "status": "free_direct",
+                            "title": page_title,
+                            "version": ver_str,
+                            "file_name": fname,
+                            "download_url": direct_dl,
+                            "page_url": url,
+                            "remote_file_size": remote_file_size,
+                        }
+        except NetworkSecurityError:
+            raise
+        except Exception:
+            pass
+        return {"status": "browser_required", "page_url": url}
+
     if "kemzimamods.com/" in u_lower:
         kz_timeout = max(timeout, 15)
         try:
@@ -4831,6 +6804,67 @@ def inspect_remote_mod_page(
     # C. Patreon 포스트 및 제작자 캠페인 자동 검사
     # ==========================================================================
     if "patreon.com" in u_lower:
+        def _extract_more_columns_choices(candidate_files: List[Tuple[int, str, str]]) -> List[Dict[str, str]]:
+            mc_items: List[Tuple[int, str, str]] = []
+            seen_mc: set[str] = set()
+            for _, v_fn, v_dl in candidate_files:
+                low_fn = v_fn.lower()
+                if "more_cas_columns" not in low_fn or not low_fn.endswith(".package"):
+                    continue
+                if low_fn in seen_mc:
+                    continue
+                seen_mc.add(low_fn)
+                m_col = re.search(r"\(?(\d+)[\s_-]*columns?\)?", v_fn, flags=re.IGNORECASE)
+                col_num = int(m_col.group(1)) if m_col else 999
+                mc_items.append((col_num, v_fn, v_dl))
+            mc_items.sort(key=lambda x: (x[0], x[1].lower()))
+            choices_out: List[Dict[str, str]] = []
+            for col_num, v_fn, v_dl in mc_items:
+                lbl = f"{col_num}열 ({col_num} Columns)" if col_num != 999 else v_fn
+                choices_out.append({
+                    "file_name": v_fn,
+                    "download_url": v_dl,
+                    "label": lbl,
+                })
+            return choices_out
+
+        def _extract_first_impressions_choices(candidate_files: List[Tuple[int, str, str]]) -> List[Dict[str, Any]]:
+            fi_items: List[Tuple[int, str, str]] = []
+            seen_fi: set[str] = set()
+            for _, v_fn, v_dl in candidate_files:
+                low_fn = v_fn.lower()
+                if "firstimpressions" not in low_fn or not low_fn.endswith(".zip"):
+                    continue
+                if low_fn in seen_fi:
+                    continue
+                seen_fi.add(low_fn)
+                if "notimedecay" in low_fn:
+                    order_idx = 1
+                elif "withtimedecay" in low_fn:
+                    order_idx = 0
+                else:
+                    order_idx = 2
+                fi_items.append((order_idx, v_fn, v_dl))
+            fi_items.sort(key=lambda x: (x[0], x[1].lower()))
+            choices_out: List[Dict[str, Any]] = []
+            for order_idx, v_fn, v_dl in fi_items:
+                if order_idx == 0:
+                    lbl = "WithTimeDecay (3일 경과 시 첫인상 소멸 · 기본)"
+                    toks = ["withtimedecay"]
+                elif order_idx == 1:
+                    lbl = "NoTimeDecay (시간 경과 소멸 없음 · 새 감정 발생 시만 변경)"
+                    toks = ["notimedecay"]
+                else:
+                    lbl = v_fn
+                    toks = []
+                choices_out.append({
+                    "file_name": v_fn,
+                    "download_url": v_dl,
+                    "label": lbl,
+                    "match_tokens": toks,
+                })
+            return choices_out
+
         # 1) 개별 포스트 URL인 경우 (예: https://www.patreon.com/XOOX_studio/posts/icon-cas-v1-1-171172167)
         m_post = re.search(r"/posts/(?:[^/?#]*-)?(\d+)(?:[/?#]|$)", url)
         if m_post:
@@ -4928,15 +6962,51 @@ def inspect_remote_mod_page(
 
                     # 무료 공개 포스트: 첨부된 모드 파일(.package, .ts4script, .zip 등) 탐색
                     files: List[Tuple[int, str, str]] = []
+                    media_size_map: Dict[str, int] = {}
                     for inc in data.get("included", []):
                         if inc.get("type") in ("media", "attachment"):
                             ia = inc.get("attributes", {})
                             fn = ia.get("file_name") or ""
                             dl = ia.get("download_url") or ia.get("url") or ""
+                            sz = int(ia.get("size_bytes") or 0)
                             if fn.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")) and dl and is_valid_https_url(dl):
                                 fn_low = fn.lower()
+                                if sz > 0:
+                                    media_size_map[dl] = sz
                                 exact_bonus = 300 if (target_base_low and (fn_low == target_base_low or (target_base_norm and fn_low.lstrip("!_~ ") == target_base_norm))) else 0
                                 files.append((_match_score_mod_name(target_mod_name, fn) + 20 + exact_bonus, fn, dl))
+
+                    def _extract_rpo_free_archive_version(zip_dl: str, size_bytes: int) -> str:
+                        try:
+                            range_hdr = (
+                                f"bytes={max(0, size_bytes - 65536)}-{size_bytes - 1}"
+                                if size_bytes > 0
+                                else "bytes=-65536"
+                            )
+                            r_rng = safe_https_get(
+                                zip_dl,
+                                headers={"User-Agent": headers["User-Agent"], "Range": range_hdr},
+                                timeout=min(timeout, 8),
+                            )
+                            try:
+                                if r_rng.status_code in (200, 206):
+                                    found_vers = re.findall(
+                                        rb"Lumpinou_RPO_Collection_M\d+_[^\x00/\\]+?_v([0-9]+(?:\.[0-9]+)*[a-z]?)\.(?:ts4script|package)",
+                                        r_rng.content,
+                                        flags=re.IGNORECASE,
+                                    )
+                                    if found_vers:
+                                        return max(
+                                            (v.decode("ascii", errors="ignore") for v in found_vers),
+                                            key=lambda vs: (tuple(int(p) for p in re.findall(r"\d+", vs)), vs),
+                                        )
+                            finally:
+                                r_rng.close()
+                        except NetworkSecurityError:
+                            raise
+                        except Exception:
+                            pass
+                        return "2.986"
 
                     if files:
                         files.sort(key=lambda x: x[0], reverse=True)
@@ -4961,7 +7031,9 @@ def inspect_remote_mod_page(
                         fn_ver = extract_version_from_filename(best_fn)
                         if fn_ver:
                             ver_str = fn_ver.lstrip("vV")
-                        if str(post_id) == "166618081":
+                        if str(post_id) == "75983577" and not ver_str:
+                            ver_str = _extract_rpo_free_archive_version(best_dl, media_size_map.get(best_dl, 0))
+                        elif str(post_id) == "166618081":
                             ver_str = "0.2.4"
                         elif str(post_id) == "158968693":
                             ver_str = "0.2.3"
@@ -4978,10 +7050,490 @@ def inspect_remote_mod_page(
                                 or (target_norm_key and best_norm_key == target_norm_key)
                             )
                         )
+                        variant_choices: List[Dict[str, Any]] = []
+                        requires_option_modal = False
+                        if str(post_id) == "27751117" or any("more_cas_columns" in fn.lower() for _, fn, _ in files):
+                            mc_choices = _extract_more_columns_choices(files)
+                            if mc_choices:
+                                variant_choices = mc_choices
+                                requires_option_modal = True
+                                if "more_cas_columns" not in best_fn.lower():
+                                    best_fn = mc_choices[0]["file_name"]
+                                    best_dl = mc_choices[0]["download_url"]
+                        elif str(post_id) == "44832679":
+                            fi_choices = _extract_first_impressions_choices(files)
+                            if fi_choices:
+                                variant_choices = fi_choices
+                                requires_option_modal = True
+                                if "firstimpressions" not in best_fn.lower() or not best_fn.lower().endswith(".zip"):
+                                    best_fn = fi_choices[0]["file_name"]
+                                    best_dl = fi_choices[0]["download_url"]
+                            if not ver_str:
+                                ver_str = "1"
+                        elif str(post_id) == "130600688":
+                            t_130_low = (target_mod_name or "").lower()
+                            if "canvas_frame_override" in t_130_low or "canvas frame" in t_130_low:
+                                cf_files = sorted(
+                                    [(fn, dl) for _, fn, dl in files if "canvas_frame_override_v" in fn.lower()],
+                                    key=lambda x: x[0].lower(),
+                                )
+                                seen_cf: set[str] = set()
+                                for v_fn, v_dl in cf_files:
+                                    if v_fn.lower() in seen_cf:
+                                        continue
+                                    seen_cf.add(v_fn.lower())
+                                    m_cv = re.search(r"_(v\d+)\.package$", v_fn, flags=re.IGNORECASE)
+                                    v_tag = m_cv.group(1).upper() if m_cv else ""
+                                    variant_choices.append({
+                                        "file_name": v_fn,
+                                        "download_url": v_dl,
+                                        "label": f"Canvas Frame Override {v_tag} (택1)".strip(),
+                                    })
+                                if cf_files and "canvas_frame_override_v" not in best_fn.lower():
+                                    best_fn, best_dl = cf_files[0]
+                            elif "mini_easel" in t_130_low or "mini easel" in t_130_low:
+                                me_file = next(
+                                    ((fn, dl) for _, fn, dl in files if "functional_mini_easels" in fn.lower()),
+                                    None,
+                                )
+                                if me_file:
+                                    best_fn, best_dl = me_file
+                            else:
+                                pa_files = sorted(
+                                    [(fn, dl) for _, fn, dl in files if "painting_animation_override" in fn.lower()],
+                                    key=lambda x: (1 if "gender_neutral" in x[0].lower() else 0, x[0].lower()),
+                                )
+                                seen_pa: set[str] = set()
+                                for v_fn, v_dl in pa_files:
+                                    if v_fn.lower() in seen_pa:
+                                        continue
+                                    seen_pa.add(v_fn.lower())
+                                    v_lbl = (
+                                        "Gender Neutral (성별 무관 애니메이션 · 택1)"
+                                        if "gender_neutral" in v_fn.lower()
+                                        else "기본 버전 (성별별 애니메이션 · 택1)"
+                                    )
+                                    variant_choices.append({
+                                        "file_name": v_fn,
+                                        "download_url": v_dl,
+                                        "label": v_lbl,
+                                    })
+                                if pa_files and "painting_animation_override" not in best_fn.lower():
+                                    best_fn, best_dl = pa_files[0]
+                        elif str(post_id) == "166429206":
+                            t_166_low = (target_mod_name or "").lower()
+                            if "wardrobeplatform" in t_166_low or "addon" in t_166_low:
+                                addon_f = next(
+                                    ((fn, dl) for _, fn, dl in files if "wardrobeplatform" in fn.lower()),
+                                    None,
+                                )
+                                if addon_f:
+                                    best_fn, best_dl = addon_f
+                                requires_option_modal = False
+                            else:
+                                lot_files = sorted(
+                                    [
+                                        (fn, dl)
+                                        for _, fn, dl in files
+                                        if "alllots_v1" in fn.lower() or "retailthriftlots_v2" in fn.lower()
+                                    ],
+                                    key=lambda x: (0 if "alllots_v1" in x[0].lower() else 1, x[0].lower()),
+                                )
+                                seen_tw: set[str] = set()
+                                for v_fn, v_dl in lot_files:
+                                    if v_fn.lower() in seen_tw:
+                                        continue
+                                    seen_tw.add(v_fn.lower())
+                                    v_lbl = (
+                                        "allLots_v1 (모든 부지 적용)"
+                                        if "alllots_v1" in v_fn.lower()
+                                        else "retailThriftLots_v2 (상점 · 중고매장 부지 전용)"
+                                    )
+                                    variant_choices.append({
+                                        "file_name": v_fn,
+                                        "download_url": v_dl,
+                                        "label": v_lbl,
+                                        "match_tokens": ["alllots_v1"] if "alllots_v1" in v_fn.lower() else ["retailthriftlots_v2"],
+                                    })
+                                if variant_choices:
+                                    requires_option_modal = True
+                                    if "wardrobeplatform" in best_fn.lower() or (
+                                        "alllots_v1" not in best_fn.lower() and "retailthriftlots_v2" not in best_fn.lower()
+                                    ):
+                                        best_fn = variant_choices[0]["file_name"]
+                                        best_dl = variant_choices[0]["download_url"]
+                            ver_str = "2026.10.26"
+                        elif str(post_id) == "159477437":
+                            t_159_low = (target_mod_name or "").lower()
+                            sel_159 = None
+                            if "purchasefromcomputer" in t_159_low or "purchase from computer" in t_159_low:
+                                sel_159 = next(((fn, dl) for _, fn, dl in files if "purchasefromcomputer" in fn.lower()), None)
+                            elif "wallsanitizer" in t_159_low or "wall sanitizer" in t_159_low:
+                                if "gettowork" in t_159_low or "get to work" in t_159_low:
+                                    sel_159 = next(((fn, dl) for _, fn, dl in files if "wallsanitizer" in fn.lower() and "gettowork" in fn.lower()), None)
+                                else:
+                                    sel_159 = next(((fn, dl) for _, fn, dl in files if "wallsanitizer" in fn.lower() and "gettowork" not in fn.lower()), None)
+                            elif "handsanitizer" in t_159_low or "hand sanitizer" in t_159_low:
+                                sel_159 = next(((fn, dl) for _, fn, dl in files if "handsanitizer" in fn.lower()), None)
+                            elif "washface" in t_159_low or "wash face" in t_159_low:
+                                sel_159 = next(((fn, dl) for _, fn, dl in files if "washface" in fn.lower()), None)
+                            if sel_159:
+                                best_fn, best_dl = sel_159
+                            ver_str = "2026.08.31"
+                        elif str(post_id) == "146833653":
+                            t_146_low = (target_mod_name or "").lower()
+                            if "posepack_female" in t_146_low or "posepack female" in t_146_low:
+                                sel_146 = next(((fn, dl) for _, fn, dl in files if "posepack_female" in fn.lower()), None)
+                                if sel_146:
+                                    best_fn, best_dl = sel_146
+                                requires_option_modal = False
+                            elif "posepack_male" in t_146_low or "posepack male" in t_146_low:
+                                sel_146 = next(((fn, dl) for _, fn, dl in files if "posepack_male" in fn.lower()), None)
+                                if sel_146:
+                                    best_fn, best_dl = sel_146
+                                requires_option_modal = False
+                            elif "mirrorphoto_phone" in t_146_low or "photo phone" in t_146_low:
+                                sel_146 = next(((fn, dl) for _, fn, dl in files if "mirrorphoto_phone" in fn.lower()), None)
+                                if sel_146:
+                                    best_fn, best_dl = sel_146
+                                requires_option_modal = False
+                            else:
+                                mp_files = sorted(
+                                    [
+                                        (fn, dl)
+                                        for _, fn, dl in files
+                                        if fn.lower() in ("simkatu_mirrorphoto.package", "simkatu_mirrorphoto_v2_genderneutral.package")
+                                    ],
+                                    key=lambda x: (0 if x[0].lower() == "simkatu_mirrorphoto.package" else 1, x[0].lower()),
+                                )
+                                seen_mp: set[str] = set()
+                                for v_fn, v_dl in mp_files:
+                                    if v_fn.lower() in seen_mp:
+                                        continue
+                                    seen_mp.add(v_fn.lower())
+                                    is_v2 = "v2_genderneutral" in v_fn.lower()
+                                    variant_choices.append({
+                                        "file_name": v_fn,
+                                        "download_url": v_dl,
+                                        "label": (
+                                            "mirrorphoto_v2_genderneutral (성별 무관 v2 · 택1)"
+                                            if is_v2
+                                            else "mirrorphoto (기본 버전 · 택1)"
+                                        ),
+                                        "match_tokens": ["mirrorphoto_v2_genderneutral"] if is_v2 else ["simkatu_mirrorphoto.package"],
+                                    })
+                                if variant_choices:
+                                    requires_option_modal = True
+                                    if best_fn.lower() not in ("simkatu_mirrorphoto.package", "simkatu_mirrorphoto_v2_genderneutral.package"):
+                                        preferred_idx = 1 if ("v2" in t_146_low or "genderneutral" in t_146_low) and len(variant_choices) > 1 else 0
+                                        best_fn = variant_choices[preferred_idx]["file_name"]
+                                        best_dl = variant_choices[preferred_idx]["download_url"]
+                            ver_str = "2026.08.31"
+                        elif str(post_id) == "114984579":
+                            t_114_low = (target_mod_name or "").lower()
+                            ml_files = sorted(
+                                [
+                                    (fn, dl)
+                                    for _, fn, dl in files
+                                    if fn.lower() in (
+                                        "simkatu_music_listening_interactions.package",
+                                        "simkatu_music_listening_interactions_autonomy_off.package",
+                                    )
+                                ],
+                                key=lambda x: (1 if "autonomy_off" in x[0].lower() else 0, x[0].lower()),
+                            )
+                            seen_ml: set[str] = set()
+                            for v_fn, v_dl in ml_files:
+                                if v_fn.lower() in seen_ml:
+                                    continue
+                                seen_ml.add(v_fn.lower())
+                                is_auto_off = "autonomy_off" in v_fn.lower()
+                                variant_choices.append({
+                                    "file_name": v_fn,
+                                    "download_url": v_dl,
+                                    "label": (
+                                        "music_listening_interactions_autonomy_off (자율성 끄기 · 택1)"
+                                        if is_auto_off
+                                        else "music_listening_interactions (기본 버전 · 택1)"
+                                    ),
+                                    "match_tokens": (
+                                        ["music_listening_interactions_autonomy_off"]
+                                        if is_auto_off
+                                        else ["simkatu_music_listening_interactions.package"]
+                                    ),
+                                })
+                            if variant_choices:
+                                requires_option_modal = True
+                                preferred_idx = (
+                                    1
+                                    if "autonomy_off" in t_114_low and len(variant_choices) > 1
+                                    else 0
+                                )
+                                best_fn = variant_choices[preferred_idx]["file_name"]
+                                best_dl = variant_choices[preferred_idx]["download_url"]
+                            ver_str = "2026.03.20"
+                        elif str(post_id) == "112677899":
+                            t_112_low = (target_mod_name or "").lower()
+                            nt_files = sorted(
+                                [
+                                    (fn, dl)
+                                    for _, fn, dl in files
+                                    if fn.lower() in (
+                                        "simkatu_nap_on_the_table.package",
+                                        "simkatu_nap_on_the_table_more_energy.package",
+                                    )
+                                ],
+                                key=lambda x: (1 if "more_energy" in x[0].lower() else 0, x[0].lower()),
+                            )
+                            seen_nt: set[str] = set()
+                            for v_fn, v_dl in nt_files:
+                                if v_fn.lower() in seen_nt:
+                                    continue
+                                seen_nt.add(v_fn.lower())
+                                is_more_energy = "more_energy" in v_fn.lower()
+                                variant_choices.append({
+                                    "file_name": v_fn,
+                                    "download_url": v_dl,
+                                    "label": (
+                                        "nap_on_the_table_more_energy (에너지 회복 증가 · 택1)"
+                                        if is_more_energy
+                                        else "nap_on_the_table (기본 버전 · 택1)"
+                                    ),
+                                    "match_tokens": (
+                                        ["nap_on_the_table_more_energy"]
+                                        if is_more_energy
+                                        else ["simkatu_nap_on_the_table.package"]
+                                    ),
+                                })
+                            if variant_choices:
+                                requires_option_modal = True
+                                preferred_idx = (
+                                    1
+                                    if "more_energy" in t_112_low and len(variant_choices) > 1
+                                    else 0
+                                )
+                                best_fn = variant_choices[preferred_idx]["file_name"]
+                                best_dl = variant_choices[preferred_idx]["download_url"]
+                            ver_str = "2026.05.15"
+                        elif str(post_id) == "111074342":
+                            t_111_low = (target_mod_name or "").lower()
+                            eg_files = sorted(
+                                [
+                                    (fn, dl)
+                                    for _, fn, dl in files
+                                    if fn.lower() in (
+                                        "simkatu_mod_endless_grief_with_autonomy.package",
+                                        "simkatu_mod_endless_grief_without_autonomy.package",
+                                    )
+                                ],
+                                key=lambda x: (1 if "without_autonomy" in x[0].lower() else 0, x[0].lower()),
+                            )
+                            seen_eg: set[str] = set()
+                            for v_fn, v_dl in eg_files:
+                                if v_fn.lower() in seen_eg:
+                                    continue
+                                seen_eg.add(v_fn.lower())
+                                is_without = "without_autonomy" in v_fn.lower()
+                                variant_choices.append({
+                                    "file_name": v_fn,
+                                    "download_url": v_dl,
+                                    "label": (
+                                        "endless_grief_without_autonomy (자율성 끄기 · 택1)"
+                                        if is_without
+                                        else "endless_grief_with_autonomy (자율성 켜기 · 택1)"
+                                    ),
+                                    "match_tokens": (
+                                        ["endless_grief_without_autonomy"]
+                                        if is_without
+                                        else ["endless_grief_with_autonomy"]
+                                    ),
+                                })
+                            if variant_choices:
+                                requires_option_modal = True
+                                preferred_idx = (
+                                    1
+                                    if "without_autonomy" in t_111_low and len(variant_choices) > 1
+                                    else 0
+                                )
+                                best_fn = variant_choices[preferred_idx]["file_name"]
+                                best_dl = variant_choices[preferred_idx]["download_url"]
+                            ver_str = "2026.03.20"
+                        elif str(post_id) == "137123858":
+                            t_137_low = (target_mod_name or "").lower()
+                            nb_files = sorted(
+                                [
+                                    (fn, dl)
+                                    for _, fn, dl in files
+                                    if fn.lower() in (
+                                        "simkatu_nap_with_baby_in_bed.package",
+                                        "simkatu_nap_with_baby_in_bed_v2_more_energy.package",
+                                    )
+                                ],
+                                key=lambda x: (1 if "more_energy" in x[0].lower() else 0, x[0].lower()),
+                            )
+                            seen_nb: set[str] = set()
+                            for v_fn, v_dl in nb_files:
+                                if v_fn.lower() in seen_nb:
+                                    continue
+                                seen_nb.add(v_fn.lower())
+                                is_more_energy = "more_energy" in v_fn.lower()
+                                variant_choices.append({
+                                    "file_name": v_fn,
+                                    "download_url": v_dl,
+                                    "label": (
+                                        "nap_with_baby_in_bed_v2_more_energy (에너지 회복 증가 v2 · 택1)"
+                                        if is_more_energy
+                                        else "nap_with_baby_in_bed (기본 버전 · 택1)"
+                                    ),
+                                    "match_tokens": (
+                                        ["nap_with_baby_in_bed_v2_more_energy"]
+                                        if is_more_energy
+                                        else ["simkatu_nap_with_baby_in_bed.package"]
+                                    ),
+                                })
+                            if variant_choices:
+                                requires_option_modal = True
+                                preferred_idx = (
+                                    1
+                                    if ("more_energy" in t_137_low or "v2" in t_137_low) and len(variant_choices) > 1
+                                    else 0
+                                )
+                                best_fn = variant_choices[preferred_idx]["file_name"]
+                                best_dl = variant_choices[preferred_idx]["download_url"]
+                            ver_str = "2026.04.18"
+                        elif str(post_id) == "125422688":
+                            t_125_low = (target_mod_name or "").lower()
+                            if (
+                                "gradeschool_homework" in t_125_low
+                                or "override_gradeschool" in t_125_low
+                                or "homework override" in t_125_low
+                            ):
+                                hw_f = next(
+                                    ((fn, dl) for _, fn, dl in files if "override_gradeschool_homework" in fn.lower()),
+                                    None,
+                                )
+                                if hw_f:
+                                    best_fn, best_dl = hw_f
+                                requires_option_modal = False
+                            else:
+                                kp_files = sorted(
+                                    [
+                                        (fn, dl)
+                                        for _, fn, dl in files
+                                        if "v1_ea_homework" in fn.lower() or "v2_custom_homework" in fn.lower()
+                                    ],
+                                    key=lambda x: (0 if "v1_ea_homework" in x[0].lower() else 1, x[0].lower()),
+                                )
+                                seen_kp: set[str] = set()
+                                for v_fn, v_dl in kp_files:
+                                    if v_fn.lower() in seen_kp:
+                                        continue
+                                    seen_kp.add(v_fn.lower())
+                                    is_v2 = "v2_custom_homework" in v_fn.lower()
+                                    variant_choices.append({
+                                        "file_name": v_fn,
+                                        "download_url": v_dl,
+                                        "label": (
+                                            "kids_interactions_pack_v2_custom_homework (커스텀 숙제 버전 · 택1)"
+                                            if is_v2
+                                            else "kids_interactions_pack_v1_ea_homework (EA 기본 숙제 버전 · 택1)"
+                                        ),
+                                        "match_tokens": (
+                                            ["v2_custom_homework"]
+                                            if is_v2
+                                            else ["v1_ea_homework"]
+                                        ),
+                                    })
+                                if variant_choices:
+                                    requires_option_modal = True
+                                    preferred_idx = (
+                                        1
+                                        if ("v2" in t_125_low or "custom_homework" in t_125_low) and len(variant_choices) > 1
+                                        else 0
+                                    )
+                                    best_fn = variant_choices[preferred_idx]["file_name"]
+                                    best_dl = variant_choices[preferred_idx]["download_url"]
+                            ver_str = "2026.03.20"
+                        elif str(post_id) == "160426834":
+                            t_160_low = (target_mod_name or "").lower()
+                            gm_files = sorted(
+                                [
+                                    (fn, dl)
+                                    for _, fn, dl in files
+                                    if "v1_sickness_gtw" in fn.lower() or "v2_sickness_ailments_gtw_ebn" in fn.lower()
+                                ],
+                                key=lambda x: (0 if "v1_sickness_gtw" in x[0].lower() else 1, x[0].lower()),
+                            )
+                            seen_gm: set[str] = set()
+                            for v_fn, v_dl in gm_files:
+                                if v_fn.lower() in seen_gm:
+                                    continue
+                                seen_gm.add(v_fn.lower())
+                                is_v2 = "v2_sickness_ailments" in v_fn.lower()
+                                variant_choices.append({
+                                    "file_name": v_fn,
+                                    "download_url": v_dl,
+                                    "label": (
+                                        "giveMedicine_v2_sickness_ailments_GTW_EBN (질병+질환 · GTW+EBN · 택1)"
+                                        if is_v2
+                                        else "giveMedicine_v1_sickness_GTW (질병 전용 · GTW · 택1)"
+                                    ),
+                                    "match_tokens": (
+                                        ["v2_sickness_ailments_gtw_ebn"]
+                                        if is_v2
+                                        else ["v1_sickness_gtw"]
+                                    ),
+                                })
+                            if variant_choices:
+                                requires_option_modal = True
+                                preferred_idx = (
+                                    1
+                                    if ("v2" in t_160_low or "ebn" in t_160_low) and len(variant_choices) > 1
+                                    else 0
+                                )
+                                best_fn = variant_choices[preferred_idx]["file_name"]
+                                best_dl = variant_choices[preferred_idx]["download_url"]
+                            ver_str = "2026.06.07"
+                        elif str(post_id) == "149952231":
+                            t_149_low = (target_mod_name or "").lower()
+                            if (
+                                "gameanim" in t_149_low
+                                or "animation override" in t_149_low
+                                or "anim_override" in t_149_low
+                            ):
+                                sel_149 = next(
+                                    ((fn, dl) for _, fn, dl in files if "gameanim_override" in fn.lower()),
+                                    None,
+                                )
+                            else:
+                                sel_149 = next(
+                                    (
+                                        (fn, dl)
+                                        for _, fn, dl in files
+                                        if "functional_stroller" in fn.lower() and "gameanim_override" not in fn.lower()
+                                    ),
+                                    None,
+                                )
+                            if sel_149:
+                                best_fn, best_dl = sel_149
+                            ver_str = "2026.03.07"
+                        elif str(post_id) == "152419156":
+                            t_152_low = (target_mod_name or "").lower()
+                            sel_152 = None
+                            if "helios" in t_152_low:
+                                sel_152 = next(((fn, dl) for _, fn, dl in files if "helios" in fn.lower()), None)
+                            elif "charles" in t_152_low:
+                                sel_152 = next(((fn, dl) for _, fn, dl in files if "charles" in fn.lower()), None)
+                            elif "enchanted" in t_152_low:
+                                sel_152 = next(((fn, dl) for _, fn, dl in files if "enchanted" in fn.lower()), None)
+                            if sel_152:
+                                best_fn, best_dl = sel_152
+                            ver_str = "2026.03.25"
+
                         if (
                             (is_same_target_file and str(post_id) not in ("166618081", "158968693", "142863954"))
                             or "wamtik" in best_fn.lower()
-                            or str(post_id) in ("69121597", "115299392", "151330104", "108516027")
+                            or str(post_id) in ("69121597", "115299392", "151330104", "108516027", "130600688", "27751117", "44832679", "166429206", "159477437", "146833653", "114984579", "112677899", "111074342", "137123858", "125422688", "160426834", "149952231", "152419156")
                             or (str(post_id) == "142863954" and "ride together" not in best_fn.lower())
                         ):
                             matched_patreon_files = [(best_fn, best_dl)]
@@ -5003,6 +7555,8 @@ def inspect_remote_mod_page(
                             "download_url": best_dl,
                             "page_url": post_url,
                             "all_files": matched_patreon_files,
+                            "variant_choices": variant_choices if len(variant_choices) > 1 else [],
+                            "requires_option_modal": requires_option_modal,
                         }
 
                     # 본문(content 및 신규 에디터 content_json_string) 내 연결된 다운로드 전용 포스트 / Itch.io / 직접 파일 링크 확인
@@ -5035,7 +7589,13 @@ def inspect_remote_mod_page(
                                 continue
                             lu_low = lu_clean.lower()
                             if (
-                                ("patreon.com/posts/" in lu_low and post_id not in lu_low and "40486381" not in lu_low)
+                                (
+                                    "patreon.com/posts/" in lu_low
+                                    and post_id not in lu_low
+                                    and "40486381" not in lu_low
+                                    and "99326557" not in lu_low
+                                    and ("86658397" not in lu_low or "toolbox" in (target_mod_name or "").lower())
+                                )
                                 or ".itch.io/" in lu_low
                                 or "curseforge.com/sims4/mods/" in lu_low
                             ):
@@ -5102,10 +7662,490 @@ def inspect_remote_mod_page(
                                 or (target_norm_key and best_norm_key == target_norm_key)
                             )
                         )
+                        variant_choices: List[Dict[str, Any]] = []
+                        requires_option_modal = False
+                        if str(post_id) == "27751117" or any("more_cas_columns" in fn.lower() for _, fn, _ in files):
+                            mc_choices = _extract_more_columns_choices(files)
+                            if mc_choices:
+                                variant_choices = mc_choices
+                                requires_option_modal = True
+                                if "more_cas_columns" not in best_fn.lower():
+                                    best_fn = mc_choices[0]["file_name"]
+                                    best_dl = mc_choices[0]["download_url"]
+                        elif str(post_id) == "44832679":
+                            fi_choices = _extract_first_impressions_choices(files)
+                            if fi_choices:
+                                variant_choices = fi_choices
+                                requires_option_modal = True
+                                if "firstimpressions" not in best_fn.lower() or not best_fn.lower().endswith(".zip"):
+                                    best_fn = fi_choices[0]["file_name"]
+                                    best_dl = fi_choices[0]["download_url"]
+                            if not ver_str:
+                                ver_str = "1"
+                        elif str(post_id) == "130600688":
+                            t_130_low = (target_mod_name or "").lower()
+                            if "canvas_frame_override" in t_130_low or "canvas frame" in t_130_low:
+                                cf_files = sorted(
+                                    [(fn, dl) for _, fn, dl in files if "canvas_frame_override_v" in fn.lower()],
+                                    key=lambda x: x[0].lower(),
+                                )
+                                seen_cf: set[str] = set()
+                                for v_fn, v_dl in cf_files:
+                                    if v_fn.lower() in seen_cf:
+                                        continue
+                                    seen_cf.add(v_fn.lower())
+                                    m_cv = re.search(r"_(v\d+)\.package$", v_fn, flags=re.IGNORECASE)
+                                    v_tag = m_cv.group(1).upper() if m_cv else ""
+                                    variant_choices.append({
+                                        "file_name": v_fn,
+                                        "download_url": v_dl,
+                                        "label": f"Canvas Frame Override {v_tag} (택1)".strip(),
+                                    })
+                                if cf_files and "canvas_frame_override_v" not in best_fn.lower():
+                                    best_fn, best_dl = cf_files[0]
+                            elif "mini_easel" in t_130_low or "mini easel" in t_130_low:
+                                me_file = next(
+                                    ((fn, dl) for _, fn, dl in files if "functional_mini_easels" in fn.lower()),
+                                    None,
+                                )
+                                if me_file:
+                                    best_fn, best_dl = me_file
+                            else:
+                                pa_files = sorted(
+                                    [(fn, dl) for _, fn, dl in files if "painting_animation_override" in fn.lower()],
+                                    key=lambda x: (1 if "gender_neutral" in x[0].lower() else 0, x[0].lower()),
+                                )
+                                seen_pa: set[str] = set()
+                                for v_fn, v_dl in pa_files:
+                                    if v_fn.lower() in seen_pa:
+                                        continue
+                                    seen_pa.add(v_fn.lower())
+                                    v_lbl = (
+                                        "Gender Neutral (성별 무관 애니메이션 · 택1)"
+                                        if "gender_neutral" in v_fn.lower()
+                                        else "기본 버전 (성별별 애니메이션 · 택1)"
+                                    )
+                                    variant_choices.append({
+                                        "file_name": v_fn,
+                                        "download_url": v_dl,
+                                        "label": v_lbl,
+                                    })
+                                if pa_files and "painting_animation_override" not in best_fn.lower():
+                                    best_fn, best_dl = pa_files[0]
+                        elif str(post_id) == "166429206":
+                            t_166_low = (target_mod_name or "").lower()
+                            if "wardrobeplatform" in t_166_low or "addon" in t_166_low:
+                                addon_f = next(
+                                    ((fn, dl) for _, fn, dl in files if "wardrobeplatform" in fn.lower()),
+                                    None,
+                                )
+                                if addon_f:
+                                    best_fn, best_dl = addon_f
+                                requires_option_modal = False
+                            else:
+                                lot_files = sorted(
+                                    [
+                                        (fn, dl)
+                                        for _, fn, dl in files
+                                        if "alllots_v1" in fn.lower() or "retailthriftlots_v2" in fn.lower()
+                                    ],
+                                    key=lambda x: (0 if "alllots_v1" in x[0].lower() else 1, x[0].lower()),
+                                )
+                                seen_tw: set[str] = set()
+                                for v_fn, v_dl in lot_files:
+                                    if v_fn.lower() in seen_tw:
+                                        continue
+                                    seen_tw.add(v_fn.lower())
+                                    v_lbl = (
+                                        "allLots_v1 (모든 부지 적용)"
+                                        if "alllots_v1" in v_fn.lower()
+                                        else "retailThriftLots_v2 (상점 · 중고매장 부지 전용)"
+                                    )
+                                    variant_choices.append({
+                                        "file_name": v_fn,
+                                        "download_url": v_dl,
+                                        "label": v_lbl,
+                                        "match_tokens": ["alllots_v1"] if "alllots_v1" in v_fn.lower() else ["retailthriftlots_v2"],
+                                    })
+                                if variant_choices:
+                                    requires_option_modal = True
+                                    if "wardrobeplatform" in best_fn.lower() or (
+                                        "alllots_v1" not in best_fn.lower() and "retailthriftlots_v2" not in best_fn.lower()
+                                    ):
+                                        best_fn = variant_choices[0]["file_name"]
+                                        best_dl = variant_choices[0]["download_url"]
+                            ver_str = "2026.10.26"
+                        elif str(post_id) == "159477437":
+                            t_159_low = (target_mod_name or "").lower()
+                            sel_159 = None
+                            if "purchasefromcomputer" in t_159_low or "purchase from computer" in t_159_low:
+                                sel_159 = next(((fn, dl) for _, fn, dl in files if "purchasefromcomputer" in fn.lower()), None)
+                            elif "wallsanitizer" in t_159_low or "wall sanitizer" in t_159_low:
+                                if "gettowork" in t_159_low or "get to work" in t_159_low:
+                                    sel_159 = next(((fn, dl) for _, fn, dl in files if "wallsanitizer" in fn.lower() and "gettowork" in fn.lower()), None)
+                                else:
+                                    sel_159 = next(((fn, dl) for _, fn, dl in files if "wallsanitizer" in fn.lower() and "gettowork" not in fn.lower()), None)
+                            elif "handsanitizer" in t_159_low or "hand sanitizer" in t_159_low:
+                                sel_159 = next(((fn, dl) for _, fn, dl in files if "handsanitizer" in fn.lower()), None)
+                            elif "washface" in t_159_low or "wash face" in t_159_low:
+                                sel_159 = next(((fn, dl) for _, fn, dl in files if "washface" in fn.lower()), None)
+                            if sel_159:
+                                best_fn, best_dl = sel_159
+                            ver_str = "2026.08.31"
+                        elif str(post_id) == "146833653":
+                            t_146_low = (target_mod_name or "").lower()
+                            if "posepack_female" in t_146_low or "posepack female" in t_146_low:
+                                sel_146 = next(((fn, dl) for _, fn, dl in files if "posepack_female" in fn.lower()), None)
+                                if sel_146:
+                                    best_fn, best_dl = sel_146
+                                requires_option_modal = False
+                            elif "posepack_male" in t_146_low or "posepack male" in t_146_low:
+                                sel_146 = next(((fn, dl) for _, fn, dl in files if "posepack_male" in fn.lower()), None)
+                                if sel_146:
+                                    best_fn, best_dl = sel_146
+                                requires_option_modal = False
+                            elif "mirrorphoto_phone" in t_146_low or "photo phone" in t_146_low:
+                                sel_146 = next(((fn, dl) for _, fn, dl in files if "mirrorphoto_phone" in fn.lower()), None)
+                                if sel_146:
+                                    best_fn, best_dl = sel_146
+                                requires_option_modal = False
+                            else:
+                                mp_files = sorted(
+                                    [
+                                        (fn, dl)
+                                        for _, fn, dl in files
+                                        if fn.lower() in ("simkatu_mirrorphoto.package", "simkatu_mirrorphoto_v2_genderneutral.package")
+                                    ],
+                                    key=lambda x: (0 if x[0].lower() == "simkatu_mirrorphoto.package" else 1, x[0].lower()),
+                                )
+                                seen_mp: set[str] = set()
+                                for v_fn, v_dl in mp_files:
+                                    if v_fn.lower() in seen_mp:
+                                        continue
+                                    seen_mp.add(v_fn.lower())
+                                    is_v2 = "v2_genderneutral" in v_fn.lower()
+                                    variant_choices.append({
+                                        "file_name": v_fn,
+                                        "download_url": v_dl,
+                                        "label": (
+                                            "mirrorphoto_v2_genderneutral (성별 무관 v2 · 택1)"
+                                            if is_v2
+                                            else "mirrorphoto (기본 버전 · 택1)"
+                                        ),
+                                        "match_tokens": ["mirrorphoto_v2_genderneutral"] if is_v2 else ["simkatu_mirrorphoto.package"],
+                                    })
+                                if variant_choices:
+                                    requires_option_modal = True
+                                    if best_fn.lower() not in ("simkatu_mirrorphoto.package", "simkatu_mirrorphoto_v2_genderneutral.package"):
+                                        preferred_idx = 1 if ("v2" in t_146_low or "genderneutral" in t_146_low) and len(variant_choices) > 1 else 0
+                                        best_fn = variant_choices[preferred_idx]["file_name"]
+                                        best_dl = variant_choices[preferred_idx]["download_url"]
+                            ver_str = "2026.08.31"
+                        elif str(post_id) == "114984579":
+                            t_114_low = (target_mod_name or "").lower()
+                            ml_files = sorted(
+                                [
+                                    (fn, dl)
+                                    for _, fn, dl in files
+                                    if fn.lower() in (
+                                        "simkatu_music_listening_interactions.package",
+                                        "simkatu_music_listening_interactions_autonomy_off.package",
+                                    )
+                                ],
+                                key=lambda x: (1 if "autonomy_off" in x[0].lower() else 0, x[0].lower()),
+                            )
+                            seen_ml: set[str] = set()
+                            for v_fn, v_dl in ml_files:
+                                if v_fn.lower() in seen_ml:
+                                    continue
+                                seen_ml.add(v_fn.lower())
+                                is_auto_off = "autonomy_off" in v_fn.lower()
+                                variant_choices.append({
+                                    "file_name": v_fn,
+                                    "download_url": v_dl,
+                                    "label": (
+                                        "music_listening_interactions_autonomy_off (자율성 끄기 · 택1)"
+                                        if is_auto_off
+                                        else "music_listening_interactions (기본 버전 · 택1)"
+                                    ),
+                                    "match_tokens": (
+                                        ["music_listening_interactions_autonomy_off"]
+                                        if is_auto_off
+                                        else ["simkatu_music_listening_interactions.package"]
+                                    ),
+                                })
+                            if variant_choices:
+                                requires_option_modal = True
+                                preferred_idx = (
+                                    1
+                                    if "autonomy_off" in t_114_low and len(variant_choices) > 1
+                                    else 0
+                                )
+                                best_fn = variant_choices[preferred_idx]["file_name"]
+                                best_dl = variant_choices[preferred_idx]["download_url"]
+                            ver_str = "2026.03.20"
+                        elif str(post_id) == "112677899":
+                            t_112_low = (target_mod_name or "").lower()
+                            nt_files = sorted(
+                                [
+                                    (fn, dl)
+                                    for _, fn, dl in files
+                                    if fn.lower() in (
+                                        "simkatu_nap_on_the_table.package",
+                                        "simkatu_nap_on_the_table_more_energy.package",
+                                    )
+                                ],
+                                key=lambda x: (1 if "more_energy" in x[0].lower() else 0, x[0].lower()),
+                            )
+                            seen_nt: set[str] = set()
+                            for v_fn, v_dl in nt_files:
+                                if v_fn.lower() in seen_nt:
+                                    continue
+                                seen_nt.add(v_fn.lower())
+                                is_more_energy = "more_energy" in v_fn.lower()
+                                variant_choices.append({
+                                    "file_name": v_fn,
+                                    "download_url": v_dl,
+                                    "label": (
+                                        "nap_on_the_table_more_energy (에너지 회복 증가 · 택1)"
+                                        if is_more_energy
+                                        else "nap_on_the_table (기본 버전 · 택1)"
+                                    ),
+                                    "match_tokens": (
+                                        ["nap_on_the_table_more_energy"]
+                                        if is_more_energy
+                                        else ["simkatu_nap_on_the_table.package"]
+                                    ),
+                                })
+                            if variant_choices:
+                                requires_option_modal = True
+                                preferred_idx = (
+                                    1
+                                    if "more_energy" in t_112_low and len(variant_choices) > 1
+                                    else 0
+                                )
+                                best_fn = variant_choices[preferred_idx]["file_name"]
+                                best_dl = variant_choices[preferred_idx]["download_url"]
+                            ver_str = "2026.05.15"
+                        elif str(post_id) == "111074342":
+                            t_111_low = (target_mod_name or "").lower()
+                            eg_files = sorted(
+                                [
+                                    (fn, dl)
+                                    for _, fn, dl in files
+                                    if fn.lower() in (
+                                        "simkatu_mod_endless_grief_with_autonomy.package",
+                                        "simkatu_mod_endless_grief_without_autonomy.package",
+                                    )
+                                ],
+                                key=lambda x: (1 if "without_autonomy" in x[0].lower() else 0, x[0].lower()),
+                            )
+                            seen_eg: set[str] = set()
+                            for v_fn, v_dl in eg_files:
+                                if v_fn.lower() in seen_eg:
+                                    continue
+                                seen_eg.add(v_fn.lower())
+                                is_without = "without_autonomy" in v_fn.lower()
+                                variant_choices.append({
+                                    "file_name": v_fn,
+                                    "download_url": v_dl,
+                                    "label": (
+                                        "endless_grief_without_autonomy (자율성 끄기 · 택1)"
+                                        if is_without
+                                        else "endless_grief_with_autonomy (자율성 켜기 · 택1)"
+                                    ),
+                                    "match_tokens": (
+                                        ["endless_grief_without_autonomy"]
+                                        if is_without
+                                        else ["endless_grief_with_autonomy"]
+                                    ),
+                                })
+                            if variant_choices:
+                                requires_option_modal = True
+                                preferred_idx = (
+                                    1
+                                    if "without_autonomy" in t_111_low and len(variant_choices) > 1
+                                    else 0
+                                )
+                                best_fn = variant_choices[preferred_idx]["file_name"]
+                                best_dl = variant_choices[preferred_idx]["download_url"]
+                            ver_str = "2026.03.20"
+                        elif str(post_id) == "137123858":
+                            t_137_low = (target_mod_name or "").lower()
+                            nb_files = sorted(
+                                [
+                                    (fn, dl)
+                                    for _, fn, dl in files
+                                    if fn.lower() in (
+                                        "simkatu_nap_with_baby_in_bed.package",
+                                        "simkatu_nap_with_baby_in_bed_v2_more_energy.package",
+                                    )
+                                ],
+                                key=lambda x: (1 if "more_energy" in x[0].lower() else 0, x[0].lower()),
+                            )
+                            seen_nb: set[str] = set()
+                            for v_fn, v_dl in nb_files:
+                                if v_fn.lower() in seen_nb:
+                                    continue
+                                seen_nb.add(v_fn.lower())
+                                is_more_energy = "more_energy" in v_fn.lower()
+                                variant_choices.append({
+                                    "file_name": v_fn,
+                                    "download_url": v_dl,
+                                    "label": (
+                                        "nap_with_baby_in_bed_v2_more_energy (에너지 회복 증가 v2 · 택1)"
+                                        if is_more_energy
+                                        else "nap_with_baby_in_bed (기본 버전 · 택1)"
+                                    ),
+                                    "match_tokens": (
+                                        ["nap_with_baby_in_bed_v2_more_energy"]
+                                        if is_more_energy
+                                        else ["simkatu_nap_with_baby_in_bed.package"]
+                                    ),
+                                })
+                            if variant_choices:
+                                requires_option_modal = True
+                                preferred_idx = (
+                                    1
+                                    if ("more_energy" in t_137_low or "v2" in t_137_low) and len(variant_choices) > 1
+                                    else 0
+                                )
+                                best_fn = variant_choices[preferred_idx]["file_name"]
+                                best_dl = variant_choices[preferred_idx]["download_url"]
+                            ver_str = "2026.04.18"
+                        elif str(post_id) == "125422688":
+                            t_125_low = (target_mod_name or "").lower()
+                            if (
+                                "gradeschool_homework" in t_125_low
+                                or "override_gradeschool" in t_125_low
+                                or "homework override" in t_125_low
+                            ):
+                                hw_f = next(
+                                    ((fn, dl) for _, fn, dl in files if "override_gradeschool_homework" in fn.lower()),
+                                    None,
+                                )
+                                if hw_f:
+                                    best_fn, best_dl = hw_f
+                                requires_option_modal = False
+                            else:
+                                kp_files = sorted(
+                                    [
+                                        (fn, dl)
+                                        for _, fn, dl in files
+                                        if "v1_ea_homework" in fn.lower() or "v2_custom_homework" in fn.lower()
+                                    ],
+                                    key=lambda x: (0 if "v1_ea_homework" in x[0].lower() else 1, x[0].lower()),
+                                )
+                                seen_kp: set[str] = set()
+                                for v_fn, v_dl in kp_files:
+                                    if v_fn.lower() in seen_kp:
+                                        continue
+                                    seen_kp.add(v_fn.lower())
+                                    is_v2 = "v2_custom_homework" in v_fn.lower()
+                                    variant_choices.append({
+                                        "file_name": v_fn,
+                                        "download_url": v_dl,
+                                        "label": (
+                                            "kids_interactions_pack_v2_custom_homework (커스텀 숙제 버전 · 택1)"
+                                            if is_v2
+                                            else "kids_interactions_pack_v1_ea_homework (EA 기본 숙제 버전 · 택1)"
+                                        ),
+                                        "match_tokens": (
+                                            ["v2_custom_homework"]
+                                            if is_v2
+                                            else ["v1_ea_homework"]
+                                        ),
+                                    })
+                                if variant_choices:
+                                    requires_option_modal = True
+                                    preferred_idx = (
+                                        1
+                                        if ("v2" in t_125_low or "custom_homework" in t_125_low) and len(variant_choices) > 1
+                                        else 0
+                                    )
+                                    best_fn = variant_choices[preferred_idx]["file_name"]
+                                    best_dl = variant_choices[preferred_idx]["download_url"]
+                            ver_str = "2026.03.20"
+                        elif str(post_id) == "160426834":
+                            t_160_low = (target_mod_name or "").lower()
+                            gm_files = sorted(
+                                [
+                                    (fn, dl)
+                                    for _, fn, dl in files
+                                    if "v1_sickness_gtw" in fn.lower() or "v2_sickness_ailments_gtw_ebn" in fn.lower()
+                                ],
+                                key=lambda x: (0 if "v1_sickness_gtw" in x[0].lower() else 1, x[0].lower()),
+                            )
+                            seen_gm: set[str] = set()
+                            for v_fn, v_dl in gm_files:
+                                if v_fn.lower() in seen_gm:
+                                    continue
+                                seen_gm.add(v_fn.lower())
+                                is_v2 = "v2_sickness_ailments" in v_fn.lower()
+                                variant_choices.append({
+                                    "file_name": v_fn,
+                                    "download_url": v_dl,
+                                    "label": (
+                                        "giveMedicine_v2_sickness_ailments_GTW_EBN (질병+질환 · GTW+EBN · 택1)"
+                                        if is_v2
+                                        else "giveMedicine_v1_sickness_GTW (질병 전용 · GTW · 택1)"
+                                    ),
+                                    "match_tokens": (
+                                        ["v2_sickness_ailments_gtw_ebn"]
+                                        if is_v2
+                                        else ["v1_sickness_gtw"]
+                                    ),
+                                })
+                            if variant_choices:
+                                requires_option_modal = True
+                                preferred_idx = (
+                                    1
+                                    if ("v2" in t_160_low or "ebn" in t_160_low) and len(variant_choices) > 1
+                                    else 0
+                                )
+                                best_fn = variant_choices[preferred_idx]["file_name"]
+                                best_dl = variant_choices[preferred_idx]["download_url"]
+                            ver_str = "2026.06.07"
+                        elif str(post_id) == "149952231":
+                            t_149_low = (target_mod_name or "").lower()
+                            if (
+                                "gameanim" in t_149_low
+                                or "animation override" in t_149_low
+                                or "anim_override" in t_149_low
+                            ):
+                                sel_149 = next(
+                                    ((fn, dl) for _, fn, dl in files if "gameanim_override" in fn.lower()),
+                                    None,
+                                )
+                            else:
+                                sel_149 = next(
+                                    (
+                                        (fn, dl)
+                                        for _, fn, dl in files
+                                        if "functional_stroller" in fn.lower() and "gameanim_override" not in fn.lower()
+                                    ),
+                                    None,
+                                )
+                            if sel_149:
+                                best_fn, best_dl = sel_149
+                            ver_str = "2026.03.07"
+                        elif str(post_id) == "152419156":
+                            t_152_low = (target_mod_name or "").lower()
+                            sel_152 = None
+                            if "helios" in t_152_low:
+                                sel_152 = next(((fn, dl) for _, fn, dl in files if "helios" in fn.lower()), None)
+                            elif "charles" in t_152_low:
+                                sel_152 = next(((fn, dl) for _, fn, dl in files if "charles" in fn.lower()), None)
+                            elif "enchanted" in t_152_low:
+                                sel_152 = next(((fn, dl) for _, fn, dl in files if "enchanted" in fn.lower()), None)
+                            if sel_152:
+                                best_fn, best_dl = sel_152
+                            ver_str = "2026.03.25"
+
                         if (
                             (is_same_target_file and str(post_id) not in ("166618081", "158968693", "142863954"))
                             or "wamtik" in best_fn.lower()
-                            or str(post_id) in ("69121597", "115299392", "151330104", "108516027")
+                            or str(post_id) in ("69121597", "115299392", "151330104", "108516027", "130600688", "27751117", "44832679", "166429206", "159477437", "146833653", "114984579", "112677899", "111074342", "137123858", "125422688", "160426834", "149952231", "152419156")
                             or (str(post_id) == "142863954" and "ride together" not in best_fn.lower())
                         ):
                             matched_patreon_files = [(best_fn, best_dl)]
@@ -5127,6 +8167,8 @@ def inspect_remote_mod_page(
                             "download_url": best_dl,
                             "page_url": post_url,
                             "all_files": matched_patreon_files,
+                            "variant_choices": variant_choices if len(variant_choices) > 1 else [],
+                            "requires_option_modal": requires_option_modal,
                         }
 
                     return {"status": "browser_required", "page_url": post_url}
@@ -5209,6 +8251,19 @@ def inspect_remote_mod_page(
                                 fn_v = extract_version_from_filename(best_fn)
                                 if fn_v:
                                     ver_str = fn_v.lstrip("vV")
+                                camp_mc_choices = _extract_more_columns_choices(post_files)
+                                if camp_mc_choices and "more_cas_columns" in best_fn.lower():
+                                    return {
+                                        "status": "free_direct",
+                                        "title": ptitle,
+                                        "version": ver_str,
+                                        "file_name": best_fn,
+                                        "download_url": best_dl,
+                                        "page_url": p_url,
+                                        "all_files": [(best_fn, best_dl)],
+                                        "variant_choices": camp_mc_choices if len(camp_mc_choices) > 1 else [],
+                                        "requires_option_modal": True,
+                                    }
                                 return {
                                     "status": "free_direct",
                                     "title": ptitle,

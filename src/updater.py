@@ -18,6 +18,7 @@ from src.utils import (
     ZipSlipSecurityError,
     download_file,
     extract_zip,
+    find_superseded_mod_files,
     inspect_dangerous_extension,
     is_auxiliary_non_mod_archive,
     is_safe_subpath,
@@ -108,6 +109,7 @@ class ModUpdater:
         page_url: str,
         latest_ver: str = "",
         local_file_name: str = "",
+        asset_name: str = "",
     ) -> None:
         """검증 완료된 모드의 공식 배포 페이지 URL(HTTPS 전용)을 파일명 기준으로 mods_manifest.json에 자동 기록(Pinning)합니다."""
         if not page_url or not is_valid_https_url(page_url) or "google.com/search" in page_url:
@@ -118,8 +120,32 @@ class ModUpdater:
             mods = self.load_manifest()
             t_name = (local_file_name or mod.get("name") or "").strip()
             f_name = (mod.get("folder_name") or mod.get("install_folder") or t_name).strip()
+            clean_asset = (asset_name or "").strip()
             if not t_name:
                 return
+
+            local_size: Optional[int] = None
+            local_mtime: Optional[int] = None
+            cand_paths: List[str] = []
+            for ip_str in (mod.get("installed_paths") or []):
+                if ip_str and Path(str(ip_str)).name.lower() == t_name.lower():
+                    cand_paths.append(str(ip_str))
+            fp_str = mod.get("file_path") or (
+                mod["selected_file"].get("full_path") if isinstance(mod.get("selected_file"), dict) else ""
+            )
+            if fp_str and (not local_file_name or Path(str(fp_str)).name.lower() == t_name.lower()):
+                cand_paths.append(str(fp_str))
+            for cp_str in cand_paths:
+                try:
+                    cp = Path(cp_str)
+                    if cp.exists() and cp.is_file():
+                        st = cp.stat()
+                        local_size = int(st.st_size)
+                        local_mtime = int(st.st_mtime)
+                        break
+                except OSError:
+                    continue
+
             updated = False
             for entry in mods:
                 e_name = (entry.get("name") or "").strip().lower()
@@ -129,17 +155,28 @@ class ModUpdater:
                     entry["pinned_page_url"] = page_url
                     if latest_ver:
                         entry["current_version"] = latest_ver
+                    if clean_asset:
+                        entry["installed_asset_name"] = clean_asset
+                    if local_size is not None:
+                        entry["local_file_size"] = local_size
+                        entry["local_file_mtime"] = local_mtime
                     updated = True
                     break
             if not updated:
-                mods.append({
+                new_entry: Dict[str, Any] = {
                     "name": t_name,
                     "local_file": t_name,
                     "source_type": mod.get("source_type", "generic_web"),
                     "install_folder": f_name or t_name,
                     "pinned_page_url": page_url,
                     "current_version": latest_ver,
-                })
+                }
+                if clean_asset:
+                    new_entry["installed_asset_name"] = clean_asset
+                if local_size is not None:
+                    new_entry["local_file_size"] = local_size
+                    new_entry["local_file_mtime"] = local_mtime
+                mods.append(new_entry)
             self.save_manifest(mods)
         except Exception:
             pass
@@ -158,7 +195,7 @@ class ModUpdater:
         api_url = f"https://api.github.com/repos/{repo_clean}/releases/latest"
         validate_https_url(api_url, allow_fragment=False, purpose="GitHub 원격 카탈로그 조회")
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.5",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.6",
             "Accept": "application/vnd.github.v3+json"
         }
         try:
@@ -214,7 +251,7 @@ class ModUpdater:
         url = "https://deaderpool-mccc.com/downloads.html"
         validate_https_url(url, allow_fragment=False, purpose="MCCC 공식 카탈로그 조회")
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.5"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Sims4ModAutoUpdater/0.1.6"
         }
 
         try:
@@ -309,9 +346,28 @@ class ModUpdater:
             "release_notes": f"Deaderpool {label_prefix} {latest_version} Official Release (MediaFire: {asset_name})",
         }
 
-    def check_wickedwhims_update(self, current_ver: str) -> Dict[str, Any]:
-        """Wicked.cc 공식 배포처(https://wicked.cc/mods/TURBODRIVER/wickedwhims)에서 최신 버전 및 직접 다운로드 파일 URL을 조회합니다."""
+    def check_wickedwhims_update(self, current_ver: str, ww_channel: str = "free") -> Dict[str, Any]:
+        """WickedWhims 배포 채널(free: Wicked.cc 자동 업데이트 / paid: Patreon 유료 수동 다운로드)에 따라 업데이트 정보를 조회합니다."""
         from src.finder import inspect_remote_mod_page
+
+        if str(ww_channel or "").strip().lower() == "paid":
+            patreon_paid_url = "https://www.patreon.com/wickedwoohoo/posts/wickedwhims-v187-134827399"
+            cur_norm = (current_ver or "").strip().lstrip("vV").lower()
+            has_update = (cur_norm != "187.18") if cur_norm else True
+            return {
+                "latest_version": "Patreon (v187.18)",
+                "has_update": has_update,
+                "status_label": "🔒 선배포 버전 (수동 다운로드)",
+                "direct_file_detected": False,
+                "requires_browser": True,
+                "is_paid": True,
+                "is_early_access": True,
+                "download_url": patreon_paid_url,
+                "page_url": patreon_paid_url,
+                "patreon_url": patreon_paid_url,
+                "asset_name": "WickedWhims_v187.18.zip",
+                "release_notes": "WickedWhims 선배포 버전 (Patreon v187.18 · 수동 다운로드 안내)",
+            }
 
         page_url = "https://wicked.cc/mods/TURBODRIVER/wickedwhims"
         itch_url = "https://turbodriver.itch.io/wickedwhims"
@@ -319,15 +375,18 @@ class ModUpdater:
         remote_info = inspect_remote_mod_page(page_url, target_mod_name="WickedWhims")
         if remote_info.get("status") == "free_direct" and remote_info.get("download_url"):
             detected_fn = remote_info.get("file_name") or "WickedWhims.zip"
-            ver_raw = remote_info.get("version") or ""
-            ver_norm = (ver_raw if ver_raw.lower().startswith("v") else f"v{ver_raw}") if ver_raw else "최신 버전"
-            ver_label = f"Wicked.cc ({ver_norm})" if ver_raw else "Wicked.cc (최신 버전)"
+            ver_raw = str(remote_info.get("version") or "").strip() or "185k"
+            ver_norm = ver_raw if ver_raw.lower().startswith("v") else f"v{ver_raw}"
+            ver_label = f"Wicked.cc ({ver_norm})"
+            cur_norm = (current_ver or "").strip().lstrip("vV").lower()
+            rem_cmp = ver_norm.lstrip("vV").lower()
             return {
                 "latest_version": ver_label,
-                "has_update": (ver_norm != current_ver),
+                "has_update": (rem_cmp != cur_norm) if cur_norm else True,
                 "status_label": "🚀 최신 버전 배포 중",
                 "direct_file_detected": True,
                 "requires_browser": False,
+                "is_paid": False,
                 "is_early_access": False,
                 "download_url": remote_info["download_url"],
                 "itch_url": itch_url,
@@ -338,8 +397,8 @@ class ModUpdater:
             }
 
         return {
-            "latest_version": "Wicked.cc (최신 버전)",
-            "has_update": True,
+            "latest_version": "Wicked.cc (v185k)",
+            "has_update": ((current_ver or "").strip().lstrip("vV").lower() != "185k") if current_ver else True,
             "download_url": page_url,
             "page_url": page_url,
             "itch_url": itch_url,
@@ -350,8 +409,8 @@ class ModUpdater:
 
     def check_barambyul_update(self, current_ver: str, target_name: str = "") -> Dict[str, Any]:
         """바람별 한글화 모드 최신 배포 정보를 실시간 조회합니다.
-        - 바람별 공식 한글화 모드(!WAMTIK-V97.8.package / 성씨-이름 !WAMTIK-V97.8-FF.package): 네이버 블로그 배포 포스트에서 직접 자동 다운로드 지원
-        - 광역후원자 선배포 버전(!WAMTIK-V98G8.package / !WAMTIK-V98G8-FF.package 등): Patreon/Postype 선배포 채널 수동 다운로드 안내
+        - 바람별 공식 한글화 모드(!WAMTIK-V97.9.package / 성씨-이름 !WAMTIK-V97.9-FF.package): 네이버 블로그 배포 포스트에서 직접 자동 다운로드 지원
+        - 광역후원자 선배포 버전(!WAMTIK-V98G10.package / !WAMTIK-V98G10-FF.package 등): Patreon/Postype 선배포 채널 수동 다운로드 안내
         """
         import re
         from src.finder import _cached_safe_https_get, check_known_catalog, inspect_remote_mod_page
@@ -371,7 +430,7 @@ class ModUpdater:
                 remote_info = inspect_remote_mod_page(direct_post_url, target_mod_name=target_name)
                 if remote_info and remote_info.get("status") == "free_direct" and remote_info.get("download_url"):
                     detected_fn = remote_info.get("file_name") or target_name
-                    rem_ver_raw = str(remote_info.get("version") or cat_match.get("version") or "97.8").lstrip("vV")
+                    rem_ver_raw = str(remote_info.get("version") or cat_match.get("version") or "97.9").lstrip("vV")
                     if re.match(r"^20\d{2}\.\d{2}\.\d{2}$", rem_ver_raw):
                         latest_ver_str = rem_ver_raw
                     else:
@@ -399,6 +458,11 @@ class ModUpdater:
                         "naver_blog_url": direct_post_url if "blog.naver.com" in direct_post_url.lower() else naver_url,
                         "asset_name": detected_fn,
                         "detected_filename": detected_fn,
+                        "variant_choices": remote_info.get("variant_choices", []),
+                        "requires_option_modal": bool(
+                            remote_info.get("requires_option_modal") or cat_match.get("requires_option_modal")
+                        ),
+                        "option_modal_prompt": cat_match.get("option_modal_prompt") or "",
                         "all_remote_files": remote_info.get("all_files", []),
                         "verification_note": "공식 카탈로그 검증됨 (바람별 공식 한글화 모드)",
                         "release_notes": cat_match.get("release_notes") or f"바람별 공식 한글화 모드 ({detected_fn})",
@@ -410,14 +474,17 @@ class ModUpdater:
         ff_desc = " · 풀네임 성씨-이름(FF) 표시" if is_ff else ""
         lead_prefix = "_" if t_low.startswith("_") else "!"
 
-        # 순한맛(순결버전 V98P8 등) 후원자 전용 버전
-        if (cat_match and "9789832" in str(cat_match.get("candidate_links") or "")) or re.search(r"v\d+p\d+", t_low):
-            latest_version = (cat_match.get("version") if cat_match else "") or "V98P8"
+        # 순한맛(순결버전 V98-alpha / V98P8 등) 후원자 전용 버전
+        if (
+            (cat_match and "9789832" in str(cat_match.get("candidate_links") or ""))
+            or re.search(r"v\d+(?:p\d+|-alpha)", t_low)
+        ) and not re.search(r"v\d+r-alpha", t_low):
+            latest_version = (cat_match.get("version") if cat_match else "") or "V98-alpha"
             post_link = "https://www.postype.com/@wwwindystar/post/9789832"
             try:
                 r = _cached_safe_https_get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=(8, 10))
                 if r.status_code == 200:
-                    m = re.search(r"통합한글화모음\s*(V\d+P\d+)", r.text)
+                    m = re.search(r"통합한글화모음\s*(V\d+(?:P\d+|-alpha))", r.text, flags=re.IGNORECASE)
                     if m:
                         latest_version = m.group(1)
                     link_m = re.search(r'href="(/@wwwindystar/post/\d+)"[^>]*>[^<]*' + re.escape(latest_version), r.text)
@@ -445,9 +512,9 @@ class ModUpdater:
                 "requires_browser": True,
             }
 
-        # 베타버전 빨간맛(V98B8 등) 또는 카탈로그에 개별 Patreon 포스트가 지정된 후원자 전용 버전
-        if (cat_match and "69805432" in (cat_match.get("primary_url") or "")) or re.search(r"v\d+b\d+", t_low):
-            latest_version = (cat_match.get("version") if cat_match else "") or "V98B8"
+        # 베타버전 빨간맛(V98R-alpha / V98B8 등) 또는 카탈로그에 개별 Patreon 포스트가 지정된 후원자 전용 버전
+        if (cat_match and "69805432" in (cat_match.get("primary_url") or "")) or re.search(r"v\d+(?:b\d+|r-alpha)", t_low):
+            latest_version = (cat_match.get("version") if cat_match else "") or "V98R-alpha"
             patreon_post_url = (
                 cat_match.get("primary_url")
                 if (cat_match and "/posts/" in (cat_match.get("primary_url") or "").lower())
@@ -457,7 +524,7 @@ class ModUpdater:
             try:
                 r = _cached_safe_https_get(postype_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=(8, 10))
                 if r.status_code == 200:
-                    m = re.search(r"통합한글화모음\s*(V\d+B\d+)", r.text)
+                    m = re.search(r"통합한글화모음\s*(V\d+(?:B\d+|R-alpha))", r.text, flags=re.IGNORECASE)
                     if m:
                         latest_version = m.group(1)
                     link_m = re.search(r'href="(/@wwwindystar/post/\d+)"[^>]*>[^<]*' + re.escape(latest_version), r.text)
@@ -485,7 +552,7 @@ class ModUpdater:
                 "requires_browser": True,
             }
 
-        latest_version = "V98G8"
+        latest_version = "V98G10"
         post_link = f"{postype_url}/post/7214790"
 
         # 포스타입에서 실시간 최신 광역/선배포 버전 검색
@@ -607,7 +674,8 @@ class ModUpdater:
 
         elif source_type == "wickedwhims":
             try:
-                info = self.check_wickedwhims_update(current_ver)
+                ww_channel = str(mod.get("ww_channel") or "free").strip().lower()
+                info = self.check_wickedwhims_update(current_ver, ww_channel=ww_channel)
                 if "error" not in info:
                     info["mod_name"] = mod["name"]
                     info["current_version"] = current_ver
@@ -653,6 +721,16 @@ class ModUpdater:
             custom_release_notes = ""
             is_paid_catalog = False
             is_early_access_catalog = False
+            requires_option_modal = False
+            option_modal_mode = ""
+            option_modal_prompt = ""
+            catalog_option_presets: List[Dict[str, Any]] = []
+            catalog_optional_addons: List[Dict[str, Any]] = []
+            rpo_channel = str(mod.get("rpo_channel") or "").strip().lower()
+            ww_channel = str(mod.get("ww_channel") or "").strip().lower()
+            is_unreleased_catalog = bool(
+                re.search(r"sulsul[\s_-]*ai", f"{target_name} {folder_name}", flags=re.IGNORECASE)
+            )
             is_verified_source = bool(
                 self.get_pinned_url(target_name, folder_name)
                 or (url and "google.com" not in url)
@@ -664,6 +742,8 @@ class ModUpdater:
                         target_name,
                         file_path=file_path,
                         folder_name=folder_name,
+                        rpo_channel=rpo_channel or None,
+                        ww_channel=ww_channel or None,
                     )
                     cand_primary = (finder_res.get("primary_url") or "").strip()
                     if cand_primary and not is_valid_https_url(cand_primary):
@@ -677,6 +757,13 @@ class ModUpdater:
                     custom_release_notes = finder_res.get("release_notes", "")
                     is_paid_catalog = bool(finder_res.get("is_paid"))
                     is_early_access_catalog = bool(finder_res.get("is_early_access"))
+                    requires_option_modal = bool(finder_res.get("requires_option_modal"))
+                    option_modal_mode = str(finder_res.get("option_modal_mode") or "")
+                    option_modal_prompt = str(finder_res.get("option_modal_prompt") or "")
+                    catalog_option_presets = list(finder_res.get("option_presets") or [])
+                    catalog_optional_addons = list(finder_res.get("optional_addons") or [])
+                    if finder_res.get("is_unreleased"):
+                        is_unreleased_catalog = True
                     finder_diagnostics = dict(finder_res.get("diagnostics") or {})
                     matched_creator = (
                         finder_res.get("creator")
@@ -687,8 +774,9 @@ class ModUpdater:
                     )
                     if finder_res.get("is_verified_source"):
                         is_verified_source = True
+                    if extracted_meta.get("binary_version"):
+                        current_ver = current_ver or extracted_meta["binary_version"]
                     if extracted_meta.get("version"):
-                        current_ver = current_ver or extracted_meta["version"]
                         ver_val = str(extracted_meta["version"]).strip()
                         if re.match(r"^(?:20\d{2}\.\d{2}\.\d{2}|[ab]\d+\.\d+(?:\.\d+)*)$", ver_val, flags=re.IGNORECASE):
                             latest_ver_label = ver_val
@@ -717,6 +805,12 @@ class ModUpdater:
                         lambda m: f".post{m.group(1) or '1'}",
                         rem_v.lstrip("vV").strip(),
                     )
+                    m_l_ab = re.match(r"^([abAB])(\d+(?:\.\d+)*)(.*)$", l_s)
+                    if m_l_ab:
+                        l_s = f"{m_l_ab.group(2)}{m_l_ab.group(1).lower()}0{m_l_ab.group(3)}"
+                    m_r_ab = re.match(r"^([abAB])(\d+(?:\.\d+)*)(.*)$", r_s)
+                    if m_r_ab:
+                        r_s = f"{m_r_ab.group(2)}{m_r_ab.group(1).lower()}0{m_r_ab.group(3)}"
                     if re.match(r"^\d+\.\d{2,3}$", l_s) and re.match(r"^\d+\.\d{2,3}$", r_s):
                         l_maj, l_min = l_s.split(".")
                         r_maj, r_min = r_s.split(".")
@@ -726,6 +820,29 @@ class ModUpdater:
                     return rv >= lv
                 except Exception:
                     return True
+
+            # 미출시 상태 모드는 원격 조회 및 업데이트 대상에서 즉시 제외
+            if is_unreleased_catalog:
+                return {
+                    "latest_version": "미출시",
+                    "has_update": False,
+                    "status_label": "⏳ 미출시 (업데이트 제외)",
+                    "direct_file_detected": False,
+                    "is_paid": False,
+                    "is_early_access": False,
+                    "is_unreleased": True,
+                    "requires_browser": False,
+                    "download_url": "",
+                    "page_url": "",
+                    "candidate_links": [],
+                    "extracted_meta": extracted_meta,
+                    "matched_creator": matched_creator or creator,
+                    "finder_diagnostics": finder_diagnostics,
+                    "verification_note": "미출시 모드 제외",
+                    "release_notes": custom_release_notes or "미출시 상태 모드로 업데이트 대상에서 제외됩니다.",
+                    "mod_name": mod["name"],
+                    "current_version": current_ver,
+                }
 
             # 프로그램이 자체적으로 배포 페이지(Patreon 등)를 열어 직접 다운로드 가능 여부 / 얼리 액세스 여부 판별
             remote_info: Dict[str, Any] = {"status": "browser_required"}
@@ -737,7 +854,7 @@ class ModUpdater:
                 pinned_url = self.get_pinned_url(target_name, folder_name)
                 # 1순위 URL 및 후보 링크 중 HTTPS 전용 배포 페이지만 선별 검사
                 urls_to_check: List[str] = []
-                if pinned_url and is_valid_https_url(pinned_url):
+                if pinned_url and is_valid_https_url(pinned_url) and rpo_channel not in ("early_access", "free"):
                     urls_to_check.append(pinned_url)
                 if url and is_valid_https_url(url) and url not in urls_to_check:
                     urls_to_check.append(url)
@@ -775,7 +892,7 @@ class ModUpdater:
                         cand_fn = info_res.get("file_name") or ""
                         cand_ver = extract_version_from_filename(cand_fn)
                         # 원격 미러(예: CurseForge 구버전 v3)가 로컬 파일 버전(예: v4)보다 낮은 경우 다음 후보(Patreon 등) 계속 탐색
-                        if local_fn_ver and cand_ver and not _is_remote_newer_or_equal(local_fn_ver, cand_ver):
+                        if rpo_channel != "free" and local_fn_ver and cand_ver and not _is_remote_newer_or_equal(local_fn_ver, cand_ver):
                             if remote_info.get("status") != "free_direct":
                                 remote_info = info_res
                             continue
@@ -832,7 +949,7 @@ class ModUpdater:
                     return "Pandasama"
                 if "lot51.cc" in u_low or "lot51_core" in (target_name or "").lower():
                     return "제작자 공식 사이트"
-                if "sims4ai.virtualconscious.com" in u_low:
+                if "sims4ai.virtualconscious.com" in u_low or "s4m-byok.prmptplus.chatgpt.site" in u_low:
                     return "제작자 공식 사이트"
                 if "twistedmexi.com" in u_low:
                     return "TwistedMexi"
@@ -841,31 +958,39 @@ class ModUpdater:
             def _resolve_web_first_version(rem_info: Dict[str, Any], loc_ver: str) -> str:
                 raw_rem_v = str(rem_info.get("version") or "").strip()
                 m_hf_rem = re.match(
-                    r"^v?([0-9]+(?:\.[0-9]+)*[a-z]?)\s*\(핫픽스(?:\s*\d+)?\)$",
+                    r"^([ab])?v?([0-9]+(?:\.[0-9]+)*[a-z]?)\s*\(핫픽스(?:\s*\d+)?\)$",
                     raw_rem_v,
                     flags=re.IGNORECASE,
                 )
                 rem_ver = (
-                    f"v{m_hf_rem.group(1)} (핫픽스)"
+                    f"{(m_hf_rem.group(1) or 'v').lower()}{m_hf_rem.group(2)} (핫픽스)"
                     if m_hf_rem
                     else (
-                        extract_version_from_filename(raw_rem_v)
-                        or (f"v{raw_rem_v}" if re.match(r"^[0-9]+(?:\.[0-9]+)*[a-z]?$", raw_rem_v, flags=re.IGNORECASE) else "")
-                        or extract_version_from_filename(str(rem_info.get("file_name") or ""))
-                        or extract_version_from_filename(str(rem_info.get("title") or ""))
+                        (raw_rem_v[0].lower() + raw_rem_v[1:])
+                        if re.match(r"^[ab][0-9]+(?:\.[0-9]+)*[a-z]?$", raw_rem_v, flags=re.IGNORECASE)
+                        else (
+                            extract_version_from_filename(raw_rem_v)
+                            or (f"v{raw_rem_v}" if re.match(r"^[0-9]+(?:\.[0-9]+)*[a-z]?$", raw_rem_v, flags=re.IGNORECASE) else "")
+                            or extract_version_from_filename(str(rem_info.get("file_name") or ""))
+                            or extract_version_from_filename(str(rem_info.get("title") or ""))
+                        )
                     )
                 )
                 meta_ver_raw = str(extracted_meta.get("version") or "").strip()
                 if re.match(r"^(?:20\d{2}\.\d{1,2}\.\d{1,2}|[ab]\d+\.\d+(?:\.\d+)*)$", meta_ver_raw, flags=re.IGNORECASE):
-                    meta_ver = meta_ver_raw
+                    meta_ver = (
+                        meta_ver_raw[0].lower() + meta_ver_raw[1:]
+                        if re.match(r"^[ab]", meta_ver_raw, flags=re.IGNORECASE)
+                        else meta_ver_raw
+                    )
                 else:
                     meta_ver = (f"v{meta_ver_raw.lstrip('vV')}" if meta_ver_raw else "")
                 folder_low = (folder_name or "").strip().lower()
                 t_name_low = (target_name or "").strip().lower()
                 if "byok" in t_name_low:
-                    return rem_ver or "v2.5.5"
+                    return rem_ver or "v2.6.1 (핫픽스)"
                 if ("ai chat" in folder_low or "aichat" in folder_low or "sims4_ai_chat" in t_name_low or "sims 4 ai chat" in t_name_low) and "byok" not in t_name_low:
-                    return rem_ver or "v2.5.0"
+                    return rem_ver or "v2.6.1"
                 if "volleyball" in folder_low or "volleyball" in (target_name or "").lower():
                     return "v0.2.4"
                 if "twister" in folder_low or "twister" in (target_name or "").lower():
@@ -874,16 +999,27 @@ class ModUpdater:
                     return "a0.5"
                 if "wave-n-grind" in t_name_low or "wave and grind" in t_name_low or "wave_and_grind" in t_name_low or "wave-n-grind" in folder_low or "wave and grind" in folder_low:
                     return "a0.5"
-                if rem_ver and loc_ver:
-                    # 예: XmlInjector_Script_v42.zip(v42) vs XmlInjector_Script_v4.2.ts4script(v4.2)처럼 점(.)만 생략된 동일 버전이거나 v2 vs V2.0처럼 의미상 동일 버전인 경우 로컬 표기 보존
-                    if rem_ver.lstrip("vV").replace(".", "") == loc_ver.lstrip("vV").replace(".", "") and "." in loc_ver and "." not in rem_ver:
-                        return loc_ver
+                if rpo_channel == "free" and rem_ver:
+                    return rem_ver
+                ref_loc_ver = loc_ver or meta_ver
+                if rem_ver and ref_loc_ver:
+                    # 예: XmlInjector_Script_v42.zip(v42) vs XmlInjector_Script_v4.2.ts4script(v4.2)처럼 점(.)만 생략된 동일 버전이거나 v2 vs V2.0처럼 의미상 동일 버전인 경우 로컬/메타 표기 보존
+                    if rem_ver.lstrip("vV").replace(".", "") == ref_loc_ver.lstrip("vV").replace(".", "") and "." in ref_loc_ver and "." not in rem_ver:
+                        return ref_loc_ver
                     try:
-                        if version.parse(rem_ver.lstrip("vV")) == version.parse(loc_ver.lstrip("vV")):
-                            return loc_ver
+                        def _pep440_ver(v_str: str) -> str:
+                            s_v = v_str.lstrip("vV").strip()
+                            m_v_ab = re.match(r"^([abAB])(\d+(?:\.\d+)*)(.*)$", s_v)
+                            if m_v_ab:
+                                return f"{m_v_ab.group(2)}{m_v_ab.group(1).lower()}0{m_v_ab.group(3)}"
+                            return s_v
+
+                        if version.parse(_pep440_ver(rem_ver)) == version.parse(_pep440_ver(ref_loc_ver)):
+                            return ref_loc_ver
                     except Exception:
                         pass
-                    return rem_ver if _is_remote_newer_or_equal(loc_ver, rem_ver) else loc_ver
+                    if loc_ver:
+                        return rem_ver if _is_remote_newer_or_equal(loc_ver, rem_ver) else loc_ver
                 return rem_ver or loc_ver or meta_ver
 
             def _format_latest_version_label(ver_candidate: str, page_u: str, is_direct: bool = False) -> str:
@@ -892,8 +1028,10 @@ class ModUpdater:
                     v_clean_date = ver_candidate.lstrip("vV")
                     if re.match(r"^20\d{2}\.\d{1,2}\.\d{1,2}$", v_clean_date):
                         v_norm = v_clean_date
-                    elif re.match(r"^[ab]\d+\.\d+(?:\.\d+)*$", ver_candidate, flags=re.IGNORECASE):
-                        v_norm = ver_candidate
+                    elif re.match(r"^V\d+(?:\.\d+)?[GBPR]\d*$", ver_candidate, flags=re.IGNORECASE):
+                        v_norm = ver_candidate.upper()
+                    elif re.match(r"^[ab]\d+(?:\.\d+)*[a-z]?$", ver_candidate, flags=re.IGNORECASE):
+                        v_norm = ver_candidate[0].lower() + ver_candidate[1:]
                     else:
                         v_norm = ver_candidate if ver_candidate.lower().startswith("v") else f"v{ver_candidate}"
                     return f"{plat} ({v_norm})"
@@ -994,6 +1132,11 @@ class ModUpdater:
                     "is_multi_file_bundle": is_multi_pkg_bundle,
                     "bundle_filenames": bundle_filenames,
                     "variant_choices": remote_info.get("variant_choices", []),
+                    "requires_option_modal": bool(remote_info.get("requires_option_modal") or requires_option_modal),
+                    "option_modal_mode": str(remote_info.get("option_modal_mode") or option_modal_mode),
+                    "option_modal_prompt": str(remote_info.get("option_modal_prompt") or option_modal_prompt),
+                    "catalog_option_presets": catalog_option_presets,
+                    "optional_addons": remote_info.get("optional_addons") or catalog_optional_addons,
                     "all_remote_files": all_rem_files,
                     "remote_file_size": remote_file_size,
                     "page_url": final_page_u,
@@ -1021,6 +1164,12 @@ class ModUpdater:
                     "requires_browser": True,
                     "download_url": ea_page,
                     "page_url": ea_page,
+                    "variant_choices": remote_info.get("variant_choices", []),
+                    "requires_option_modal": bool(remote_info.get("requires_option_modal") or requires_option_modal),
+                    "option_modal_mode": str(remote_info.get("option_modal_mode") or option_modal_mode),
+                    "option_modal_prompt": str(remote_info.get("option_modal_prompt") or option_modal_prompt),
+                    "catalog_option_presets": catalog_option_presets,
+                    "optional_addons": remote_info.get("optional_addons") or catalog_optional_addons,
                     "candidate_links": candidate_links,
                     "extracted_meta": extracted_meta,
                     "matched_creator": matched_creator or creator,
@@ -1119,6 +1268,51 @@ class ModUpdater:
                 except Exception:
                     pass
 
+        variant_choices = update_info.get("variant_choices") or []
+        selected_variant = str(update_info.get("selected_variant") or "").strip()
+        if variant_choices and selected_variant:
+            sel_choice = next(
+                (vc for vc in variant_choices if str(vc.get("file_name") or "").lower() == selected_variant.lower()),
+                None,
+            )
+            if sel_choice and sel_choice.get("download_url"):
+                variant_names_low = {
+                    str(vc.get("file_name") or "").lower()
+                    for vc in variant_choices
+                    if vc.get("file_name")
+                }
+                variant_dls_low = {
+                    str(vc.get("download_url") or "").lower()
+                    for vc in variant_choices
+                    if vc.get("download_url")
+                }
+                sel_dl_low = str(sel_choice["download_url"]).lower()
+                orig_all = list(update_info.get("all_remote_files") or [])
+                filtered_all = [
+                    (fn, dl)
+                    for fn, dl in orig_all
+                    if (
+                        str(fn).lower() not in variant_names_low
+                        and str(dl or "").lower() not in variant_dls_low
+                    )
+                    or str(fn).lower() == selected_variant.lower()
+                    or str(dl or "").lower() == sel_dl_low
+                ]
+                if not any(
+                    str(fn).lower() == selected_variant.lower()
+                    or str(dl or "").lower() == sel_dl_low
+                    for fn, dl in filtered_all
+                ):
+                    filtered_all.append((sel_choice["file_name"], sel_choice["download_url"]))
+                update_info = dict(update_info)
+                update_info["all_remote_files"] = filtered_all
+                cur_asset_low = str(update_info.get("asset_name") or "").lower()
+                cur_dl_low = str(update_info.get("download_url") or "").lower()
+                if cur_asset_low in variant_names_low or cur_dl_low in variant_dls_low:
+                    update_info["download_url"] = sel_choice["download_url"]
+                    update_info["asset_name"] = sel_choice["file_name"]
+                    update_info["detected_filename"] = sel_choice["file_name"]
+
         download_url = update_info.get("download_url")
         if not download_url:
             raise ValueError("다운로드 URL이 유효하지 않습니다.")
@@ -1194,6 +1388,24 @@ class ModUpdater:
             and target_dir.name.lower() not in shared_container_names
         )
         include_subdirs = bool(has_subdir_known or is_dedicated_mod_dir)
+
+        expected_catalog_id = str(mod.get("catalog_id") or "").strip()
+        if not expected_catalog_id:
+            try:
+                from src.finder import check_known_catalog
+                cat_probe = (
+                    (check_known_catalog(selected_file_path.name) if selected_file_path else None)
+                    or check_known_catalog(mod.get("name") or "")
+                )
+                if isinstance(cat_probe, dict) and cat_probe.get("matched_catalog"):
+                    expected_catalog_id = str(cat_probe["matched_catalog"]).strip()
+            except Exception:
+                pass
+        mods_root_resolved = (
+            self.mods_folder.resolve()
+            if str(self.mods_folder).strip() and self.mods_folder.exists()
+            else None
+        )
 
         def _backup_if_exists(dest_p: Path) -> None:
             nonlocal backup_session
@@ -1278,8 +1490,31 @@ class ModUpdater:
                         existing_norm_map.setdefault(fn_nk, kf)
 
             # 3. 설치 (ZIP/RAR/7Z 압축 해제 또는 단일 파일 교체)
+            installed_archive_norm_keys: set[str] = set()
             if downloaded_file.suffix.lower() in (".zip", ".rar", ".7z"):
                 _notify("extract", f"압축 해제 및 설치 중 ({asset_name})...")
+                arch_nk = normalize_mod_filename_key(asset_name)
+                if arch_nk:
+                    installed_archive_norm_keys.add(arch_nk)
+                optional_addons = update_info.get("optional_addons") or []
+                has_selected_addons_cfg = bool(optional_addons) and ("selected_addons" in update_info) and (update_info.get("selected_addons") is not None)
+                all_opt_low = {
+                    str(oa.get("file_name") or "").strip().lower()
+                    for oa in optional_addons
+                    if isinstance(oa, dict) and oa.get("file_name")
+                }
+                chosen_opt_low = {
+                    str(x).strip().lower()
+                    for x in (update_info.get("selected_addons") or [])
+                    if str(x).strip()
+                }
+                unselected_opt_low = all_opt_low - chosen_opt_low
+
+                if has_selected_addons_cfg and target_dir.exists():
+                    for opt_f in list(target_dir.iterdir()):
+                        if opt_f.is_file() and opt_f.name.lower() in all_opt_low:
+                            _backup_if_exists(opt_f)
+
                 target_fn = selected_file_path.name if selected_file_path else None
                 extracted_paths = extract_zip(
                     downloaded_file,
@@ -1289,9 +1524,24 @@ class ModUpdater:
                     temp_work_dir=temp_extract_dir,
                     known_existing_files=known_existing_paths,
                     include_subdirs=include_subdirs,
+                    force_include_names=(chosen_opt_low if has_selected_addons_cfg else None),
+                    pre_remove_callback=_backup_if_exists,
+                    selected_file_path=selected_file_path,
+                    mods_root_resolved=mods_root_resolved,
+                    expected_catalog_id=expected_catalog_id,
+                    protected_paths=installed_paths,
                 )
                 safe_remove(downloaded_file)
                 safe_remove(temp_extract_dir)
+
+                if has_selected_addons_cfg and unselected_opt_low:
+                    if target_dir.exists():
+                        for rem_opt in list(target_dir.iterdir()):
+                            if rem_opt.is_file() and rem_opt.name.lower() in unselected_opt_low:
+                                _backup_if_exists(rem_opt)
+                                safe_remove(rem_opt)
+                    extracted_paths = [ep for ep in extracted_paths if ep.name.lower() not in unselected_opt_low]
+
                 for ep in extracted_paths:
                     if ep not in installed_paths:
                         installed_paths.append(ep)
@@ -1321,26 +1571,54 @@ class ModUpdater:
                         if "fitnesscontrols-limits" in ex_file.name.lower():
                             _backup_if_exists(ex_file)
                             safe_remove(ex_file)
+                elif any("lumpinou_firstimpressions" in n and "timedecay" in n and "optional" not in n for n in ext_names_low):
+                    ext_low_set = set(ext_names_low)
+                    for ex_file in list(target_dir.iterdir()):
+                        if not ex_file.is_file():
+                            continue
+                        ex_low = ex_file.name.lower()
+                        if (
+                            "lumpinou_firstimpressions" in ex_low
+                            and "timedecay" in ex_low
+                            and "optional" not in ex_low
+                            and ex_low not in ext_low_set
+                        ):
+                            _backup_if_exists(ex_file)
+                            safe_remove(ex_file)
 
-                if selected_file_path and selected_file_path.exists():
+                if selected_file_path:
                     same_ext_files = [
                         ep for ep in extracted_paths
                         if ep.suffix.lower() == selected_file_path.suffix.lower()
                     ]
                     if len(same_ext_files) == 1 and same_ext_files[0].resolve() != selected_file_path.resolve():
-                        _backup_if_exists(selected_file_path)
-                        safe_remove(selected_file_path)
+                        if selected_file_path.exists():
+                            _backup_if_exists(selected_file_path)
+                            safe_remove(selected_file_path)
                         mod["file_path"] = str(same_ext_files[0])
                         if isinstance(mod.get("selected_file"), dict):
                             mod["selected_file"]["name"] = same_ext_files[0].name
                             mod["selected_file"]["full_path"] = str(same_ext_files[0])
                     elif same_ext_files:
                         sel_nk = normalize_mod_filename_key(selected_file_path.name)
-                        matched_rep = next(
+                        fi_core = next(
+                            (
+                                ep for ep in same_ext_files
+                                if "lumpinou_firstimpressions" in ep.name.lower()
+                                and "timedecay" in ep.name.lower()
+                                and "optional" not in ep.name.lower()
+                            ),
+                            None,
+                        )
+                        matched_rep = fi_core or next(
                             (ep for ep in same_ext_files if normalize_mod_filename_key(ep.name) == sel_nk),
                             same_ext_files[0],
                         )
-                        if matched_rep.resolve() != selected_file_path.resolve() and normalize_mod_filename_key(matched_rep.name) == sel_nk:
+                        if (
+                            selected_file_path.exists()
+                            and matched_rep.resolve() != selected_file_path.resolve()
+                            and normalize_mod_filename_key(matched_rep.name) == sel_nk
+                        ):
                             _backup_if_exists(selected_file_path)
                             safe_remove(selected_file_path)
                         mod["file_path"] = str(matched_rep)
@@ -1354,10 +1632,31 @@ class ModUpdater:
                     raise ValueError(
                         f"화이트리스트에 허용되지 않은 확장자 파일('{downloaded_file.name}')이어서 Mods 폴더 반영을 차단했습니다."
                     )
-                dest = target_dir / downloaded_file.name
+                superseded_single, dest_parent_hints = find_superseded_mod_files(
+                    incoming_names=[downloaded_file.name],
+                    target_dir_resolved=target_dir.resolve(),
+                    mods_root_resolved=mods_root_resolved,
+                    known_existing_files=known_existing_paths,
+                    selected_file_path=selected_file_path,
+                    include_subdirs=include_subdirs,
+                    expected_catalog_id=expected_catalog_id,
+                    protected_paths=installed_paths,
+                )
+                hint_parent = dest_parent_hints.get(downloaded_file.name.lower())
+                dest_dir_single = (
+                    hint_parent
+                    if hint_parent is not None and is_safe_subpath(hint_parent, target_dir, allow_equal=True)
+                    else target_dir
+                )
+                dest = dest_dir_single / downloaded_file.name
                 if not is_safe_subpath(dest, target_dir):
                     safe_remove(downloaded_file)
                     raise ZipSlipSecurityError(f"[보안 차단] 설치 대상 경로('{dest}')가 Mods 폴더 범위를 벗어납니다.")
+
+                # 새 버전 파일 배치 전 기존 구버전/동일 카탈로그 파일을 먼저 백업 및 안전 제거
+                for old_p in superseded_single:
+                    _backup_if_exists(old_p)
+                    safe_remove(old_p)
                 if (
                     selected_file_path
                     and selected_file_path.exists()
@@ -1368,6 +1667,7 @@ class ModUpdater:
                     safe_remove(selected_file_path)
                 _backup_if_exists(dest)
                 safe_remove(dest)
+                dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.move(str(downloaded_file), str(dest))
                 installed_paths.append(dest)
                 installed_names.append(dest.name)
@@ -1379,8 +1679,20 @@ class ModUpdater:
             # 4. 'all'(다 같이 덮어쓰기) 모드이거나 다중 패키지/스크립트 세트(예: Volleyball Mod 5개 파일)인 경우, 동일 배포 페이지의 구성 파일을 모두 다운로드 및 덮어쓰기
             is_multi_bundle = bool(update_info.get("is_multi_file_bundle"))
             if overwrite_mode == "all" or is_multi_bundle:
+                from src.utils import _is_variant_or_edition_protected_file, _lookup_catalog_id_safe
                 all_remote_files = update_info.get("all_remote_files") or []
                 seen_remote_urls = {download_url}
+                installed_norm_keys_so_far: set[str] = {
+                    nk
+                    for n in installed_names
+                    if (nk := normalize_mod_filename_key(n))
+                }
+                installed_cat_ext_core: set[Tuple[str, str]] = set()
+                if expected_catalog_id:
+                    for n in installed_names:
+                        if not _is_variant_or_edition_protected_file(n):
+                            installed_cat_ext_core.add((expected_catalog_id, Path(n).suffix.lower()))
+
                 for idx_rem, (rem_fn, rem_dl) in enumerate(all_remote_files):
                     if not rem_fn or not rem_dl or rem_dl in seen_remote_urls or rem_fn in installed_names:
                         continue
@@ -1406,6 +1718,17 @@ class ModUpdater:
                         or (bool(rem_norm_key) and rem_norm_key in existing_norm_map)
                     )
                     if rem_ext in ALLOWED_MOD_WHITELIST_EXTENSIONS and (is_multi_bundle or has_existing_match):
+                        # 동일 포스트에 남아 있는 구버전 첨부파일 중복 다운로드 차단
+                        if rem_norm_key and rem_norm_key in installed_norm_keys_so_far:
+                            continue
+                        if (
+                            not is_multi_bundle
+                            and expected_catalog_id
+                            and (expected_catalog_id, rem_ext) in installed_cat_ext_core
+                            and not _is_variant_or_edition_protected_file(clean_rem_fn)
+                            and (_lookup_catalog_id_safe(clean_rem_fn) or expected_catalog_id) == expected_catalog_id
+                        ):
+                            continue
                         try:
                             seen_remote_urls.add(rem_dl)
                             sub_dl = tmp_path / clean_rem_fn
@@ -1421,13 +1744,22 @@ class ModUpdater:
                             if not is_whitelisted_mod_file(sub_dl, ALLOWED_MOD_WHITELIST_EXTENSIONS):
                                 safe_remove(sub_dl)
                                 continue
+                            superseded_sub, sub_parent_hints = find_superseded_mod_files(
+                                incoming_names=[clean_rem_fn],
+                                target_dir_resolved=target_dir.resolve(),
+                                mods_root_resolved=mods_root_resolved,
+                                known_existing_files=known_existing_paths,
+                                include_subdirs=include_subdirs,
+                                expected_catalog_id=expected_catalog_id,
+                                protected_paths=installed_paths,
+                            )
                             dest_parent = (
                                 existing_names_map[clean_rem_fn.lower()].parent
                                 if clean_rem_fn.lower() in existing_names_map
                                 else (
                                     existing_norm_map[rem_norm_key].parent
                                     if rem_norm_key in existing_norm_map
-                                    else target_dir
+                                    else sub_parent_hints.get(clean_rem_fn.lower(), target_dir)
                                 )
                             )
                             if not is_safe_subpath(dest_parent, target_dir, allow_equal=True):
@@ -1435,18 +1767,28 @@ class ModUpdater:
                             dest_sub = dest_parent / clean_rem_fn
                             if not is_safe_subpath(dest_sub, target_dir):
                                 raise ZipSlipSecurityError(f"부가 설치 파일 대상 경로 이탈 감지: {clean_rem_fn!r}")
+                            for old_sub in superseded_sub:
+                                _backup_if_exists(old_sub)
+                                safe_remove(old_sub)
                             _backup_if_exists(dest_sub)
                             safe_remove(dest_sub)
+                            dest_sub.parent.mkdir(parents=True, exist_ok=True)
                             shutil.move(str(sub_dl), str(dest_sub))
                             if dest_sub not in installed_paths:
                                 installed_paths.append(dest_sub)
                             if clean_rem_fn not in installed_names:
                                 installed_names.append(clean_rem_fn)
+                            if rem_norm_key:
+                                installed_norm_keys_so_far.add(rem_norm_key)
+                            if expected_catalog_id and not _is_variant_or_edition_protected_file(clean_rem_fn):
+                                installed_cat_ext_core.add((expected_catalog_id, rem_ext))
                         except (ArchiveSecurityError, NetworkSecurityError):
                             raise
                         except Exception:
                             pass
                     elif rem_ext in (".zip", ".rar", ".7z"):
+                        if rem_norm_key and rem_norm_key in installed_archive_norm_keys:
+                            continue
                         # 다중 옵션 아카이브(예: Limits 1.75x, 2.5x, 3.0x 등) 중 현재 폴더에 설치되지 않은 다른 변형 아카이브는 건너뜀
                         rem_stem_low = Path(clean_rem_fn).stem.lower()
                         if "limits" in rem_stem_low and not any(rem_stem_low in ex_n for ex_n in existing_names_map):
@@ -1472,19 +1814,247 @@ class ModUpdater:
                                 temp_work_dir=sub_extract_dir,
                                 known_existing_files=known_existing_paths,
                                 include_subdirs=include_subdirs,
+                                pre_remove_callback=_backup_if_exists,
+                                mods_root_resolved=mods_root_resolved,
+                                expected_catalog_id=expected_catalog_id,
+                                protected_paths=installed_paths,
                             )
                             safe_remove(sub_dl)
+                            if rem_norm_key:
+                                installed_archive_norm_keys.add(rem_norm_key)
                             for sep in sub_extracted:
                                 if sep not in installed_paths:
                                     installed_paths.append(sep)
                                 if sep.name not in installed_names:
                                     installed_names.append(sep.name)
+                                sep_nk = normalize_mod_filename_key(sep.name)
+                                if sep_nk:
+                                    installed_norm_keys_so_far.add(sep_nk)
+                                if expected_catalog_id and not _is_variant_or_edition_protected_file(sep.name):
+                                    installed_cat_ext_core.add((expected_catalog_id, sep.suffix.lower()))
                         except (ArchiveSecurityError, NetworkSecurityError):
                             raise
                         except Exception:
                             pass
                         finally:
                             safe_remove(sub_extract_dir)
+
+            # 4-0. 상호 배타적 단일 옵션 파일 교체 시 기존 타 옵션 파일 백업 후 정리
+            installed_low_names = {ip.name.lower() for ip in installed_paths if ip.exists()}
+            if any("canvas_frame_override_v" in n for n in installed_low_names):
+                for ex_cf in list(target_dir.iterdir()):
+                    if (
+                        ex_cf.is_file()
+                        and "canvas_frame_override_v" in ex_cf.name.lower()
+                        and ex_cf.name.lower() not in installed_low_names
+                    ):
+                        _backup_if_exists(ex_cf)
+                        safe_remove(ex_cf)
+            if any("simkatu_painting_animation_override" in n for n in installed_low_names):
+                for ex_pa in list(target_dir.iterdir()):
+                    if (
+                        ex_pa.is_file()
+                        and "simkatu_painting_animation_override" in ex_pa.name.lower()
+                        and ex_pa.name.lower() not in installed_low_names
+                    ):
+                        _backup_if_exists(ex_pa)
+                        safe_remove(ex_pa)
+            if any("more_cas_columns" in n for n in installed_low_names):
+                for ex_mc in list(target_dir.iterdir()):
+                    if (
+                        ex_mc.is_file()
+                        and "more_cas_columns" in ex_mc.name.lower()
+                        and ex_mc.name.lower() not in installed_low_names
+                    ):
+                        _backup_if_exists(ex_mc)
+                        safe_remove(ex_mc)
+            if any("tryonweddingpromoutfits_alllots" in n or "tryonweddingpromoutfits_retailthriftlots" in n for n in installed_low_names):
+                for ex_tw in list(target_dir.iterdir()):
+                    if not ex_tw.is_file():
+                        continue
+                    ex_tw_low = ex_tw.name.lower()
+                    if (
+                        ("tryonweddingpromoutfits_alllots" in ex_tw_low or "tryonweddingpromoutfits_retailthriftlots" in ex_tw_low)
+                        and ex_tw_low not in installed_low_names
+                    ):
+                        _backup_if_exists(ex_tw)
+                        safe_remove(ex_tw)
+            if any(
+                n in ("simkatu_mirrorphoto.package", "simkatu_mirrorphoto_v2_genderneutral.package")
+                for n in installed_low_names
+            ):
+                for ex_ms in list(target_dir.iterdir()):
+                    if not ex_ms.is_file():
+                        continue
+                    ex_ms_low = ex_ms.name.lower()
+                    if (
+                        ex_ms_low in ("simkatu_mirrorphoto.package", "simkatu_mirrorphoto_v2_genderneutral.package")
+                        and ex_ms_low not in installed_low_names
+                    ):
+                        _backup_if_exists(ex_ms)
+                        safe_remove(ex_ms)
+            if any(
+                n in (
+                    "simkatu_music_listening_interactions.package",
+                    "simkatu_music_listening_interactions_autonomy_off.package",
+                )
+                for n in installed_low_names
+            ):
+                for ex_ml in list(target_dir.iterdir()):
+                    if not ex_ml.is_file():
+                        continue
+                    ex_ml_low = ex_ml.name.lower()
+                    if (
+                        ex_ml_low in (
+                            "simkatu_music_listening_interactions.package",
+                            "simkatu_music_listening_interactions_autonomy_off.package",
+                        )
+                        and ex_ml_low not in installed_low_names
+                    ):
+                        _backup_if_exists(ex_ml)
+                        safe_remove(ex_ml)
+            if any(
+                n in (
+                    "simkatu_nap_on_the_table.package",
+                    "simkatu_nap_on_the_table_more_energy.package",
+                )
+                for n in installed_low_names
+            ):
+                for ex_nt in list(target_dir.iterdir()):
+                    if not ex_nt.is_file():
+                        continue
+                    ex_nt_low = ex_nt.name.lower()
+                    if (
+                        ex_nt_low in (
+                            "simkatu_nap_on_the_table.package",
+                            "simkatu_nap_on_the_table_more_energy.package",
+                        )
+                        and ex_nt_low not in installed_low_names
+                    ):
+                        _backup_if_exists(ex_nt)
+                        safe_remove(ex_nt)
+            if any(
+                n in (
+                    "simkatu_mod_endless_grief_with_autonomy.package",
+                    "simkatu_mod_endless_grief_without_autonomy.package",
+                )
+                for n in installed_low_names
+            ):
+                for ex_eg in list(target_dir.iterdir()):
+                    if not ex_eg.is_file():
+                        continue
+                    ex_eg_low = ex_eg.name.lower()
+                    if (
+                        ex_eg_low in (
+                            "simkatu_mod_endless_grief_with_autonomy.package",
+                            "simkatu_mod_endless_grief_without_autonomy.package",
+                        )
+                        and ex_eg_low not in installed_low_names
+                    ):
+                        _backup_if_exists(ex_eg)
+                        safe_remove(ex_eg)
+            if any(
+                n in (
+                    "simkatu_nap_with_baby_in_bed.package",
+                    "simkatu_nap_with_baby_in_bed_v2_more_energy.package",
+                )
+                for n in installed_low_names
+            ):
+                for ex_nb in list(target_dir.iterdir()):
+                    if not ex_nb.is_file():
+                        continue
+                    ex_nb_low = ex_nb.name.lower()
+                    if (
+                        ex_nb_low in (
+                            "simkatu_nap_with_baby_in_bed.package",
+                            "simkatu_nap_with_baby_in_bed_v2_more_energy.package",
+                        )
+                        and ex_nb_low not in installed_low_names
+                    ):
+                        _backup_if_exists(ex_nb)
+                        safe_remove(ex_nb)
+            if any(
+                n in (
+                    "simkatu_kids_interactions_pack_v1_ea_homework.package",
+                    "simkatu_kids_interactions_pack_v2_custom_homework.package",
+                )
+                for n in installed_low_names
+            ):
+                for ex_kp in list(target_dir.iterdir()):
+                    if not ex_kp.is_file():
+                        continue
+                    ex_kp_low = ex_kp.name.lower()
+                    if (
+                        ex_kp_low in (
+                            "simkatu_kids_interactions_pack_v1_ea_homework.package",
+                            "simkatu_kids_interactions_pack_v2_custom_homework.package",
+                        )
+                        and ex_kp_low not in installed_low_names
+                    ):
+                        _backup_if_exists(ex_kp)
+                        safe_remove(ex_kp)
+            if any(
+                n in (
+                    "simkatu_givemedicine_v1_sickness_gtw.package",
+                    "simkatu_givemedicine_v2_sickness_ailments_gtw_ebn.package",
+                )
+                for n in installed_low_names
+            ):
+                for ex_gm in list(target_dir.iterdir()):
+                    if not ex_gm.is_file():
+                        continue
+                    ex_gm_low = ex_gm.name.lower()
+                    if (
+                        ex_gm_low in (
+                            "simkatu_givemedicine_v1_sickness_gtw.package",
+                            "simkatu_givemedicine_v2_sickness_ailments_gtw_ebn.package",
+                        )
+                        and ex_gm_low not in installed_low_names
+                    ):
+                        _backup_if_exists(ex_gm)
+                        safe_remove(ex_gm)
+            wlpo_core_variants = {
+                "wlpo.package",
+                "wlpo-nocc.package",
+                "wlpo_nocc.package",
+                "wlpo-all.package",
+                "wlpo_all.package",
+            }
+            if any(n in wlpo_core_variants for n in installed_low_names):
+                for ex_wlpo in list(target_dir.iterdir()):
+                    if not ex_wlpo.is_file():
+                        continue
+                    ex_wlpo_low = ex_wlpo.name.lower()
+                    if ex_wlpo_low in wlpo_core_variants and ex_wlpo_low not in installed_low_names:
+                        _backup_if_exists(ex_wlpo)
+                        safe_remove(ex_wlpo)
+            if any("livedrag" in n for n in installed_low_names):
+                has_livedrag_all = any("livedragall" in n for n in installed_low_names)
+                for ex_ld in list(target_dir.iterdir()):
+                    if not ex_ld.is_file():
+                        continue
+                    ex_ld_low = ex_ld.name.lower()
+                    if "livedrag" not in ex_ld_low or ex_ld_low in installed_low_names:
+                        continue
+                    if has_livedrag_all or "livedragall" in ex_ld_low:
+                        _backup_if_exists(ex_ld)
+                        safe_remove(ex_ld)
+            if any("lumpinou_rpo_collection_m" in n for n in installed_low_names):
+                installed_rpo_slots: set[Tuple[str, str]] = set()
+                for n in installed_low_names:
+                    m_slot = re.search(r"lumpinou_rpo_collection_(m\d+)_", n)
+                    if m_slot:
+                        installed_rpo_slots.add((m_slot.group(1), Path(n).suffix.lower()))
+                for ex_rpo in list(target_dir.iterdir()):
+                    if not ex_rpo.is_file():
+                        continue
+                    ex_low = ex_rpo.name.lower()
+                    if ex_low in installed_low_names:
+                        continue
+                    m_ex_slot = re.search(r"lumpinou_rpo_collection_(m\d+)_", ex_low)
+                    if m_ex_slot and (m_ex_slot.group(1), ex_rpo.suffix.lower()) in installed_rpo_slots:
+                        _backup_if_exists(ex_rpo)
+                        safe_remove(ex_rpo)
 
             # 4-1. 새로 설치된 파일과 정규화 키가 일치하는 구버전 파일(예: _v1.972.package -> _v1.98.package) 자동 백업 및 정리
             if installed_paths:
@@ -1543,9 +2113,23 @@ class ModUpdater:
                     mod["name"] = installed_names[0]
         elif update_info.get("detected_filename") and str(update_info["detected_filename"]).lower().endswith((".package", ".ts4script")):
             mod["name"] = update_info["detected_filename"]
-        mod["current_version"] = update_info.get("latest_version", "")
+        raw_pin_ver = str(update_info.get("latest_version") or "").strip()
+        if not raw_pin_ver or any(k in raw_pin_ver for k in ("최신 배포본", "확인 불가", "수동 확인")):
+            try:
+                from src.finder import check_known_catalog
+                cat_pin = check_known_catalog(mod.get("name") or "") or check_known_catalog(original_local_name)
+                if cat_pin and cat_pin.get("version"):
+                    raw_pin_ver = str(cat_pin["version"]).strip()
+            except Exception:
+                pass
+        mod["current_version"] = raw_pin_ver
 
-        verified_page = update_info.get("page_url") or ""
+        verified_page = (
+            update_info.get("page_url")
+            or mod.get("homepage")
+            or update_info.get("download_url")
+            or ""
+        ).strip()
         if verified_page and installed_names:
             names_to_pin: List[str] = []
             for cand_pin in [original_local_name] + list(installed_names):
@@ -1558,12 +2142,14 @@ class ModUpdater:
                     names_to_pin.append(c_clean)
             if not names_to_pin and original_local_name:
                 names_to_pin.append(original_local_name)
+            pin_asset_name = str(update_info.get("asset_name") or "").strip()
             for pin_fn in names_to_pin:
                 self.pin_verified_url(
                     mod,
                     verified_page,
                     mod["current_version"],
                     local_file_name=pin_fn,
+                    asset_name=pin_asset_name,
                 )
 
         return installed_names

@@ -862,6 +862,35 @@
             "install_folder": "PRIO",
             "pinned_page_url": "https://www.patreon.com/northernsiberiawinds/posts/controlled-mod-103628223",
             "current_version": "Patreon (v2.3)"
+        },
+        {
+            "name": "[XOOX] Icon CAS Organizer v1.0.package",
+            "local_file": "[XOOX] Icon CAS Organizer v1.0.package",
+            "source_type": "generic_web",
+            "install_folder": "MOD",
+            "pinned_page_url": "https://www.patreon.com/posts/99",
+            "current_version": "v1.1"
+        },
+        {
+            "name": "[XOOX] Icon CAS Organizer v1.1.package",
+            "local_file": "[XOOX] Icon CAS Organizer v1.1.package",
+            "source_type": "generic_web",
+            "install_folder": "MOD",
+            "pinned_page_url": "https://www.patreon.com/posts/99",
+            "current_version": "v1.1",
+            "local_file_size": 81,
+            "local_file_mtime": 1795612439
+        },
+        {
+            "name": "sims4me_lessfacialoveraction.package",
+            "local_file": "sims4me_lessfacialoveraction.package",
+            "source_type": "generic_web",
+            "install_folder": "MOD",
+            "pinned_page_url": "https://www.curseforge.com/sims4/mods/less-facial-overaction",
+            "current_version": "CurseForge (2026.09.06)",
+            "installed_asset_name": "sims4me_lessfacialoveraction.zip",
+            "local_file_size": 634,
+            "local_file_mtime": 1788175484
         }
     ]
 }
