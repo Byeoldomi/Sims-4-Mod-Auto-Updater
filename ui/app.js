@@ -13,6 +13,17 @@ const SIMS4_QUOTES = {
     '🕵️ 벨라 고트의 행방을 추적하는 중...',
     '🔭 망원경으로 이웃집 정원을 관찰하는 중...',
   ],
+  scan_subfolder: [
+    '📂 지정한 폴더 안의 항목만 집중 탐색하는 중...',
+    '🔎 선택한 경로의 최신 배포 버전을 대조하는 중...',
+    '💎 전체 폴더 대신 지정된 폴더만 빠르게 확인하는 중...',
+  ],
+  scan_ww_anim: [
+    '🎞️ 지정한 폴더에서 WW 애니메이션 팩만 집중 탐색 중...',
+    '💜 애니메이션 제작자 공식 배포처와 버전을 대조하는 중...',
+    '✨ 바디·의상 CC는 건너뛰고 실제 WW 애니메이션만 선별 중...',
+    '🎬 심들의 애니메이션 패키지 메타데이터를 읽는 중...',
+  ],
   update: [
     '🧪 최신 패치 노트에 맞춰 마법의 물약 조제 중...',
     '💎 플럼밥 광택 내는 중...',
@@ -63,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 무드렛 대시보드 카운트 & 카드 그리드 요소
   const countTotalEl = document.getElementById('count-total');
+  const totalMoodletLabelEl = document.querySelector('.moodlet-total .moodlet-label');
   const countUpdateEl = document.getElementById('count-update');
   const countConflictEl = document.getElementById('count-conflict');
   const countErrorEl = document.getElementById('count-error');
@@ -80,6 +92,17 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentFilter = 'all'; // 'all' | 'update' | 'error' | 'latest'
   let searchQuery = '';
   let isBusy = false;
+  let busyMode = ''; // '' | 'scan' | 'update'
+  let activeScanToken = 0;
+  let activeScopeState = {
+    modsFolder: '',
+    scanSubfolder: '',
+    scanTargetPath: '',
+    isScoped: false,
+    isWwAnimScope: false,
+    shortLabel: '',
+    fullLabel: '',
+  };
   let isInitializing = true;
   let quoteIntervalId = null;
   let quoteIndex = 0;
@@ -222,33 +245,130 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // 경로 바 범위(전체 Mods / 지정 하위 폴더) UI 동기화
+  const extractLeafName = (rawPath) => {
+    const parts = String(rawPath || '')
+      .replace(/\//g, '\\')
+      .split('\\')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return parts.length > 0 ? parts[parts.length - 1] : '';
+  };
+
+  const detectWwAnimPathHint = (text) => {
+    const low = String(text || '').toLowerCase();
+    if (!low) return false;
+    return (
+      low.includes('wicked') ||
+      low.includes('위키드') ||
+      low.includes('anim') ||
+      low.includes('motion') ||
+      low.includes('nsfw') ||
+      low.includes('woohoo') ||
+      low.includes('19금') ||
+      low.includes('꾸금') ||
+      low.includes('후방') ||
+      low.includes('우후') ||
+      low.includes('사랑나누기') ||
+      low.includes('성인모드') ||
+      low.includes('성인애니') ||
+      low.includes('성인모션') ||
+      low.includes('야스') ||
+      low.includes('애니') ||
+      low.includes('모션') ||
+      low.includes('동작') ||
+      low.includes('체위') ||
+      low.includes('포즈') ||
+      low.includes('pose') ||
+      /(?:^|[\s_\-\[\(\\])ww(?:$|[\s_\-\]\(\\]|[가-힣])/.test(low)
+    );
+  };
+
+  const getScanQuoteCategory = () => {
+    if (!activeScopeState.isScoped) return 'scan';
+    return activeScopeState.isWwAnimScope ? 'scan_ww_anim' : 'scan_subfolder';
+  };
+
+  const getScopeLoadingMessage = (phase = 'remote') => {
+    if (!activeScopeState.isScoped) {
+      return phase === 'local'
+        ? '플럼밥이 모드 폴더를 탐색 중...'
+        : '플럼밥이 원격 최신 버전을 병렬 탐색 중...';
+    }
+    const label = activeScopeState.shortLabel || activeScopeState.fullLabel || '지정 폴더';
+    if (activeScopeState.isWwAnimScope) {
+      return phase === 'local'
+        ? `[${label}] WW 애니메이션 폴더를 확인 중...`
+        : `[${label}] WW 애니메이션 최신 버전 탐색 중...`;
+    }
+    return phase === 'local'
+      ? `[${label}] 지정 폴더 항목을 확인 중...`
+      : `[${label}] 지정 폴더 최신 버전 탐색 중...`;
+  };
+
+  // 경로 바 범위(전체 Mods / 지정 하위 폴더 / 개별 지정 폴더) UI 동기화
   const applyFolderScopeUI = (modsFolder, scanSubfolder = '', scanTargetPath = '') => {
     const sub = String(scanSubfolder || '').trim();
+    const modsClean = String(modsFolder || '').trim();
     const displayPath = sub
-      ? String(scanTargetPath || `${modsFolder || ''}\\${sub}`).trim()
-      : String(modsFolder || '').trim();
+      ? String(scanTargetPath || `${modsClean}\\${sub}`).trim()
+      : String(scanTargetPath || modsClean).trim();
+
+    const modsLeaf = extractLeafName(modsClean);
+    const targetLeaf = extractLeafName(displayPath);
+    const isCustomNonModsRoot = Boolean(!sub && modsLeaf && modsLeaf.toLowerCase() !== 'mods');
+    const isScoped = Boolean(sub || isCustomNonModsRoot);
+    const fullLabel = sub || (isCustomNonModsRoot ? targetLeaf : '');
+    const shortLabel = targetLeaf || fullLabel;
+    const isWwAnimScope = isScoped && detectWwAnimPathHint(`${sub} ${targetLeaf}`);
+
+    activeScopeState = {
+      modsFolder: modsClean,
+      scanSubfolder: sub,
+      scanTargetPath: displayPath,
+      isScoped,
+      isWwAnimScope,
+      shortLabel,
+      fullLabel,
+    };
+
     if (modFolderPath && displayPath) {
       modFolderPath.textContent = displayPath;
       modFolderPath.title = sub
-        ? `하위 폴더 지정 스캔 중: ${displayPath} (전체 Mods: ${modsFolder || ''})`
+        ? `지정 폴더 스캔 중: ${displayPath} (상위 Mods: ${modsClean})`
         : displayPath;
     }
     if (pathScopeBadge) {
-      pathScopeBadge.textContent = sub ? '📂 하위 폴더' : '📂 모드 폴더';
+      if (isWwAnimScope) {
+        pathScopeBadge.textContent = '🎞️ WW 애니메이션 폴더';
+      } else if (sub) {
+        pathScopeBadge.textContent = '📂 하위 폴더';
+      } else if (isCustomNonModsRoot) {
+        pathScopeBadge.textContent = '📂 지정 폴더';
+      } else {
+        pathScopeBadge.textContent = '📂 모드 폴더';
+      }
     }
     if (resetSubfolderBtn) {
       resetSubfolderBtn.classList.toggle('is-hidden', !sub);
     }
+    if (totalMoodletLabelEl) {
+      totalMoodletLabelEl.textContent = isWwAnimScope
+        ? '폴더 내 애니메이션'
+        : isScoped
+        ? '지정 폴더 항목'
+        : '전체 설치 모드';
+    }
+    updateDashboard();
   };
 
-  // 작업 진행 중 중복 클릭(레이스 컨디션) 방지용 전체 컨트롤 잠금/해제
+  // 작업 진행 중 중복 클릭 방지 (스캔 중에도 폴더/하위 폴더 변경은 즉시 허용하여 전체 스캔을 중단하고 전환 가능)
   const applyBusyLockState = () => {
+    const isUpdateBusy = isBusy && busyMode === 'update';
     if (backupBtn) backupBtn.disabled = isBusy;
     if (refreshBtn) refreshBtn.disabled = isBusy;
-    if (selectSubfolderBtn) selectSubfolderBtn.disabled = isBusy;
-    if (resetSubfolderBtn) resetSubfolderBtn.disabled = isBusy;
-    if (changeFolderBtn) changeFolderBtn.disabled = isBusy;
+    if (selectSubfolderBtn) selectSubfolderBtn.disabled = isUpdateBusy;
+    if (resetSubfolderBtn) resetSubfolderBtn.disabled = isUpdateBusy;
+    if (changeFolderBtn) changeFolderBtn.disabled = isUpdateBusy;
     if (selectAllCheckbox) selectAllCheckbox.disabled = isBusy;
 
     if (modList) {
@@ -275,12 +395,14 @@ document.addEventListener('DOMContentLoaded', () => {
     options = {}
   ) => {
     const {
-      category = 'scan',
+      category = getScanQuoteCategory(),
       doneQuote = getNextCompleteQuote(),
       tone = 'complete',
+      mode = category === 'update' ? 'update' : 'scan',
     } = options;
 
     isBusy = isLoading;
+    busyMode = isLoading ? mode : '';
 
     if (loaderIndicator) {
       if (loaderText) {
@@ -353,7 +475,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const versionMatch =
         (mod.currentVersion || '').toLowerCase().includes(q) ||
         (mod.latestVersion || '').toLowerCase().includes(q);
-      return nameMatch || authorMatch || versionMatch;
+      const wwAnimMatch =
+        Boolean(mod.isWwAnimation) &&
+        ('ww 애니메이션'.includes(q) || 'wickedwhims'.includes(q));
+      return nameMatch || authorMatch || versionMatch || wwAnimMatch;
     }
 
     return true;
@@ -379,7 +504,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (countLatestEl) countLatestEl.textContent = String(latestCount);
 
     if (modListLabel) {
-      modListLabel.textContent = `업데이트 대상 목록 (총 ${totalCount}개 / 업데이트 가능 ${updateCount}개)`;
+      const scopePrefix = activeScopeState.isScoped && activeScopeState.shortLabel
+        ? `[${activeScopeState.shortLabel}] `
+        : '';
+      modListLabel.textContent = `${scopePrefix}업데이트 대상 목록 (총 ${totalCount}개 / 업데이트 가능 ${updateCount}개)`;
     }
 
     if (moodletGrid) {
@@ -431,8 +559,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const emptyEl = document.createElement('div');
       emptyEl.className = 'empty-filter-state';
       if (currentMods.length === 0) {
+        const scopeTag = activeScopeState.isScoped && activeScopeState.shortLabel
+          ? `[${activeScopeState.shortLabel}] 지정 폴더`
+          : '모드 폴더';
         emptyEl.textContent = isInitializing
-          ? '모드 폴더에서 설치된 모드를 불러오는 중입니다...'
+          ? `${scopeTag}에서 항목을 불러오는 중입니다...`
+          : activeScopeState.isScoped
+          ? `${scopeTag}에 설치된 스크립트/게임플레이 모드 및 WW 애니메이션이 없습니다.`
           : '선택된 Mods 폴더에 설치된 스크립트/게임플레이 모드가 없습니다.';
       } else if (searchQuery.trim() !== '') {
         emptyEl.textContent = `"${searchQuery.trim()}" 검색 결과가 없습니다.`;
@@ -476,6 +609,14 @@ document.addEventListener('DOMContentLoaded', () => {
       nameEl.title = mod.name;
 
       titleRowEl.appendChild(nameEl);
+
+      if (mod.isWwAnimation) {
+        const wwAnimBadgeEl = document.createElement('span');
+        wwAnimBadgeEl.className = 'mod-ww-anim-badge';
+        wwAnimBadgeEl.textContent = 'WW 애니메이션';
+        wwAnimBadgeEl.title = 'WickedWhims 애니메이션 팩';
+        titleRowEl.appendChild(wwAnimBadgeEl);
+      }
 
       let filenameRowEl = null;
       if (mod.primaryFile) {
@@ -525,6 +666,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
       metaRowEl.appendChild(authorBadgeEl);
       metaRowEl.appendChild(versionEl);
+
+      if (mod.optionModalMode === 'multi_file_select') {
+        const isAllDl = (mod.selectedVariant || 'download_mode:all') === 'download_mode:all';
+        const selCnt = Array.isArray(mod.selectedAddons) ? mod.selectedAddons.length : 0;
+        const dlModeBtn = document.createElement('button');
+        dlModeBtn.type = 'button';
+        dlModeBtn.className = 'mod-channel-pill is-free';
+        dlModeBtn.disabled = isBusy;
+        dlModeBtn.textContent = isAllDl
+          ? '전체 다운로드 ▾'
+          : `선택 다운로드 (${selCnt}개) ▾`;
+        dlModeBtn.title = '전체 다운로드 / 선택 다운로드(다중 선택) 설정';
+        dlModeBtn.addEventListener('click', async (event) => {
+          event.stopPropagation();
+          if (isBusy) return;
+          const modalResult = await openOptionSelectModal(mod, {
+            confirmLabel: '옵션 저장',
+          });
+          if (!modalResult || !modalResult.selectedVariant) {
+            setLog(`[${mod.name}] 다운로드 옵션 선택이 취소되었습니다.`);
+            return;
+          }
+          mod.selectedVariant = modalResult.selectedVariant;
+          mod.selectedAddons = Array.isArray(modalResult.selectedAddons)
+            ? modalResult.selectedAddons
+            : [];
+          if (hasPywebview() && window.pywebview.api.set_mod_variant) {
+            try {
+              const varRes = await window.pywebview.api.set_mod_variant(
+                mod.id,
+                modalResult.selectedVariant,
+                mod.selectedAddons
+              );
+              if (varRes?.error) {
+                setLog(`옵션 변경 오류: ${varRes.error}`);
+                return;
+              }
+              if (varRes?.entry) {
+                Object.assign(mod, varRes.entry);
+                renderModList(currentMods);
+              }
+              if (varRes?.message) {
+                setLog(varRes.message);
+              }
+            } catch (err) {
+              setLog(`옵션 변경 오류: ${err}`);
+            }
+          } else {
+            renderModList(currentMods);
+          }
+        });
+        metaRowEl.appendChild(dlModeBtn);
+      }
 
       if (mod.optionModalMode === 'rpo_channel' || mod.optionModalMode === 'ww_channel') {
         const isWwChannel = mod.optionModalMode === 'ww_channel';
@@ -823,14 +1017,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 백엔드 원격 병렬 스캔 실행 함수
-  const runRemoteScan = async () => {
-    if (!hasPywebview() || isBusy) return;
-    setLoading(true, '플럼밥이 원격 최신 버전을 병렬 탐색 중...', { category: 'scan' });
+  // 백엔드 원격 병렬 스캔 실행 함수 (force=true 시 진행 중이던 이전 스캔을 대체하여 즉시 재실행)
+  const runRemoteScan = async ({ force = false, scanToken = null } = {}) => {
+    if (!hasPywebview()) return;
+    if (isBusy && (!force || busyMode === 'update')) return;
+
+    const myToken = scanToken !== null ? scanToken : ++activeScanToken;
+    const scopeName = activeScopeState.isScoped
+      ? activeScopeState.shortLabel || activeScopeState.fullLabel
+      : '';
+    setLoading(true, getScopeLoadingMessage('remote'), {
+      category: getScanQuoteCategory(),
+      mode: 'scan',
+    });
+    if (statusSummary) {
+      statusSummary.textContent = scopeName
+        ? `진행 상태: [${scopeName}] 스캔 준비 중...`
+        : '진행 상태: 원격 스캔 준비 중...';
+    }
     if (progressBar) progressBar.style.width = '8%';
 
     try {
       const res = await window.pywebview.api.scan_mods(true);
+      if (myToken !== activeScanToken || res?.superseded) {
+        return;
+      }
       if (res?.error) {
         setLog(`스캔 오류: ${res.error}`);
         setLoading(false, '', {
@@ -857,6 +1068,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tone: 'complete',
       });
     } catch (err) {
+      if (myToken !== activeScanToken) return;
       setLog(`스캔 중 오류가 발생했습니다: ${err}`);
       setLoading(false, '', {
         doneQuote: SIMS4_QUOTES.error[0],
@@ -932,6 +1144,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const isChannelMode = mod?.optionModalMode === 'rpo_channel' || mod?.optionModalMode === 'ww_channel';
+    const isMultiFileSelectMode = mod?.optionModalMode === 'multi_file_select';
     const primaryLow = String(mod.primaryFile || '').trim().toLowerCase();
     const initialChoice =
       choices.find((vc) => vc.file_name === mod.selectedVariant) ||
@@ -940,11 +1153,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedFile = initialChoice ? initialChoice.file_name : '';
 
     const selectedAddonsLow = new Set(
-      (Array.isArray(mod.selectedAddons)
+      (Array.isArray(mod.selectedAddons) && mod.selectedAddons.length > 0
         ? mod.selectedAddons
         : addons.filter((oa) => oa.installed).map((oa) => oa.file_name)
       ).map((fn) => String(fn).toLowerCase())
     );
+    if (isMultiFileSelectMode && selectedAddonsLow.size === 0) {
+      addons.forEach((oa) => selectedAddonsLow.add(String(oa.file_name || '').toLowerCase()));
+    }
 
     if (optionModalTitle) {
       optionModalTitle.textContent = mod.name || '모드 옵션 선택';
@@ -958,6 +1174,7 @@ document.addEventListener('DOMContentLoaded', () => {
       optionModalConfirmBtn.textContent = modalOpts.confirmLabel || '선택 완료 및 업데이트';
     }
 
+    let addonContainerEl = null;
     const syncSelectedVisuals = () => {
       const radioItems = optionModalList.querySelectorAll('.option-modal-item[role="radio"]');
       radioItems.forEach((btn) => {
@@ -965,6 +1182,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.classList.toggle('is-selected', isSel);
         btn.setAttribute('aria-checked', isSel ? 'true' : 'false');
       });
+      if (isMultiFileSelectMode && addonContainerEl) {
+        addonContainerEl.classList.toggle('is-hidden', selectedFile !== 'download_mode:select');
+      }
       const checkItems = optionModalList.querySelectorAll('.option-modal-item[role="checkbox"]');
       checkItems.forEach((btn) => {
         const isChk = selectedAddonsLow.has(String(btn.dataset.fileName || '').toLowerCase());
@@ -978,7 +1198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addons.length > 0 && choices.length > 0) {
       const mainSectionEl = document.createElement('div');
       mainSectionEl.className = 'option-section-label';
-      mainSectionEl.textContent = '필수 본체 버전 (택1)';
+      mainSectionEl.textContent = isMultiFileSelectMode ? '다운로드 방식 (택1)' : '필수 본체 버전 (택1)';
       optionModalList.appendChild(mainSectionEl);
     }
 
@@ -1004,7 +1224,10 @@ document.addEventListener('DOMContentLoaded', () => {
       labelEl.textContent = vc.label || vc.file_name;
       labelRowEl.appendChild(labelEl);
 
-      if (vc.installed || (!isChannelMode && primaryLow && vc.file_name.toLowerCase() === primaryLow)) {
+      if (
+        !isMultiFileSelectMode &&
+        (vc.installed || (!isChannelMode && primaryLow && vc.file_name.toLowerCase() === primaryLow))
+      ) {
         const curBadgeEl = document.createElement('span');
         curBadgeEl.className = 'option-current-badge';
         curBadgeEl.textContent = isChannelMode ? '현재 선택됨' : '현재 설치됨';
@@ -1029,10 +1252,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (addons.length > 0) {
+      addonContainerEl = document.createElement('div');
+      addonContainerEl.className = 'option-addon-group';
+      addonContainerEl.style.display = 'flex';
+      addonContainerEl.style.flexDirection = 'column';
+      addonContainerEl.style.gap = '8px';
+
       const addonSectionEl = document.createElement('div');
       addonSectionEl.className = 'option-section-label';
-      addonSectionEl.textContent = '세부 옵션 파일 (선택 사항 · 복수 선택 가능)';
-      optionModalList.appendChild(addonSectionEl);
+      addonSectionEl.textContent = isMultiFileSelectMode
+        ? '다운로드할 파일 선택 (다중 선택 가능)'
+        : '세부 옵션 파일 (선택 사항 · 복수 선택 가능)';
+      addonContainerEl.appendChild(addonSectionEl);
 
       addons.forEach((oa) => {
         const itemBtn = document.createElement('button');
@@ -1083,8 +1314,10 @@ document.addEventListener('DOMContentLoaded', () => {
           syncSelectedVisuals();
         });
 
-        optionModalList.appendChild(itemBtn);
+        addonContainerEl.appendChild(itemBtn);
       });
+
+      optionModalList.appendChild(addonContainerEl);
     }
 
     syncSelectedVisuals();
@@ -1108,9 +1341,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const chosenAddons = addons
           .filter((oa) => selectedAddonsLow.has(oa.file_name.toLowerCase()))
           .map((oa) => oa.file_name);
+        if (isMultiFileSelectMode && selectedFile === 'download_mode:select' && chosenAddons.length === 0) {
+          setLog(`[${mod.name}] 선택 다운로드 시 최소 1개 이상의 파일을 선택해 주세요.`);
+          return;
+        }
         cleanupAndResolve({
           selectedVariant: selectedFile || choices[0]?.file_name || '',
-          selectedAddons: chosenAddons,
+          selectedAddons:
+            isMultiFileSelectMode && selectedFile === 'download_mode:all'
+              ? addons.map((oa) => oa.file_name)
+              : chosenAddons,
         });
       };
       const onCancel = () => cleanupAndResolve(null);
@@ -1383,8 +1623,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (hasPywebview()) {
         await runRemoteScan();
       } else {
-        setLoading(true, '플럼밥이 모드를 탐색 중...', { category: 'scan' });
-        setLog('모드 폴더 및 원격 버전을 확인하고 있습니다...');
+        setLoading(true, getScopeLoadingMessage('remote'), {
+          category: getScanQuoteCategory(),
+          mode: 'scan',
+        });
+        setLog(
+          activeScopeState.isScoped
+            ? `[${activeScopeState.shortLabel}] 지정 폴더 및 원격 버전을 확인하고 있습니다...`
+            : '모드 폴더 및 원격 버전을 확인하고 있습니다...'
+        );
         setTimeout(() => {
           isInitializing = false;
           currentFilter = 'all';
@@ -1406,14 +1653,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // 하위 폴더 지정 스캔 버튼
   if (selectSubfolderBtn) {
     selectSubfolderBtn.addEventListener('click', async () => {
-      if (isBusy) return;
+      if (isBusy && busyMode === 'update') return;
       if (hasPywebview()) {
         try {
           const res = await window.pywebview.api.select_scan_subfolder();
           if (res?.cancelled) return;
+          const nextToken = ++activeScanToken;
           if (res?.error) {
             setLog(`하위 폴더 지정 오류: ${res.error}`);
-            setWittyQuote(SIMS4_QUOTES.error[0], 'error');
+            setLoading(false, '', { doneQuote: SIMS4_QUOTES.error[0], tone: 'error' });
             return;
           }
           applyFolderScopeUI(
@@ -1428,21 +1676,21 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           setLog(res?.message || '스캔 대상 하위 폴더가 지정되었습니다.');
           if (res?.needs_remote_scan) {
-            await runRemoteScan();
-          } else if (res?.cached) {
-            if (progressBar) progressBar.style.width = '100%';
-            setWittyQuote(getNextCompleteQuote(), 'complete');
+            await runRemoteScan({ force: true, scanToken: nextToken });
+          } else {
+            if (progressBar) progressBar.style.width = res?.cached ? '100%' : '0%';
+            setLoading(false, '', { doneQuote: getNextCompleteQuote(), tone: 'complete' });
           }
         } catch (err) {
           setLog(`하위 폴더 지정 중 오류가 발생했습니다: ${err}`);
-          setWittyQuote(SIMS4_QUOTES.error[0], 'error');
+          setLoading(false, '', { doneQuote: SIMS4_QUOTES.error[0], tone: 'error' });
         }
       } else {
         const subInput = window.prompt('Mods 기준 스캔할 하위 폴더 상대 경로를 입력하세요 (비우면 전체):', '');
         if (subInput !== null) {
           const clean = subInput.trim();
           applyFolderScopeUI('Mods', clean, clean ? `Mods\\${clean}` : 'Mods');
-          setLog(clean ? `하위 폴더 지정됨: ${clean}` : '전체 Mods 폴더로 복귀했습니다.');
+          setLog(clean ? `[${clean}] 하위 폴더 지정됨` : '전체 Mods 폴더로 복귀했습니다.');
         }
       }
     });
@@ -1451,13 +1699,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // 전체 Mods 폴더 스캔 복귀 버튼
   if (resetSubfolderBtn) {
     resetSubfolderBtn.addEventListener('click', async () => {
-      if (isBusy) return;
+      if (isBusy && busyMode === 'update') return;
       if (hasPywebview()) {
         try {
+          const nextToken = ++activeScanToken;
           const res = await window.pywebview.api.set_scan_subfolder('');
           if (res?.error) {
             setLog(`전체 보기 전환 오류: ${res.error}`);
-            setWittyQuote(SIMS4_QUOTES.error[0], 'error');
+            setLoading(false, '', { doneQuote: SIMS4_QUOTES.error[0], tone: 'error' });
             return;
           }
           applyFolderScopeUI(
@@ -1472,14 +1721,14 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           setLog(res?.message || '전체 Mods 폴더 스캔으로 복귀했습니다.');
           if (res?.needs_remote_scan) {
-            await runRemoteScan();
-          } else if (res?.cached) {
-            if (progressBar) progressBar.style.width = '100%';
-            setWittyQuote(getNextCompleteQuote(), 'complete');
+            await runRemoteScan({ force: true, scanToken: nextToken });
+          } else {
+            if (progressBar) progressBar.style.width = res?.cached ? '100%' : '0%';
+            setLoading(false, '', { doneQuote: getNextCompleteQuote(), tone: 'complete' });
           }
         } catch (err) {
           setLog(`전체 보기 전환 중 오류가 발생했습니다: ${err}`);
-          setWittyQuote(SIMS4_QUOTES.error[0], 'error');
+          setLoading(false, '', { doneQuote: SIMS4_QUOTES.error[0], tone: 'error' });
         }
       } else {
         applyFolderScopeUI('Mods', '', 'Mods');
@@ -1491,14 +1740,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // 폴더 변경 버튼
   if (changeFolderBtn) {
     changeFolderBtn.addEventListener('click', async () => {
-      if (isBusy) return;
+      if (isBusy && busyMode === 'update') return;
       if (hasPywebview()) {
         try {
           const res = await window.pywebview.api.select_mods_folder();
           if (res?.cancelled) return;
+          const nextToken = ++activeScanToken;
           if (res?.error) {
             setLog(`폴더 변경 오류: ${res.error}`);
-            setWittyQuote(SIMS4_QUOTES.error[0], 'error');
+            setLoading(false, '', { doneQuote: SIMS4_QUOTES.error[0], tone: 'error' });
             return;
           }
           if (res?.mods_folder || res?.scan_target_path) {
@@ -1513,20 +1763,23 @@ document.addEventListener('DOMContentLoaded', () => {
             currentFilter = 'all';
             renderModList(res.mods);
           }
-          setLog(res?.message || '모드 폴더가 변경되었습니다.');
+          setLog(res?.message || '폴더 경로가 변경되었습니다.');
           if (res?.needs_remote_scan) {
-            await runRemoteScan();
+            await runRemoteScan({ force: true, scanToken: nextToken });
+          } else {
+            if (progressBar) progressBar.style.width = res?.cached ? '100%' : '0%';
+            setLoading(false, '', { doneQuote: getNextCompleteQuote(), tone: 'complete' });
           }
         } catch (err) {
           setLog(`폴더 변경 중 오류가 발생했습니다: ${err}`);
-          setWittyQuote(SIMS4_QUOTES.error[0], 'error');
+          setLoading(false, '', { doneQuote: SIMS4_QUOTES.error[0], tone: 'error' });
         }
       } else {
         const currentPath = modFolderPath ? modFolderPath.textContent.trim() : '';
-        const nextPath = window.prompt('변경할 심즈4 Mods 폴더 경로를 입력하세요:', currentPath);
+        const nextPath = window.prompt('변경할 폴더 경로를 입력하세요:', currentPath);
         if (nextPath && nextPath.trim() && modFolderPath) {
           applyFolderScopeUI(nextPath.trim(), '', nextPath.trim());
-          setLog(`모드 폴더 경로가 변경되었습니다: ${nextPath.trim()}`);
+          setLog(`폴더 경로가 변경되었습니다: ${nextPath.trim()}`);
         }
       }
     });
@@ -1556,8 +1809,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // pywebview 환경 준비 시 2단계 비차단 스캔 (1단계: 로컬 0.5초 즉시 표시 -> 2단계: 백그라운드 병렬 원격 조회)
   window.addEventListener('pywebviewready', async () => {
     if (!hasPywebview()) return;
+    const initToken = ++activeScanToken;
     try {
       const state = await window.pywebview.api.get_initial_state();
+      if (initToken !== activeScanToken) {
+        return;
+      }
       isInitializing = false;
       if (state?.mods_folder || state?.scan_target_path) {
         applyFolderScopeUI(
@@ -1579,9 +1836,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (progressBar) progressBar.style.width = '100%';
         setWittyQuote(getNextCompleteQuote(), 'complete');
       } else if (state?.needs_remote_scan) {
-        await runRemoteScan();
+        await runRemoteScan({ force: true, scanToken: initToken });
       }
     } catch (_) {
+      if (initToken !== activeScanToken) return;
       isInitializing = false;
       renderModList([]);
       setWittyQuote(SIMS4_QUOTES.error[0], 'error');
@@ -1590,6 +1848,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const onBackendProgress = (payload) => {
     if (!payload) return;
+    const rawScope = String(payload.scopeLabel || '').trim();
+    // 이미 특정 폴더 스캔으로 전환되었는데 이전 전체 Mods 스캔의 지연된 이벤트가 도착한 경우 무시
+    if (payload.mode === 'scan' && activeScopeState.isScoped && !rawScope) {
+      return;
+    }
     if (typeof payload.percent === 'number' && progressBar) {
       progressBar.style.width = `${payload.percent}%`;
     }
@@ -1598,7 +1861,17 @@ document.addEventListener('DOMContentLoaded', () => {
       typeof payload.total === 'number' &&
       statusSummary
     ) {
-      const actionLabel = payload.mode === 'scan' ? '원격 스캔 중' : '업데이트 중';
+      const shortScope = rawScope
+        ? extractLeafName(rawScope) || rawScope
+        : activeScopeState.isScoped
+        ? activeScopeState.shortLabel
+        : '';
+      const actionLabel =
+        payload.mode === 'scan'
+          ? shortScope
+            ? `[${shortScope}] 스캔 중`
+            : '원격 스캔 중'
+          : '업데이트 중';
       statusSummary.textContent = `진행 상태: ${actionLabel} (${payload.completed} / ${payload.total})`;
     }
     if (payload.message) {

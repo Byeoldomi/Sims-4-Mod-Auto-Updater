@@ -91,11 +91,18 @@ class ModUpdater:
         t_low = (target_name or "").strip().lower()
         if not t_low:
             return ""
+        is_xml_target = "xml" in t_low and "injector" in t_low
         for entry in mods:
             e_name = (entry.get("name") or "").strip().lower()
             e_local = (entry.get("local_file") or "").strip().lower()
             if t_low in (e_name, e_local) and e_name:
                 pinned = (entry.get("pinned_page_url") or entry.get("homepage") or "").strip()
+                pinned_low = pinned.lower()
+                if not is_xml_target and (
+                    "scumbumbomods.com/xml-injector" in pinned_low
+                    or "curseforge.com/sims4/mods/xml-injector" in pinned_low
+                ):
+                    continue
                 if pinned.lower().startswith("http://"):
                     log_security_warning(f"매니페스트 내 일반 HTTP 고정 URL 차단: '{pinned}'")
                     return ""
@@ -999,6 +1006,50 @@ class ModUpdater:
                     return "a0.5"
                 if "wave-n-grind" in t_name_low or "wave and grind" in t_name_low or "wave_and_grind" in t_name_low or "wave-n-grind" in folder_low or "wave and grind" in folder_low:
                     return "a0.5"
+                if "0nizu" in t_name_low or "0nizu" in folder_low:
+                    return rem_ver or "2026.11.27"
+                if "0zzzy" in t_name_low or "0zzzy" in folder_low:
+                    return rem_ver or "v1.0.6"
+                if "adakasay" in t_name_low or "adakasay" in folder_low:
+                    return rem_ver or "2026.11.04"
+                if "aftermathdna" in t_name_low or "aftermathdna" in folder_low:
+                    return rem_ver or "v1.0.13"
+                if "alchemistanimations" in t_name_low or "ww_alchemist" in t_name_low or ("alchemist" in folder_low and "ww" in folder_low) or "ww animation - alchemist" in t_name_low:
+                    return rem_ver or "2026.11.25"
+                if "amateurhour47" in t_name_low or "amateurhour47" in folder_low:
+                    return rem_ver or "2024.04.20"
+                if "amorzinho" in t_name_low or "amorzinho" in folder_low:
+                    return rem_ver or "v1.0.0"
+                if "amra72" in t_name_low or "amra72" in folder_low:
+                    return rem_ver or "2023.04.12"
+                if "anarcis" in t_name_low or "anarcis" in folder_low:
+                    return rem_ver or "2026.11.27"
+                if "anonny" in t_name_low or "anonny" in folder_low:
+                    return rem_ver or "v1.7"
+                if "artistadebastardo" in t_name_low or "artistadebastardo" in folder_low:
+                    return rem_ver or "v1.2.0"
+                if "artmiel" in t_name_low or "artmiel" in folder_low:
+                    return rem_ver or "v5.5"
+                if "asketo" in t_name_low or "asketo" in folder_low:
+                    return rem_ver or "2020.09.18"
+                if (
+                    "ww_aske" in t_name_low
+                    or "aske_ww" in t_name_low
+                    or "aske_anim" in t_name_low
+                    or "ww animation - aske" in t_name_low
+                    or re.search(r"(?:^|[^a-z0-9])aske(?:$|[^a-z0-9])", t_name_low)
+                ):
+                    return rem_ver or "v1.4"
+                if "atrois" in t_name_low or "atrois" in folder_low or "a-trois" in t_name_low or "a-trois" in folder_low:
+                    return rem_ver or "2026.08.06"
+                if "awsome" in t_name_low or "awsome" in folder_low:
+                    return rem_ver or "2026.11.22"
+                if "ayone" in t_name_low or "ayone" in folder_low:
+                    return rem_ver or "2025.01.11"
+                if "azmodan22" in t_name_low or "azmodan22" in folder_low:
+                    return "2025.02.05"
+                if "404dyma" in t_name_low or "404dyma" in folder_low:
+                    return rem_ver or "v1.0.0"
                 if rpo_channel == "free" and rem_ver:
                     return rem_ver
                 ref_loc_ver = loc_ver or meta_ver
@@ -1270,7 +1321,81 @@ class ModUpdater:
 
         variant_choices = update_info.get("variant_choices") or []
         selected_variant = str(update_info.get("selected_variant") or "").strip()
-        if variant_choices and selected_variant:
+        is_multi_file_select_mode = bool(
+            str(update_info.get("option_modal_mode") or "").strip().lower() == "multi_file_select"
+            or selected_variant.lower() in ("download_mode:all", "download_mode:select")
+        )
+        archive_only_include_names: Optional[set[str]] = None
+        if is_multi_file_select_mode:
+            orig_all_pairs = [
+                (str(fn), str(dl))
+                for fn, dl in (update_info.get("all_remote_files") or [])
+                if fn and dl
+            ]
+            if not orig_all_pairs and update_info.get("download_url"):
+                orig_all_pairs = [(
+                    str(update_info.get("asset_name") or mod.get("name") or "animation.package"),
+                    str(update_info.get("download_url")),
+                )]
+            pref_arch_upd = str(update_info.get("preferred_archive_name") or "").strip()
+            if not pref_arch_upd:
+                try:
+                    from src.finder import check_known_catalog
+                    _cat_arch = check_known_catalog(mod.get("name") or "", is_ww_animation_hint=True)
+                    if isinstance(_cat_arch, dict):
+                        pref_arch_upd = str(_cat_arch.get("preferred_archive_name") or "").strip()
+                except Exception:
+                    pass
+            if pref_arch_upd and orig_all_pairs:
+                pref_u_low = pref_arch_upd.lower()
+                pref_u_clean = re.sub(r"[^a-z0-9]", "", pref_u_low)
+                matched_arch_pairs = [
+                    pair for pair in orig_all_pairs
+                    if pair[0].strip().lower() == pref_u_low
+                    or (pref_u_clean and re.sub(r"[^a-z0-9]", "", pair[0].lower()) == pref_u_clean)
+                ]
+                if matched_arch_pairs:
+                    orig_all_pairs = matched_arch_pairs
+
+            if selected_variant.lower() == "download_mode:select":
+                chosen_addons_raw = [
+                    str(x).strip().lower()
+                    for x in (update_info.get("selected_addons") or [])
+                    if str(x).strip()
+                ]
+                chosen_stems = {Path(x).stem.lower() for x in chosen_addons_raw}
+                if not chosen_addons_raw:
+                    raise ValueError("선택 다운로드할 파일이 선택되지 않았습니다. 최소 1개 이상의 파일을 선택해 주세요.")
+                selected_pairs = [
+                    (fn, dl)
+                    for fn, dl in orig_all_pairs
+                    if fn.lower() in chosen_addons_raw or Path(fn).stem.lower() in chosen_stems
+                ]
+                archive_pairs = [
+                    (fn, dl)
+                    for fn, dl in orig_all_pairs
+                    if Path(fn).suffix.lower() in (".zip", ".rar", ".7z")
+                ]
+                if not selected_pairs and archive_pairs:
+                    selected_pairs = archive_pairs
+                    archive_only_include_names = set(chosen_addons_raw) | chosen_stems
+                if not selected_pairs:
+                    raise ValueError("선택 다운로드할 파일이 선택되지 않았습니다. 최소 1개 이상의 파일을 선택해 주세요.")
+            else:
+                selected_pairs = orig_all_pairs
+
+            if selected_pairs:
+                update_info = dict(update_info)
+                update_info["download_url"] = selected_pairs[0][1]
+                update_info["asset_name"] = selected_pairs[0][0]
+                update_info["detected_filename"] = (
+                    f"{selected_pairs[0][0]} 외 {len(selected_pairs) - 1}개 (총 {len(selected_pairs)}개 파일)"
+                    if len(selected_pairs) > 1
+                    else selected_pairs[0][0]
+                )
+                update_info["all_remote_files"] = selected_pairs
+                update_info["is_multi_file_bundle"] = len(selected_pairs) > 1
+        elif variant_choices and selected_variant:
             sel_choice = next(
                 (vc for vc in variant_choices if str(vc.get("file_name") or "").lower() == selected_variant.lower()),
                 None,
@@ -1379,18 +1504,9 @@ class ModUpdater:
             for p in known_existing_paths
             if is_safe_subpath(p, target_dir, allow_equal=False)
         )
-        shared_container_names = {
-            "mod", "mods", "gsm", "gm", "prio", "overrides", "override",
-            "lms", "lumpinou", "utopya", "frequentlybasic", "natethel0ser",
-        }
-        is_dedicated_mod_dir = (
-            target_dir.resolve() != self.mods_folder.resolve()
-            and target_dir.name.lower() not in shared_container_names
-        )
-        include_subdirs = bool(has_subdir_known or is_dedicated_mod_dir)
 
-        expected_catalog_id = str(mod.get("catalog_id") or "").strip()
-        if not expected_catalog_id:
+        expected_catalog_id = "" if is_multi_file_select_mode else str(mod.get("catalog_id") or "").strip()
+        if not expected_catalog_id and not is_multi_file_select_mode:
             try:
                 from src.finder import check_known_catalog
                 cat_probe = (
@@ -1401,6 +1517,61 @@ class ModUpdater:
                     expected_catalog_id = str(cat_probe["matched_catalog"]).strip()
             except Exception:
                 pass
+
+        from src.scanner import CONTAINER_FOLDER_NAMES, ModScanner
+        from src.utils import _can_supersede_renamed_mod_file, _lookup_catalog_id_safe
+
+        shared_container_names = set(CONTAINER_FOLDER_NAMES) | {
+            "mod", "mods", "gsm", "gm", "prio", "overrides", "override",
+            "lms", "lumpinou", "utopya", "frequentlybasic", "natethel0ser",
+            "scumbumbo", "sacrificial", "sims4me", "polarbearsims",
+            "simkatu", "ilkavelle", "weerbesu", "turbodriver", "twistedmexi",
+            "pandasama", "spinningplumbobs", "kuttoe",
+            "animations", "animation", "ww animations", "wickedwhims animations",
+            "애니메이션", "애니", "ww 애니", "pose", "poses", "포즈",
+        }
+        target_dir_name_clean = target_dir.name.strip()
+        is_numbered_shared_container = bool(
+            re.match(
+                r"^(?:[\d\-]+[\.\s_\-]*)?(?:MOD|GSM|GM)(?:[\s_\-]*\[?\d+\]?)?$",
+                target_dir_name_clean,
+                flags=re.IGNORECASE,
+            )
+            or ModScanner._is_ww_animation_folder_name(target_dir_name_clean, allow_cc_prefix=True)
+            or ModScanner._is_pose_folder_name(target_dir_name_clean)
+        )
+        has_unrelated_direct_mods = False
+        if target_dir.exists() and target_dir.is_dir():
+            unit_norm_keys = {
+                nk
+                for kp in known_existing_paths
+                if (nk := normalize_mod_filename_key(kp.name))
+            }
+            if selected_file_path is not None:
+                sel_nk_init = normalize_mod_filename_key(selected_file_path.name)
+                if sel_nk_init:
+                    unit_norm_keys.add(sel_nk_init)
+            for sibling_f in target_dir.iterdir():
+                if not sibling_f.is_file() or sibling_f.suffix.lower() not in ALLOWED_MOD_WHITELIST_EXTENSIONS:
+                    continue
+                if str(sibling_f.resolve()).lower() in known_existing_low_set:
+                    continue
+                sib_nk = normalize_mod_filename_key(sibling_f.name)
+                if sib_nk and sib_nk in unit_norm_keys:
+                    continue
+                sib_cat = _lookup_catalog_id_safe(sibling_f.name)
+                if expected_catalog_id and sib_cat == expected_catalog_id:
+                    continue
+                has_unrelated_direct_mods = True
+                break
+
+        is_dedicated_mod_dir = (
+            target_dir.resolve() != self.mods_folder.resolve()
+            and target_dir_name_clean.lower() not in shared_container_names
+            and not is_numbered_shared_container
+            and not has_unrelated_direct_mods
+        )
+        include_subdirs = bool(has_subdir_known or is_dedicated_mod_dir)
         mods_root_resolved = (
             self.mods_folder.resolve()
             if str(self.mods_folder).strip() and self.mods_folder.exists()
@@ -1524,7 +1695,8 @@ class ModUpdater:
                     temp_work_dir=temp_extract_dir,
                     known_existing_files=known_existing_paths,
                     include_subdirs=include_subdirs,
-                    force_include_names=(chosen_opt_low if has_selected_addons_cfg else None),
+                    force_include_names=(archive_only_include_names or (chosen_opt_low if has_selected_addons_cfg else None)),
+                    only_include_names=archive_only_include_names,
                     pre_remove_callback=_backup_if_exists,
                     selected_file_path=selected_file_path,
                     mods_root_resolved=mods_root_resolved,
@@ -1534,7 +1706,7 @@ class ModUpdater:
                 safe_remove(downloaded_file)
                 safe_remove(temp_extract_dir)
 
-                if has_selected_addons_cfg and unselected_opt_low:
+                if has_selected_addons_cfg and unselected_opt_low and not is_multi_file_select_mode:
                     if target_dir.exists():
                         for rem_opt in list(target_dir.iterdir()):
                             if rem_opt.is_file() and rem_opt.name.lower() in unselected_opt_low:
@@ -1592,13 +1764,19 @@ class ModUpdater:
                         if ep.suffix.lower() == selected_file_path.suffix.lower()
                     ]
                     if len(same_ext_files) == 1 and same_ext_files[0].resolve() != selected_file_path.resolve():
-                        if selected_file_path.exists():
-                            _backup_if_exists(selected_file_path)
-                            safe_remove(selected_file_path)
-                        mod["file_path"] = str(same_ext_files[0])
-                        if isinstance(mod.get("selected_file"), dict):
-                            mod["selected_file"]["name"] = same_ext_files[0].name
-                            mod["selected_file"]["full_path"] = str(same_ext_files[0])
+                        if _can_supersede_renamed_mod_file(
+                            selected_file_path.name,
+                            same_ext_files[0].name,
+                            _lookup_catalog_id_safe(selected_file_path.name),
+                            _lookup_catalog_id_safe(same_ext_files[0].name),
+                        ):
+                            if selected_file_path.exists():
+                                _backup_if_exists(selected_file_path)
+                                safe_remove(selected_file_path)
+                            mod["file_path"] = str(same_ext_files[0])
+                            if isinstance(mod.get("selected_file"), dict):
+                                mod["selected_file"]["name"] = same_ext_files[0].name
+                                mod["selected_file"]["full_path"] = str(same_ext_files[0])
                     elif same_ext_files:
                         sel_nk = normalize_mod_filename_key(selected_file_path.name)
                         fi_core = next(
@@ -1658,10 +1836,17 @@ class ModUpdater:
                     _backup_if_exists(old_p)
                     safe_remove(old_p)
                 if (
-                    selected_file_path
+                    not is_multi_file_select_mode
+                    and selected_file_path
                     and selected_file_path.exists()
                     and selected_file_path.suffix.lower() == downloaded_file.suffix.lower()
                     and selected_file_path.resolve() != dest.resolve()
+                    and _can_supersede_renamed_mod_file(
+                        selected_file_path.name,
+                        downloaded_file.name,
+                        _lookup_catalog_id_safe(selected_file_path.name),
+                        _lookup_catalog_id_safe(downloaded_file.name),
+                    )
                 ):
                     _backup_if_exists(selected_file_path)
                     safe_remove(selected_file_path)
@@ -2055,6 +2240,146 @@ class ModUpdater:
                     if m_ex_slot and (m_ex_slot.group(1), ex_rpo.suffix.lower()) in installed_rpo_slots:
                         _backup_if_exists(ex_rpo)
                         safe_remove(ex_rpo)
+
+            # 4-0. 후속 패치 오버레이(post_install_overlays) 적용 (예: 기본팩 설치 후 Gold_Normal만 최신 패치로 2차 덮어쓰기)
+            raw_overlays = list(update_info.get("post_install_overlays") or [])
+            if not raw_overlays:
+                try:
+                    from src.finder import check_known_catalog
+                    _cat_ov = (
+                        check_known_catalog(mod.get("name") or "", is_ww_animation_hint=True)
+                        or (check_known_catalog(selected_file_path.name, is_ww_animation_hint=True) if selected_file_path else None)
+                    )
+                    if isinstance(_cat_ov, dict):
+                        raw_overlays = list(_cat_ov.get("post_install_overlays") or [])
+                except Exception:
+                    pass
+            if raw_overlays:
+                from src.finder import inspect_remote_mod_page
+                for idx_ov, ov in enumerate(raw_overlays):
+                    if not isinstance(ov, dict):
+                        continue
+                    ov_url = str(ov.get("url") or "").strip()
+                    if not ov_url or not is_valid_https_url(ov_url):
+                        continue
+                    ov_ver = str(ov.get("version") or "").strip()
+                    ov_label = str(ov.get("label") or ov_url).strip()
+                    ov_tokens = [
+                        str(t).strip().lower()
+                        for t in (ov.get("target_tokens") or [])
+                        if str(t).strip()
+                    ]
+                    try:
+                        _notify("download", f"추가 패치 확인 중 ({ov_label})...")
+                        ov_res = inspect_remote_mod_page(ov_url, target_mod_name=(ov_label or mod.get("name") or ""))
+                        if not isinstance(ov_res, dict) or ov_res.get("status") != "free_direct":
+                            continue
+                        ov_dl_url = str(ov_res.get("download_url") or "").strip()
+                        if not ov_dl_url:
+                            continue
+                        validate_https_url(ov_dl_url, allow_fragment=True, purpose="후속 패치 오버레이 다운로드")
+                        raw_ov_fn = Path(str(ov_res.get("file_name") or f"overlay_{idx_ov}.package").replace("\\", "/")).name
+                        ov_clean_fn = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "_", raw_ov_fn).strip(" .") or f"overlay_{idx_ov}.package"
+                        bad_ov_ext = inspect_dangerous_extension(ov_clean_fn)
+                        if bad_ov_ext is not None:
+                            raise DangerousFileExtensionError(
+                                f"[보안 차단] 후속 패치에서 위험 확장자('{bad_ov_ext}')가 감지되어 중단했습니다: {ov_clean_fn}"
+                            )
+                        ov_dl_path = tmp_path / f"ov_{idx_ov}_{ov_clean_fn}"
+                        if not is_safe_subpath(ov_dl_path, tmp_path):
+                            raise ZipSlipSecurityError(f"후속 패치 경로 이탈 감지: {ov_clean_fn!r}")
+                        download_file(ov_dl_url, ov_dl_path, page_url=ov_url, target_mod_name=ov_clean_fn)
+                        verify_downloaded_mod_file(
+                            ov_dl_path,
+                            expected_target_name=mod.get("name") or ov_clean_fn,
+                            target_dir=target_dir,
+                            temp_extract_dir=temp_extract_dir,
+                        )
+                        ov_applied = False
+                        if ov_dl_path.suffix.lower() in (".zip", ".rar", ".7z"):
+                            ov_only_names: Optional[set[str]] = None
+                            if ov_dl_path.suffix.lower() == ".zip" and ov_tokens and zipfile.is_zipfile(ov_dl_path):
+                                with zipfile.ZipFile(ov_dl_path, "r") as zov:
+                                    matched_ov_members = {
+                                        Path(nm).name.lower()
+                                        for nm in zov.namelist()
+                                        if any(tok in Path(nm).name.lower() for tok in ov_tokens)
+                                        and Path(nm).suffix.lower() in ALLOWED_MOD_WHITELIST_EXTENSIONS
+                                    }
+                                if matched_ov_members:
+                                    ov_only_names = matched_ov_members
+                            ov_extract_dir = tmp_path / f"extract_ov_{idx_ov}"
+                            ov_ext_paths = extract_zip(
+                                ov_dl_path,
+                                target_dir,
+                                overwrite_mode="all",
+                                temp_work_dir=ov_extract_dir,
+                                known_existing_files=list(dict.fromkeys(known_existing_paths + installed_paths)),
+                                include_subdirs=include_subdirs,
+                                force_include_names=ov_only_names,
+                                only_include_names=ov_only_names,
+                                pre_remove_callback=_backup_if_exists,
+                                selected_file_path=selected_file_path,
+                                mods_root_resolved=mods_root_resolved,
+                                expected_catalog_id="",
+                                protected_paths=[],
+                            )
+                            safe_remove(ov_dl_path)
+                            safe_remove(ov_extract_dir)
+                            for oep in ov_ext_paths:
+                                ov_applied = True
+                                if oep not in installed_paths:
+                                    installed_paths.append(oep)
+                                if oep.name not in installed_names:
+                                    installed_names.append(oep.name)
+                        else:
+                            if not is_whitelisted_mod_file(ov_dl_path, ALLOWED_MOD_WHITELIST_EXTENSIONS):
+                                safe_remove(ov_dl_path)
+                                continue
+                            dest_ov_dir = target_dir
+                            if ov_clean_fn.lower() in existing_names_map:
+                                cand_ov_p = existing_names_map[ov_clean_fn.lower()].parent
+                                if is_safe_subpath(cand_ov_p, target_dir, allow_equal=True):
+                                    dest_ov_dir = cand_ov_p
+                            elif ov_tokens:
+                                for ip_ex in list(installed_paths):
+                                    if ip_ex.exists() and any(tok in ip_ex.name.lower() for tok in ov_tokens):
+                                        if is_safe_subpath(ip_ex.parent, target_dir, allow_equal=True):
+                                            dest_ov_dir = ip_ex.parent
+                                            break
+                            dest_ov = dest_ov_dir / ov_clean_fn
+                            if not is_safe_subpath(dest_ov, target_dir):
+                                raise ZipSlipSecurityError(f"후속 패치 대상 경로 이탈 감지: {ov_clean_fn!r}")
+                            if ov_tokens:
+                                for cand_dir in ({target_dir} | {ip.parent for ip in installed_paths if ip.exists()}):
+                                    if not cand_dir.exists() or not is_safe_subpath(cand_dir, target_dir, allow_equal=True):
+                                        continue
+                                    for old_tok_f in list(cand_dir.iterdir()):
+                                        if (
+                                            old_tok_f.is_file()
+                                            and old_tok_f.suffix.lower() == dest_ov.suffix.lower()
+                                            and any(tok in old_tok_f.name.lower() for tok in ov_tokens)
+                                            and old_tok_f.resolve() != dest_ov.resolve()
+                                        ):
+                                            _backup_if_exists(old_tok_f)
+                                            safe_remove(old_tok_f)
+                                            installed_paths = [p for p in installed_paths if p != old_tok_f]
+                                            installed_names = [n for n in installed_names if n.lower() != old_tok_f.name.lower()]
+                            _backup_if_exists(dest_ov)
+                            safe_remove(dest_ov)
+                            dest_ov.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.move(str(ov_dl_path), str(dest_ov))
+                            ov_applied = True
+                            if dest_ov not in installed_paths:
+                                installed_paths.append(dest_ov)
+                            if dest_ov.name not in installed_names:
+                                installed_names.append(dest_ov.name)
+                        if ov_applied and ov_ver:
+                            update_info = dict(update_info, latest_version=ov_ver)
+                    except (ArchiveSecurityError, NetworkSecurityError):
+                        raise
+                    except Exception:
+                        continue
 
             # 4-1. 새로 설치된 파일과 정규화 키가 일치하는 구버전 파일(예: _v1.972.package -> _v1.98.package) 자동 백업 및 정리
             if installed_paths:

@@ -2085,7 +2085,7 @@ KNOWN_CATALOG = [
         ]
     },
     {
-        "keywords": ["xmlinjector_script.ts4script", "xmlinjector", "xml_injector", "xml injector", "scumbumbo"],
+        "keywords": ["xmlinjector_script.ts4script", "xmlinjector", "xml_injector", "xml injector"],
         "name": "XML Injector",
         "creator": "Scumbumbo",
         "mod_title": "XML Injector",
@@ -3439,6 +3439,933 @@ KNOWN_CATALOG = [
             ("네이버 블로그", "바람별의 심즈 4 네이버 블로그", "https://blog.naver.com/wwwindystar")
         ]
     },
+    # ==========================================================================
+    # WickedWhims 공식 인기 애니메이션 크리에이터 카탈로그
+    # ==========================================================================
+    {
+        "keywords": ["greynaya_ww", "greynaya ww", "greynaya_anim", "greynaya anim", "greynaya_animations", "greynaya animations", "ww_greynaya", "ww greynaya"],
+        "ww_creator_aliases": ["greynaya"],
+        "name": "GreyNaya (WW Animations)",
+        "creator": "GreyNaya",
+        "mod_title": "GreyNaya WW Animations",
+        "is_ww_animation": True,
+        "version": "",
+        "links": [
+            ("Patreon (공식)", "GreyNaya | Patreon", "https://www.patreon.com/greynaya"),
+            ("Wicked.cc (공식)", "WickedWhims Animations | Wicked.cc", "https://wicked.cc/")
+        ]
+    },
+    {
+        "keywords": ["lupobianco_ww", "lupobianco ww", "lupobianco_anim", "lupobianco anim", "lupobianco_animations", "lupobianco animations", "ww_lupobianco", "ww lupobianco"],
+        "ww_creator_aliases": ["lupobianco"],
+        "name": "Lupobianco (WW Animations)",
+        "creator": "Lupobianco",
+        "mod_title": "Lupobianco WW Animations",
+        "is_ww_animation": True,
+        "version": "",
+        "links": [
+            ("Patreon (공식)", "Lupobianco | Patreon", "https://www.patreon.com/lupobianco"),
+            ("Wicked.cc (공식)", "WickedWhims Animations | Wicked.cc", "https://wicked.cc/")
+        ]
+    },
+    {
+        "keywords": ["mike24_ww", "mike24 ww", "mike24_anim", "mike24 anim", "mike24_animations", "mike24 animations", "ww_mike24", "ww mike24"],
+        "ww_creator_aliases": ["mike24"],
+        "name": "Mike24 (WW Animations)",
+        "creator": "Mike24",
+        "mod_title": "Mike24 WW Animations",
+        "is_ww_animation": True,
+        "version": "",
+        "links": [
+            ("Patreon (공식)", "Mike24 | Patreon", "https://www.patreon.com/mike24"),
+            ("Wicked.cc (공식)", "WickedWhims Animations | Wicked.cc", "https://wicked.cc/")
+        ]
+    },
+    {
+        "keywords": ["motherlode_ww", "motherlode ww", "motherlode_anim", "motherlode anim", "motherlode_animations", "motherlode animations", "ww_motherlode", "ww motherlode"],
+        "ww_creator_aliases": ["motherlode"],
+        "name": "Motherlode (WW Animations)",
+        "creator": "Motherlode",
+        "mod_title": "Motherlode WW Animations",
+        "is_ww_animation": True,
+        "version": "",
+        "links": [
+            ("Patreon (공식)", "Motherlode | Patreon", "https://www.patreon.com/motherlode"),
+            ("Wicked.cc (공식)", "WickedWhims Animations | Wicked.cc", "https://wicked.cc/")
+        ]
+    },
+    {
+        "keywords": ["oolala_ww", "oolala ww", "oolala_anim", "oolala anim", "oolala_animations", "oolala animations", "oolalaworld", "ww_oolala", "ww oolala"],
+        "ww_creator_aliases": ["oolala", "oolalaworld"],
+        "name": "OOLALA (WW Animations)",
+        "creator": "OOLALA",
+        "mod_title": "OOLALA WW Animations",
+        "is_ww_animation": True,
+        "version": "",
+        "links": [
+            ("Patreon (공식)", "OOLALAWORLD | Patreon", "https://www.patreon.com/oolalaworld"),
+            ("Wicked.cc (공식)", "WickedWhims Animations | Wicked.cc", "https://wicked.cc/")
+        ]
+    },
+    {
+        "keywords": ["wildguy_ww", "wildguy ww", "wildguy_anim", "wildguy anim", "wildguy_animations", "wildguy animations", "ww_wildguy", "ww wildguy"],
+        "ww_creator_aliases": ["wildguy"],
+        "name": "WildGuy (WW Animations)",
+        "creator": "WildGuy",
+        "mod_title": "WildGuy WW Animations",
+        "is_ww_animation": True,
+        "version": "",
+        "links": [
+            ("Patreon (공식)", "WildGuy | Patreon", "https://www.patreon.com/wild_guy"),
+            ("Wicked.cc (공식)", "WickedWhims Animations | Wicked.cc", "https://wicked.cc/")
+        ]
+    },
+    {
+        "keywords": ["yrsa_ww", "yrsa ww", "yrsa_anim", "yrsa anim", "yrsa_animations", "yrsa animations", "ww_yrsa", "ww yrsa"],
+        "ww_creator_aliases": ["yrsa"],
+        "name": "Yrsa (WW Animations)",
+        "creator": "Yrsa",
+        "mod_title": "Yrsa WW Animations",
+        "is_ww_animation": True,
+        "version": "",
+        "links": [
+            ("Patreon (공식)", "Yrsa | Patreon", "https://www.patreon.com/yrsa_sims"),
+            ("Wicked.cc (공식)", "WickedWhims Animations | Wicked.cc", "https://wicked.cc/")
+        ]
+    },
+    {
+        "keywords": ["noirdarksims_ww", "noirdarksims ww", "noirdarksims_anim", "noirdarksims anim", "noirdarksims_animations", "noirdarksims animations", "ww_noirdarksims", "ww noirdarksims"],
+        "ww_creator_aliases": ["noirdarksims"],
+        "name": "NoirDarkSims (WW Animations)",
+        "creator": "NoirDarkSims",
+        "mod_title": "NoirDarkSims WW Animations",
+        "is_ww_animation": True,
+        "version": "",
+        "links": [
+            ("Patreon (공식)", "NoirDarkSims | Patreon", "https://www.patreon.com/noirdarksims"),
+            ("Wicked.cc (공식)", "WickedWhims Animations | Wicked.cc", "https://wicked.cc/")
+        ]
+    },
+    {
+        "keywords": ["zorak_ww", "zorak ww", "zorak_anim", "zorak anim", "zorak_animations", "zorak animations", "ww_zorak", "ww zorak"],
+        "ww_creator_aliases": ["zorak"],
+        "name": "Zorak (WW Animations)",
+        "creator": "Zorak",
+        "mod_title": "Zorak WW Animations",
+        "is_ww_animation": True,
+        "version": "",
+        "links": [
+            ("Patreon (공식)", "Zorak | Patreon", "https://www.patreon.com/Zorak_"),
+            ("Wicked.cc (공식)", "WickedWhims Animations | Wicked.cc", "https://wicked.cc/")
+        ]
+    },
+    {
+        "keywords": ["khlas_ww", "khlas ww", "khlas_anim", "khlas anim", "khlas_animations", "khlas animations", "ww_khlas", "ww khlas"],
+        "ww_creator_aliases": ["khlas"],
+        "name": "Khlas (WW Animations)",
+        "creator": "Khlas",
+        "mod_title": "Khlas WW Animations",
+        "is_ww_animation": True,
+        "version": "",
+        "links": [
+            ("Patreon (공식)", "Khlas | Patreon", "https://www.patreon.com/khlas"),
+            ("Wicked.cc (공식)", "WickedWhims Animations | Wicked.cc", "https://wicked.cc/")
+        ]
+    },
+    {
+        "keywords": ["cherrypie_ww", "cherrypie ww", "cherrypie_anim", "cherrypie anim", "cherrypie_animations", "cherrypie animations", "ww_cherrypie", "ww cherrypie"],
+        "ww_creator_aliases": ["cherrypie"],
+        "name": "CherryPie (WW Animations)",
+        "creator": "CherryPie",
+        "mod_title": "CherryPie WW Animations",
+        "is_ww_animation": True,
+        "version": "",
+        "links": [
+            ("Patreon (공식)", "CherryPie | Patreon", "https://www.patreon.com/CherryPie1"),
+            ("Wicked.cc (공식)", "WickedWhims Animations | Wicked.cc", "https://wicked.cc/")
+        ]
+    },
+    {
+        "keywords": ["mia_ww", "mia ww", "mia_anim", "mia anim", "mia_animations", "mia animations", "ww_mia", "ww mia"],
+        "ww_creator_aliases": ["mia"],
+        "name": "Mia (WW Animations)",
+        "creator": "Mia",
+        "mod_title": "Mia WW Animations",
+        "is_ww_animation": True,
+        "version": "",
+        "links": [
+            ("Patreon (공식)", "Mia | Patreon", "https://www.patreon.com/miasimss"),
+            ("Wicked.cc (공식)", "WickedWhims Animations | Wicked.cc", "https://wicked.cc/")
+        ]
+    },
+    {
+        "keywords": ["belo_ww", "belo ww", "belo_anim", "belo anim", "belo_animations", "belo animations", "ww_belo", "ww belo"],
+        "ww_creator_aliases": ["belo"],
+        "name": "Belo (WW Animations)",
+        "creator": "Belo",
+        "mod_title": "Belo WW Animations",
+        "is_ww_animation": True,
+        "version": "",
+        "links": [
+            ("Patreon (공식)", "Belo | Patreon", "https://www.patreon.com/Belo_"),
+            ("Wicked.cc (공식)", "WickedWhims Animations | Wicked.cc", "https://wicked.cc/")
+        ]
+    },
+    {
+        "keywords": [
+            "ww_0nizu_animations.package",
+            "ww_0nizu_group_animations.package",
+            "ww_0nizu_specialgift_animations.package",
+            "ww_0nizu_animations",
+            "ww_0nizu_group_animations",
+            "ww_0nizu_specialgift_animations",
+            "ww_0nizu",
+            "0nizu_animations",
+            "0nizu animations",
+            "0nizu-animations-for-wickedwhims",
+            "ww animation - 0nizu",
+        ],
+        "ww_creator_aliases": ["0nizu"],
+        "name": "WW Animation - 0nizu",
+        "creator": "0nizu",
+        "mod_title": "WW Animation - 0nizu",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "2026.10.11",
+        "requires_option_modal": True,
+        "option_modal_mode": "multi_file_select",
+        "option_modal_prompt": "다운로드 방식을 선택해 주세요. ('전체 다운로드' 시 3개 모두 설치 / '선택 다운로드' 시 원하는 파일만 다중 선택)",
+        "option_presets": [
+            {
+                "file_name": "download_mode:all",
+                "mode": "all",
+                "label": "전체 다운로드 (3개 파일 모두 다운로드)",
+                "description": "WW_0nizu_Animations, WW_0nizu_Group_Animations, WW_0nizu_SpecialGift_Animations 3개를 모두 다운로드합니다.",
+            },
+            {
+                "file_name": "download_mode:select",
+                "mode": "select",
+                "label": "선택 다운로드 (원하는 파일 다중 선택)",
+                "description": "아래 3개 애니메이션 파일 중 원하는 항목을 여러 개 선택해 다운로드합니다.",
+            },
+        ],
+        "optional_addons": [
+            {
+                "file_name": "WW_0nizu_Animations.package",
+                "label": "WW_0nizu_Animations",
+            },
+            {
+                "file_name": "WW_0nizu_Group_Animations.package",
+                "label": "WW_0nizu_Group_Animations",
+            },
+            {
+                "file_name": "WW_0nizu_SpecialGift_Animations.package",
+                "label": "WW_0nizu_SpecialGift_Animations",
+            },
+        ],
+        "links": [
+            (
+                "Wicked.cc (공식)",
+                "0nizu Animations for WickedWhims - WickedCC",
+                "https://wicked.cc/animations/0nizu/0nizu-animations-for-wickedwhims/",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "ww_0zzzy_animation.package",
+            "ww_0zzzy_animation.zip",
+            "ww_0zzzy_animation",
+            "ww_0zzzy_animations",
+            "ww_0zzzy",
+            "0zzzy_animation",
+            "0zzzy_animations",
+            "0zzzy animations",
+            "11365-sims4-0zzzy-animations",
+            "ww animation - 0zzzy",
+        ],
+        "ww_creator_aliases": ["0zzzy"],
+        "name": "WW Animation - 0zzzy",
+        "creator": "0zzzy",
+        "mod_title": "WW Animation - 0zzzy",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "1.0.6",
+        "links": [
+            (
+                "LoversLab (공식)",
+                "[SIMS4] 0zzzy Animations | 0zzzy",
+                "https://www.loverslab.com/files/file/11365-sims4-0zzzy-animations/",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "adakasay_ww_animations_tot.package",
+            "adakasay_ww_animations_ll_.package",
+            "adakasay_ww_animations_ll_p2.package",
+            "adakasay_ww_animations_strapon.package",
+            "adakasay_ww_animations_tot",
+            "adakasay_ww_animations_ll_",
+            "adakasay_ww_animations_ll_p2",
+            "adakasay_ww_animations_strapon",
+            "adakasay_ww_animations",
+            "adakasay_ww",
+            "adakasay",
+            "34506-adakasays-wickedwhims-animations",
+            "ww animation - adakasay",
+        ],
+        "ww_creator_aliases": ["adakasay"],
+        "name": "WW Animation - Adakasay",
+        "creator": "Adakasay",
+        "mod_title": "WW Animation - Adakasay",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "2026.11.04",
+        "requires_option_modal": True,
+        "option_modal_mode": "multi_file_select",
+        "option_modal_prompt": "다운로드 방식을 선택해 주세요. ('전체 다운로드' 시 4개 모두 설치 / '선택 다운로드' 시 원하는 파일만 다중 선택)",
+        "option_presets": [
+            {
+                "file_name": "download_mode:all",
+                "mode": "all",
+                "label": "전체 다운로드 (4개 파일 모두 다운로드)",
+                "description": "ADAkASAY_WW_animations_TOT, ADAkASAY_WW_animations_LL_, ADAkASAY_WW_animations_LL_p2, ADAkASAY_WW_animations_STRAPON 4개를 모두 다운로드합니다.",
+            },
+            {
+                "file_name": "download_mode:select",
+                "mode": "select",
+                "label": "선택 다운로드 (원하는 파일 다중 선택)",
+                "description": "아래 4개 애니메이션 파일 중 원하는 항목을 여러 개 선택해 다운로드합니다.",
+            },
+        ],
+        "optional_addons": [
+            {
+                "file_name": "ADAkASAY_WW_animations_TOT.package",
+                "label": "ADAkASAY_WW_animations_TOT",
+            },
+            {
+                "file_name": "ADAkASAY_WW_animations_LL_.package",
+                "label": "ADAkASAY_WW_animations_LL_",
+            },
+            {
+                "file_name": "ADAkASAY_WW_animations_LL_p2.package",
+                "label": "ADAkASAY_WW_animations_LL_p2",
+            },
+            {
+                "file_name": "ADAkASAY_WW_animations_STRAPON.package",
+                "label": "ADAkASAY_WW_animations_STRAPON",
+            },
+        ],
+        "links": [
+            (
+                "LoversLab (공식)",
+                "ADAKASAY's WickedWhims Animations - Update November 4th | Adakasay",
+                "https://www.loverslab.com/files/file/34506-adakasays-wickedwhims-animations-%E2%80%8B%E2%80%8B-update-november-4th/",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "ww_aftermathdna_animations.package",
+            "ww_aftermathdna_animations.zip",
+            "ww_aftermathdna_animations",
+            "ww_aftermathdna_animation",
+            "ww_aftermathdna",
+            "aftermathdna_animations",
+            "aftermathdna_animation",
+            "aftermathdna animations",
+            "aftermathdna",
+            "35783-the-sims-4-aftermathdnas-animations-for-wicked-whims",
+            "ww animation - aftermathdna",
+        ],
+        "ww_creator_aliases": ["aftermathdna"],
+        "name": "WW Animation - AftermathDNA",
+        "creator": "AftermathDNA",
+        "mod_title": "WW Animation - AftermathDNA",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "1.0.13",
+        "links": [
+            (
+                "LoversLab (공식)",
+                "The Sims 4: AftermathDNA's Animations for Wicked Whims | AftermathDNA",
+                "https://www.loverslab.com/files/file/35783-the-sims-4-aftermathdnas-animations-for-wicked-whims/",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "ww_alchemistanimations.package",
+            "ww_alchemistanimations_femdom.package",
+            "ww_alchemistanimations_cuckold.package",
+            "ww_alchemistanimations_femdom",
+            "ww_alchemistanimations_cuckold",
+            "ww_alchemistanimations",
+            "ww_alchemist",
+            "alchemistanimations",
+            "alchemist_animations",
+            "alchemist animations",
+            "alchemists-animations",
+            "ww animation - alchemist",
+        ],
+        "ww_creator_aliases": ["alchemist"],
+        "name": "WW Animation - Alchemist",
+        "creator": "Alchemist",
+        "mod_title": "WW Animation - Alchemist",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "2026.11.25",
+        "requires_option_modal": True,
+        "option_modal_mode": "multi_file_select",
+        "option_modal_prompt": "다운로드 방식을 선택해 주세요. ('전체 다운로드' 시 3개 모두 설치 / '선택 다운로드' 시 원하는 파일만 다중 선택)",
+        "option_presets": [
+            {
+                "file_name": "download_mode:all",
+                "mode": "all",
+                "label": "전체 다운로드 (3개 파일 모두 다운로드)",
+                "description": "WW_AlchemistAnimations, WW_AlchemistAnimations_Femdom, WW_AlchemistAnimations_Cuckold 3개를 모두 다운로드합니다.",
+            },
+            {
+                "file_name": "download_mode:select",
+                "mode": "select",
+                "label": "선택 다운로드 (원하는 파일 다중 선택)",
+                "description": "아래 3개 애니메이션 파일 중 원하는 항목을 여러 개 선택해 다운로드합니다.",
+            },
+        ],
+        "optional_addons": [
+            {
+                "file_name": "WW_AlchemistAnimations.package",
+                "label": "WW_AlchemistAnimations",
+            },
+            {
+                "file_name": "WW_AlchemistAnimations_Femdom.package",
+                "label": "WW_AlchemistAnimations_Femdom",
+            },
+            {
+                "file_name": "WW_AlchemistAnimations_Cuckold.package",
+                "label": "WW_AlchemistAnimations_Cuckold",
+            },
+        ],
+        "links": [
+            (
+                "LoversLab (공식)",
+                "⛧ Alchemist's Animations ⛧ (With Sound Effects) | Alchemist",
+                "https://www.loverslab.com/files/file/30558-%E2%9B%A7-alchemists-animations-%E2%9B%A7-with-sound-effects/",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "amateurhour47.package",
+            "amateurhour47.zip",
+            "ww_amateurhour47.package",
+            "ww_amateurhour47",
+            "amateurhour47_animations",
+            "amateurhour47 animations",
+            "amateurhour47s-thighjob-animations",
+            "amateurhour47",
+            "ww animation - amateurhour47",
+        ],
+        "ww_creator_aliases": ["amateurhour47"],
+        "name": "WW Animation - AmateurHour47",
+        "creator": "AmateurHour47",
+        "mod_title": "WW Animation - AmateurHour47",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "2024.04.20",
+        "links": [
+            (
+                "LoversLab (공식)",
+                "AmateurHour47's Thighjob Animations (Custom SFX ⧖) | AmateurHour47",
+                "https://www.loverslab.com/files/file/31633-amateurhour47s-thighjob-animations-custom-sfx-%E2%A7%96/",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "climax_missionario.package",
+            "oral_otesouro.package",
+            "preliminar_amorzinho.package",
+            "vaginal_abraco.package",
+            "vaginal_borboleta.package",
+            "vaginal_cavalgada.package",
+            "vaginal_cavalgadasentado.package",
+            "vaginal_deladinho.package",
+            "vaginal_dequatro.package",
+            "vaginal_dequatro2.package",
+            "vaginal_farao.package",
+            "vaginal_pousoforcado.package",
+            "vaginal_t_invertido.package",
+            "vaginal_t_invertido2.package",
+            "climax_missionario",
+            "oral_otesouro",
+            "preliminar_amorzinho",
+            "vaginal_abraco",
+            "vaginal_borboleta",
+            "vaginal_cavalgada",
+            "vaginal_cavalgadasentado",
+            "vaginal_deladinho",
+            "vaginal_dequatro",
+            "vaginal_dequatro2",
+            "vaginal_farao",
+            "vaginal_pousoforcado",
+            "vaginal_t_invertido",
+            "vaginal_t_invertido2",
+            "amorzinho",
+            "15118-teste-amorzinho",
+            "teste-amorzinho",
+            "ww_amorzinho",
+            "ww animation - amorzinho",
+        ],
+        "ww_creator_aliases": ["amorzinho"],
+        "name": "WW Animation - amorzinho",
+        "creator": "amorzinho",
+        "mod_title": "WW Animation - amorzinho",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "1.0.0",
+        "requires_option_modal": True,
+        "option_modal_mode": "multi_file_select",
+        "option_modal_prompt": "다운로드 방식을 선택해 주세요. ('전체 다운로드' 시 14개 모두 설치 / '선택 다운로드' 시 원하는 파일만 다중 선택)",
+        "option_presets": [
+            {
+                "file_name": "download_mode:all",
+                "mode": "all",
+                "label": "전체 다운로드 (14개 파일 모두 다운로드)",
+                "description": "amorzinho WW 애니메이션 패키지 14개 파일을 모두 다운로드합니다.",
+            },
+            {
+                "file_name": "download_mode:select",
+                "mode": "select",
+                "label": "선택 다운로드 (원하는 파일 다중 선택)",
+                "description": "아래 14개 애니메이션 파일 중 원하는 항목을 여러 개 선택해 다운로드합니다.",
+            },
+        ],
+        "optional_addons": [
+            {"file_name": "climax_missionario.package", "label": "climax_missionario"},
+            {"file_name": "oral_otesouro.package", "label": "oral_otesouro"},
+            {"file_name": "preliminar_amorzinho.package", "label": "preliminar_amorzinho"},
+            {"file_name": "vaginal_abraco.package", "label": "vaginal_abraco"},
+            {"file_name": "vaginal_borboleta.package", "label": "vaginal_borboleta"},
+            {"file_name": "vaginal_cavalgada.package", "label": "vaginal_cavalgada"},
+            {"file_name": "Vaginal_CavalgadaSentado.package", "label": "Vaginal_CavalgadaSentado"},
+            {"file_name": "Vaginal_DeLadinho.package", "label": "Vaginal_DeLadinho"},
+            {"file_name": "Vaginal_DeQuatro.package", "label": "Vaginal_DeQuatro"},
+            {"file_name": "Vaginal_DeQuatro2.package", "label": "Vaginal_DeQuatro2"},
+            {"file_name": "Vaginal_Farao.package", "label": "Vaginal_Farao"},
+            {"file_name": "Vaginal_PousoForcado.package", "label": "Vaginal_PousoForcado"},
+            {"file_name": "Vaginal_T_Invertido.package", "label": "Vaginal_T_Invertido"},
+            {"file_name": "Vaginal_T_Invertido2.package", "label": "Vaginal_T_Invertido2"},
+        ],
+        "links": [
+            (
+                "LoversLab (공식)",
+                "Teste Amorzinho | amorzinho",
+                "https://www.loverslab.com/files/file/15118-teste-amorzinho/",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "ww_amra72_animations.package",
+            "ww_amra72_animations_ap.package",
+            "ww_amra72_custom_sounds.package",
+            "ww_amra72_animations_update_(12.04.2023).zip",
+            "ww_amra72_animations_ap",
+            "ww_amra72_custom_sounds",
+            "ww_amra72_animations",
+            "ww_amra72",
+            "amra72_animations",
+            "amra72 animations",
+            "3140-wip-amra72s-sex-animation-for-wickedwhims",
+            "amra72",
+            "ww animation - amra72",
+        ],
+        "ww_creator_aliases": ["amra72"],
+        "name": "WW Animation - Amra72",
+        "creator": "Amra72",
+        "mod_title": "WW Animation - Amra72",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "2023.04.12",
+        "preferred_archive_name": "WW_Amra72_Animations_Update_(12.04.2023).zip",
+        "requires_option_modal": True,
+        "option_modal_mode": "multi_file_select",
+        "option_modal_prompt": "다운로드 방식을 선택해 주세요. ('전체 다운로드' 시 ZIP 내 3개 모두 설치 / '선택 다운로드' 시 원하는 파일만 다중 선택)",
+        "option_presets": [
+            {
+                "file_name": "download_mode:all",
+                "mode": "all",
+                "label": "전체 다운로드 (3개 파일 모두 다운로드)",
+                "description": "WW_Amra72_Animations_Update_(12.04.2023).zip 내부 3개 파일(WW_Amra72_Animations, WW_Amra72_Animations_AP, WW_Amra72_Custom_Sounds)을 모두 다운로드합니다.",
+            },
+            {
+                "file_name": "download_mode:select",
+                "mode": "select",
+                "label": "선택 다운로드 (원하는 파일 다중 선택)",
+                "description": "ZIP 압축 파일 내 3개 파일 중 원하는 항목만 여러 개 선택해 다운로드합니다.",
+            },
+        ],
+        "optional_addons": [
+            {"file_name": "WW_Amra72_Animations.package", "label": "WW_Amra72_Animations"},
+            {"file_name": "WW_Amra72_Animations_AP.package", "label": "WW_Amra72_Animations_AP"},
+            {"file_name": "WW_Amra72_Custom_Sounds.package", "label": "WW_Amra72_Custom_Sounds"},
+        ],
+        "links": [
+            (
+                "LoversLab (공식)",
+                "[WIP] Amra72's Sex Animation for WickedWhims | Amra72",
+                "https://www.loverslab.com/files/file/3140-wip-amra72s-sex-animation-for-wickedwhims/",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "anarcis_ww",
+            "anarcis ww",
+            "anarcis_anim",
+            "anarcis anim",
+            "anarcis_animations",
+            "anarcis animations",
+            "ww_anarcis",
+            "ww anarcis",
+            "anarcis-animations-for-wickedwhims",
+            "ww animation - anarcis",
+        ],
+        "ww_creator_aliases": ["anarcis"],
+        "name": "WW Animation - Anarcis",
+        "creator": "Anarcis",
+        "mod_title": "WW Animation - Anarcis",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "2026.11.27",
+        "links": [
+            (
+                "Wicked.cc (공식)",
+                "Anarcis Animations for WickedWhims - WickedCC",
+                "https://wicked.cc/animations/anarcis/anarcis-animations-for-wickedwhims/",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "ww_anonny_animations.package",
+            "ww_anonny_animations.zip",
+            "ww_anonny_animations",
+            "ww_anonny_animation",
+            "ww_anonny",
+            "anonny_ww",
+            "anonny ww",
+            "anonny_anim",
+            "anonny anim",
+            "anonny_animations",
+            "anonny animations",
+            "3639-sims-4-anonnys-sex-animations-for-wickedwhims",
+            "ww animation - anonny",
+        ],
+        "ww_creator_aliases": ["anonny"],
+        "name": "WW Animation - Anonny",
+        "creator": "Anonny",
+        "mod_title": "WW Animation - Anonny",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "1.7",
+        "links": [
+            (
+                "LoversLab (공식)",
+                "[Sims 4] Anonny's Sex Animations for WickedWhims | Anonny",
+                "https://www.loverslab.com/files/file/3639-sims-4-anonnys-sex-animations-for-wickedwhims/",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "ww_artistadebastardo_animations.package",
+            "ww_artistadebastardo_animations.zip",
+            "ww_artistadebastardo_animations",
+            "ww_artistadebastardo",
+            "artistadebastardo_ww",
+            "artistadebastardo ww",
+            "artistadebastardo_anim",
+            "artistadebastardo anim",
+            "artistadebastardo_animations",
+            "artistadebastardo animations",
+            "artistadebastardo",
+            "ww animation - artistadebastardo",
+        ],
+        "ww_creator_aliases": ["artistadebastardo"],
+        "name": "WW Animation - ArtistadeBastardo",
+        "creator": "ArtistadeBastardo",
+        "mod_title": "WW Animation - ArtistadeBastardo",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "1.2.0",
+        "links": [
+            (
+                "ModsFire (공식)",
+                "ArtistadeBastardo WW Animations | ModsFire",
+                "https://modsfire.com/S4eaS0B7TRa37dP",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "ww_artmiel_animations.package",
+            "ww_artmiel_animations.zip",
+            "ww_artmiel_animations",
+            "ww_artmiel",
+            "artmiel_ww",
+            "artmiel ww",
+            "artmiel_anim",
+            "artmiel anim",
+            "artmiel_animations",
+            "artmiel animations",
+            "artmiel",
+            "ww animation - artmiel",
+        ],
+        "ww_creator_aliases": ["artmiel"],
+        "name": "WW Animation - Artmiel",
+        "creator": "Artmiel",
+        "mod_title": "WW Animation - Artmiel",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "5.5",
+        "links": [
+            (
+                "ModsFire (공식)",
+                "Artmiel WW Animations | ModsFire",
+                "https://modsfire.com/vui05Fs8Cf6jE5J",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "ww_asketo_animations.package",
+            "ww_asketo_animations.zip",
+            "ww_asketo_animations",
+            "ww_asketo",
+            "asketo_ww",
+            "asketo ww",
+            "asketo_anim",
+            "asketo anim",
+            "asketo_animations",
+            "asketo animations",
+            "9127-asketos-animations-for-whickedwhims-and-some-objects-for-ts4",
+            "asketo",
+            "ww animation - asketo",
+        ],
+        "ww_creator_aliases": ["asketo"],
+        "name": "WW Animation - asketo",
+        "creator": "asketo",
+        "mod_title": "WW Animation - asketo",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "2020.09.18",
+        "links": [
+            (
+                "LoversLab (공식)",
+                "asketo's animations for WhickedWhims and some objects for TS4 | asketo",
+                "https://www.loverslab.com/files/file/9127-asketos-animations-for-whickedwhims-and-some-objects-for-ts4/",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "ww_aske_animations.package",
+            "ww_aske_animations.zip",
+            "ww_aske_animations",
+            "ww_aske",
+            "aske_ww",
+            "aske ww",
+            "aske_anim",
+            "aske anim",
+            "aske_animations",
+            "aske animations",
+            "8766-aske-sex-animations-070319",
+            "aske-sex-animations",
+            "ww animation - aske",
+        ],
+        "ww_creator_aliases": ["aske"],
+        "name": "WW Animation - ASKE",
+        "creator": "ASKE",
+        "mod_title": "WW Animation - ASKE",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "1.4",
+        "links": [
+            (
+                "LoversLab (공식)",
+                "ASKE Sex Animations (07.03.19) | ASKE",
+                "https://www.loverslab.com/files/file/8766-aske-sex-animations-070319/",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "ww_atrois_animations.package",
+            "ww_atrois_animations.zip",
+            "ww_atrois_animations",
+            "ww_atrois",
+            "atrois_ww",
+            "atrois ww",
+            "atrois_anim",
+            "atrois anim",
+            "atrois_animations",
+            "atrois animations",
+            "a-trois",
+            "4697-sims-4-a-trois-sex-animations-for-ww-0806-ll-and-patreon",
+            "atrois",
+            "ww animation - atrois",
+        ],
+        "ww_creator_aliases": ["atrois", "a-trois", "a trois"],
+        "name": "WW Animation - ATrois",
+        "creator": "ATrois",
+        "mod_title": "WW Animation - ATrois",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "2026.08.06",
+        "preferred_archive_name": "1010.rar",
+        "links": [
+            (
+                "LoversLab (공식)",
+                "[Sims 4] A-Trois Sex Animations for WW 08.06 (LL and Patreon) | ATrois",
+                "https://www.loverslab.com/files/file/4697-sims-4-a-trois-sex-animations-for-ww-0806-ll-and-patreon/",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "ww_awsome_animations.package",
+            "ww_awsome_animations.zip",
+            "ww_awsome_animations",
+            "ww_awsome",
+            "awsomeanimation",
+            "awsome_ww",
+            "awsome ww",
+            "awsome_anim",
+            "awsome anim",
+            "awsome_animations",
+            "awsome animations",
+            "awsome1",
+            "ww animation - awsome",
+        ],
+        "ww_creator_aliases": ["awsome", "awsome1"],
+        "name": "WW Animation - AWSOME",
+        "creator": "AWSOME",
+        "mod_title": "WW Animation - AWSOME",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "2026.11.22",
+        "links": [
+            (
+                "Patreon (공식)",
+                "AWSOME Animation | Patreon",
+                "https://www.patreon.com/awsome1/posts/awsomeanimation-161337996",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "ww_ayone_animations.package",
+            "ww_ayone_animations.zip",
+            "ww_ayone_animations",
+            "ww_ayone",
+            "ayone_ww",
+            "ayone ww",
+            "ayone_anim",
+            "ayone anim",
+            "ayone_animations",
+            "ayone animations",
+            "ayone",
+            "ww animation - ayone",
+        ],
+        "ww_creator_aliases": ["ayone"],
+        "name": "WW Animation - AYONE",
+        "creator": "AYONE",
+        "mod_title": "WW Animation - AYONE",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "2025.01.11",
+        "links": [
+            (
+                "Kemono (공식)",
+                "AYONE WW Animations | Kemono",
+                "https://kemono.cr/patreon/user/64723804/post/114430931",
+            )
+        ],
+    },
+    {
+        "keywords": [
+            "azmodan22_ww",
+            "azmodan22 ww",
+            "azmodan22_anim",
+            "azmodan22 anim",
+            "azmodan22_animations",
+            "azmodan22 animations",
+            "ww_azmodan22",
+            "ww azmodan22",
+            "azmodan22-wickedwhims-sex-animations",
+            "ww animation - azmodan22",
+        ],
+        "ww_creator_aliases": ["azmodan22"],
+        "name": "WW Animation - Azmodan22",
+        "creator": "Azmodan22",
+        "mod_title": "WW Animation - Azmodan22",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "2025.02.05",
+        "post_install_overlays": [
+            {
+                "label": "Gold_Normal (2025.02.05)",
+                "url": "https://modsfire.com/dy5R4F25s834UeD",
+                "version": "2025.02.05",
+                "target_tokens": ["gold_normal", "gold normal"],
+            }
+        ],
+        "links": [
+            (
+                "Wicked.cc (공식 · 2024.12.20 기본팩)",
+                "Azmodan22 WickedWhims Sex Animations - WickedCC",
+                "https://wicked.cc/animations/azmodan22/azmodan22-wickedwhims-sex-animations",
+            ),
+            (
+                "ModsFire (공식 · Gold_Normal 2025.02.05)",
+                "Azmodan22 Gold_Normal (2025.02.05) | ModsFire",
+                "https://modsfire.com/dy5R4F25s834UeD",
+            ),
+        ],
+    },
+    {
+        "keywords": [
+            "ww_404dyma_animations.package",
+            "ww_404dyma_animations.zip",
+            "ww_404dyma_animations",
+            "ww_404dyma",
+            "404dyma_ww",
+            "404dyma ww",
+            "404dyma_anim",
+            "404dyma anim",
+            "404dyma_animations",
+            "404dyma animations",
+            "404dyma",
+            "ww animation - 404dyma",
+        ],
+        "ww_creator_aliases": ["404dyma"],
+        "name": "WW Animation - 404Dyma",
+        "creator": "404Dyma",
+        "mod_title": "WW Animation - 404Dyma",
+        "override_mod_title": True,
+        "is_ww_animation": True,
+        "version": "1.0.0",
+        "links": [
+            (
+                "ModsFire (공식)",
+                "404Dyma WW Animations | ModsFire",
+                "https://modsfire.com/Bky46TOd7C9vc8L",
+            )
+        ],
+    },
 ]
 
 # 신뢰할 수 있는 심즈 4 배포 도메인 목록
@@ -3448,6 +4375,7 @@ RELIABLE_DOMAINS = [
     ("itch.io", "Itch.io"),
     ("modthesims.info", "ModTheSims"),
     ("simfileshare.net", "SimFileShare"),
+    ("modsfire.com", "ModsFire"),
     ("tumblr.com", "Tumblr"),
     ("postype.com", "포스타입 (Postype)"),
     ("blog.naver.com", "네이버 블로그 참고 (무료)"),
@@ -3455,7 +4383,9 @@ RELIABLE_DOMAINS = [
     ("drive.google.com", "Google Drive"),
     ("scumbumbomods.com", "Scumbumbo Mods"),
     ("wicked.cc", "Wicked.cc"),
+    ("wickedwhimsmod.com", "WickedWhims Official"),
     ("loverslab.com", "LoversLab"),
+    ("kemono.cr", "Kemono"),
     ("deaderpool-mccc.com", "Deaderpool MCCC"),
     ("sims4ai.virtualconscious.com", "Sims 4 AI Official"),
     ("s4m-byok.prmptplus.chatgpt.site", "S4m AI Chat BYOK Official"),
@@ -3879,6 +4809,29 @@ def _extract_from_single_ts4script(path: Path) -> Dict[str, Any]:
     return info
 
 
+_DBPF_CC_RESOURCE_TYPES = {
+    0x034AEECB,  # CASP (CAS Part: 헤어/의상/스킨/악세사리/바디 파츠)
+    0x015A1849,  # GEOM (3D Sim 메쉬)
+    0x01661233,  # MODL / MLOD (오브젝트 3D 메쉬)
+    0xC0DB5AE7,  # OBJD (건축/구매 오브젝트 정의)
+    0x319E4F1D,  # COBJ (카탈로그 오브젝트)
+    0xD5F0F921,  # CWAL (벽지)
+    0xB4F762C9,  # CFLR (바닥재)
+    0x0354796A,  # TONE (스킨톤)
+    0x0355E0A6,  # BOND (슬라이더/본 변형)
+    0x025ED6F4,  # SIMO (심 모디파이어/프리셋)
+    0xDB43E069,  # DMap (디폼 맵/슬라이더)
+    0x6B20C4F3,  # CLIP (애니메이션/포즈 클립)
+}
+_DBPF_DATA_OR_GFX_TYPES = {
+    0x545AC67A,  # DATA (SimData 바이너리 튜닝)
+    0x62ECC59A,  # GFX (Scaleform UI 리소스)
+    0x2E75C764,  # GFX 보조 리소스
+    0x376840D7,  # GFX 이미지/폰트 리소스
+}
+_DBPF_STBL_TYPE = 0x220557DA  # STBL (문자열 번역 테이블)
+
+
 def _extract_from_single_package(path: Path) -> Dict[str, Any]:
     """단일 .package (DBPF 2.1 바이너리) 내부의 XML Tuning 및 ModFileManifest 리소스를 분석합니다."""
     info: Dict[str, Any] = {
@@ -3889,11 +4842,20 @@ def _extract_from_single_package(path: Path) -> Dict[str, Any]:
         "root_tunings": [],
         "version": "",
         "is_ww_addon": False,
+        "is_ww_cas_addon": False,
+        "is_ww_animation": False,
+        "is_pose_pack": False,
+        "has_gameplay_xml": False,
+        "has_data_or_gfx_resource": False,
+        "has_stbl_resource": False,
+        "has_cc_mesh_or_casp_resource": False,
     }
     if not path.exists() or not path.is_file():
         return info
 
     try:
+        pkg_name_low = path.name.lower()
+        is_xml_injector_pkg = ("xml" in pkg_name_low and "injector" in pkg_name_low)
         with open(path, "rb") as fp:
             header = fp.read(96)
             if len(header) < 96 or header[:4] != b"DBPF":
@@ -3910,20 +4872,29 @@ def _extract_from_single_package(path: Path) -> Dict[str, Any]:
                 return info
 
             flags = struct.unpack_from("<I", idx_data, 0)[0]
+            const_type = struct.unpack_from("<I", idx_data, 4)[0] if (flags & 1) else None
             pos = 4 + sum(4 for b in range(3) if flags & (1 << b))
             entry_size = sum(4 for b in range(3) if not (flags & (1 << b))) + 20
 
-            # 최대 100개의 리소스 엔트리를 빠르게 검사 (대용량 메쉬/텍스처는 건너뜀)
+            # 최대 250개의 리소스 엔트리를 빠르게 검사 (대용량 메쉬/텍스처 본문은 건너뜀)
             inspected_xml = 0
             for _ in range(min(idx_count, 250)):
-                if pos + entry_size > len(idx_data) or inspected_xml >= 60:
+                if pos + entry_size > len(idx_data):
                     break
+                res_type = const_type if const_type is not None else struct.unpack_from("<I", idx_data, pos)[0]
+                if res_type in _DBPF_CC_RESOURCE_TYPES:
+                    info["has_cc_mesh_or_casp_resource"] = True
+                elif res_type in _DBPF_DATA_OR_GFX_TYPES:
+                    info["has_data_or_gfx_resource"] = True
+                elif res_type == _DBPF_STBL_TYPE:
+                    info["has_stbl_resource"] = True
+
                 vals = struct.unpack_from("<5I", idx_data, pos + entry_size - 20)
                 offset, fsize_raw = vals[1], vals[2]
                 fsize = fsize_raw & 0x7FFFFFFF
                 pos += entry_size
 
-                if fsize < 16 or fsize > 524288:
+                if inspected_xml >= 60 or fsize < 16 or fsize > 524288:
                     continue
 
                 fp.seek(offset)
@@ -3938,6 +4909,7 @@ def _extract_from_single_package(path: Path) -> Dict[str, Any]:
                         elif not info["root_tunings"]:
                             # XML이 아닌 CASP(CAS Part) 또는 NameMap 바이너리 리소스에서 파트 이름 추출 (예: XOOX_CO_..., [XOOX] ...)
                             if len(decompressed) >= 30 and 0x18 <= decompressed[0] <= 0x45 and decompressed[1:4] == b"\x00\x00\x00" and decompressed[15:16] == b"\x00":
+                                info["has_cc_mesh_or_casp_resource"] = True
                                 try:
                                     u16_chunk = decompressed[14:114]
                                     casp_str = u16_chunk.decode("utf-16-le", "ignore").split("\x00")[0]
@@ -3963,6 +4935,7 @@ def _extract_from_single_package(path: Path) -> Dict[str, Any]:
 
                 # 1. LlamaLogic ModFileManifest XML 스니펫 파싱
                 if "ModFileManifest" in text or "llamalogic:manifest" in text:
+                    info["has_gameplay_xml"] = True
                     main_xml = text.split('<L n="required_mods">')[0]
                     m_n = re.search(r'<T n="name">([^<]+)</T>', main_xml)
                     if m_n and not info["manifest_name"]:
@@ -3987,22 +4960,59 @@ def _extract_from_single_package(path: Path) -> Dict[str, Any]:
                             info["urls"].append(u_clean)
                     continue
 
-                # 2. WickedWhims CAS / Animation 애드온 여부 감지
+                # 2. XML Injector 의존성 스니펫(타 모드가 XML Injector를 호출하기 위해 동봉한 리소스) 제외
+                if not is_xml_injector_pkg and re.search(
+                    r'<I\b[^>]*(?:\bc=["\']XmlInjector["\']|\bm=["\']xml_injector(?:\.[^"\']*)?["\'])',
+                    text,
+                    flags=re.IGNORECASE,
+                ):
+                    info["has_gameplay_xml"] = True
+                    continue
+
+                # 3. WickedWhims CAS / Animation 애드온 및 일반 PosePack 스니펫 감지
+                is_this_xml_ww_cas = False
+                is_this_xml_pose = False
                 if any(
                     tag in text
                     for tag in (
-                        "WickedWhimsCASPartsPackage",
                         "WickedWhimsAnimationPackage",
-                        "wickedwhims_cas_parts",
                         "wickedwhims_animations",
                         "wickedwhims_dance_animations",
+                        '<T n="animation_author">',
+                        '<T n="animation_raw_display_name">',
+                    )
+                ):
+                    info["is_ww_animation"] = True
+                    info["is_ww_addon"] = True
+                    info["has_gameplay_xml"] = True
+                elif any(
+                    tag in text
+                    for tag in (
+                        "WickedWhimsCASPartsPackage",
+                        "wickedwhims_cas_parts",
                     )
                 ):
                     info["is_ww_addon"] = True
+                    info["is_ww_cas_addon"] = True
+                    is_this_xml_ww_cas = True
+                elif re.search(
+                    r'\bc=["\']PosePack["\']|\bm=["\'](?:andrew_)?pose_?player',
+                    text,
+                    flags=re.IGNORECASE,
+                ):
+                    info["is_pose_pack"] = True
+                    is_this_xml_pose = True
 
-                # 3. 루트 <I ... n="Creator:TuningName"> 식별자 추출
+                if not is_this_xml_ww_cas and not is_this_xml_pose:
+                    info["has_gameplay_xml"] = True
+
+                # 4. 루트 <I ... n="Creator:TuningName"> 식별자 추출
                 for m_root in re.finditer(r'<I\b[^>]*\bn="([^"]+)"', text):
                     rt = html.unescape(m_root.group(1).strip())
+                    if not is_xml_injector_pkg and (
+                        "xmlinjector" in rt.lower() or "xml_injector" in rt.lower()
+                    ):
+                        continue
                     if rt and rt not in info["root_tunings"]:
                         info["root_tunings"].append(rt)
 
@@ -4045,6 +5055,8 @@ def _parse_tuning_and_module_clues(root_tunings: List[str], modules: List[str]) 
 
     # 1. 루트 튜닝 이름 우선 분석 (CamelCase가 보존되어 있어 단어 분리에 유리함)
     for rt in root_tunings:
+        if "xmlinjector" in rt.lower().replace("_", ""):
+            continue
         # 패턴 A: 'Creator:ModName_...' (예: 'Spent:UsedCondom_Full', 'lotharihoe:SimSpawnOverhaul_...', 'Sopor:BODY_TOP_FEMALE')
         if ":" in rt:
             prefix, rest = rt.split(":", 1)
@@ -4155,6 +5167,69 @@ def _get_compiled_catalog() -> List[Tuple[Dict[str, Any], List[Tuple[str, str]]]
         return compiled
 
 
+def is_ww_animation_package(file_path: Path) -> bool:
+    """지정된 파일이 WickedWhims 애니메이션 패키지(.package)인지 카탈로그 및 바이너리 메타데이터로 판별합니다."""
+    if not file_path or Path(file_path).suffix.lower() != ".package":
+        return False
+    p = Path(file_path)
+    cat = check_known_catalog(p.name)
+    if cat and cat.get("is_ww_animation"):
+        return True
+    meta = extract_mod_file_metadata(str(p))
+    return bool(meta.get("is_ww_animation"))
+
+
+def is_plain_cc_or_pose_package(file_path: Path, check_root_cc: bool = False) -> bool:
+    """지정된 .package 파일이 업데이트 대상이 아닌 단순 외형/건축/포즈 CC 또는 WW 바디 파츠 CC인지 판별합니다.
+    - WW 바디 파츠 CC(WickedWhimsCASPartsPackage, 애니메이션 아님)는 폴더와 무관하게 True 반환
+    - check_root_cc=True(정리 안 된 Mods 루트 및 WW 폴더 루트 등)일 때는 일반 포즈팩(PosePack) 및
+      게임플레이 XML/매니페스트/번역/UI 리소스가 전혀 없는 순수 외형·건축 CC도 True 반환
+    """
+    if not file_path or Path(file_path).suffix.lower() != ".package":
+        return False
+    p = Path(file_path)
+    p_low = p.name.lower()
+
+    if check_known_catalog(p.name):
+        return False
+
+    if p.with_suffix(".ts4script").exists():
+        return False
+
+    meta = extract_mod_file_metadata(str(p))
+    if meta.get("is_ww_animation"):
+        return False
+
+    if meta.get("is_ww_cas_addon") and not meta.get("has_gameplay_xml"):
+        return True
+
+    if not check_root_cc:
+        return False
+
+    if any(
+        kw in p_low
+        for kw in (
+            "!wamtik", "_wamtik", "한글", "번역", "한패", "korean", "_kor",
+            "override", "오버라이드",
+        )
+    ):
+        return False
+
+    if meta.get("is_pose_pack") and not meta.get("has_gameplay_xml"):
+        return True
+
+    if meta.get("has_gameplay_xml") or meta.get("manifest_name") or meta.get("urls"):
+        return False
+
+    if meta.get("has_cc_mesh_or_casp_resource"):
+        return True
+
+    if meta.get("has_data_or_gfx_resource") or meta.get("has_stbl_resource"):
+        return False
+
+    return True
+
+
 def extract_mod_file_metadata(file_path: Optional[str]) -> Dict[str, Any]:
     """지정된 .package 또는 .ts4script 파일(및 동일 폴더의 짝 파일) 내부를 분석하여
     제작자명, 모드명, 버전, 내장 공식 배포 URL, 튜닝/모듈 식별자를 반환합니다.
@@ -4173,6 +5248,13 @@ def extract_mod_file_metadata(file_path: Optional[str]) -> Dict[str, Any]:
         "root_tunings": [],
         "modules": [],
         "is_ww_addon": False,
+        "is_ww_cas_addon": False,
+        "is_ww_animation": False,
+        "is_pose_pack": False,
+        "has_gameplay_xml": False,
+        "has_data_or_gfx_resource": False,
+        "has_stbl_resource": False,
+        "has_cc_mesh_or_casp_resource": False,
     }
     if not file_path:
         return empty_result
@@ -4220,6 +5302,13 @@ def _extract_mod_file_metadata_uncached(p: Path) -> Dict[str, Any]:
         "root_tunings": [],
         "modules": [],
         "is_ww_addon": False,
+        "is_ww_cas_addon": False,
+        "is_ww_animation": False,
+        "is_pose_pack": False,
+        "has_gameplay_xml": False,
+        "has_data_or_gfx_resource": False,
+        "has_stbl_resource": False,
+        "has_cc_mesh_or_casp_resource": False,
     }
 
     suffix = p.suffix.lower()
@@ -4257,7 +5346,7 @@ def _extract_mod_file_metadata_uncached(p: Path) -> Dict[str, Any]:
             for sp in sibling_pkgs[:2]:
                 sp_info = _extract_from_single_package(sp)
                 if sp_info.get("creators") or sp_info.get("urls") or sp_info.get("root_tunings"):
-                    pkg_info = sp_info
+                    pkg_info = {**sp_info, "is_ww_animation": False}
                     break
 
     elif suffix == ".ts4script":
@@ -4291,6 +5380,13 @@ def _extract_mod_file_metadata_uncached(p: Path) -> Dict[str, Any]:
     if result["version"]:
         result["binary_version"] = result["version"]
     result["is_ww_addon"] = bool(pkg_info.get("is_ww_addon"))
+    result["is_ww_cas_addon"] = bool(pkg_info.get("is_ww_cas_addon"))
+    result["is_ww_animation"] = bool(pkg_info.get("is_ww_animation"))
+    result["is_pose_pack"] = bool(pkg_info.get("is_pose_pack"))
+    result["has_gameplay_xml"] = bool(pkg_info.get("has_gameplay_xml") or scr_info.get("modules"))
+    result["has_data_or_gfx_resource"] = bool(pkg_info.get("has_data_or_gfx_resource"))
+    result["has_stbl_resource"] = bool(pkg_info.get("has_stbl_resource"))
+    result["has_cc_mesh_or_casp_resource"] = bool(pkg_info.get("has_cc_mesh_or_casp_resource"))
 
     for c in (pkg_info.get("creators", []) + scr_info.get("creators", [])):
         if c and c not in result["creators"]:
@@ -4363,20 +5459,32 @@ def _extract_mod_file_metadata_uncached(p: Path) -> Dict[str, Any]:
         rpo_sub = split_camel_case(m_rpo.group(2).replace("_", " "))
         result["manifest_name"] = f"RPO {m_rpo.group(1).upper()} {rpo_sub}"
 
-    cat_match = check_known_catalog(p.name) or (
+    cat_match = check_known_catalog(
+        p.name,
+        is_ww_animation_hint=bool(pkg_info.get("is_ww_animation")),
+    ) or (
         check_known_catalog(p.parent.name) if "mccc" in p.parent.name.lower() else None
     )
     if cat_match:
         if cat_match.get("creator"):
             result["creators"] = [cat_match["creator"]]
-        if cat_match.get("mod_title") and (not result["manifest_name"] or cat_match.get("override_mod_title")):
+        if (
+            cat_match.get("mod_title")
+            and not cat_match.get("is_ww_animation")
+            and (not result["manifest_name"] or cat_match.get("override_mod_title"))
+        ):
             result["manifest_name"] = cat_match["mod_title"]
         if cat_match.get("version") and (not result["version"] or result["version"] == "4.04"):
             if result["version"] == "4.04":
                 result["binary_version"] = ""
             result["version"] = cat_match["version"]
         if cat_match.get("candidate_links"):
-            result["urls"] = [link[2] for link in cat_match["candidate_links"]]
+            if result["urls"] and cat_match.get("is_ww_animation"):
+                for lk in cat_match["candidate_links"]:
+                    if lk[2] not in result["urls"]:
+                        result["urls"].append(lk[2])
+            else:
+                result["urls"] = [link[2] for link in cat_match["candidate_links"]]
 
     result["inferred_creator"] = (
         result["creators"][0]
@@ -4415,64 +5523,83 @@ def check_known_catalog(
     raw_name: str,
     rpo_channel: Optional[str] = None,
     ww_channel: Optional[str] = None,
+    is_ww_animation_hint: bool = False,
 ) -> Optional[Dict[str, Any]]:
-    """핵심 코어 모드 카탈로그(MCCC, WickedWhims 본체, 바람별 한글화 등)와 정확히 일치하는지 확인합니다."""
+    """핵심 코어 모드 카탈로그(MCCC, WickedWhims 본체, WW 애니메이션, 바람별 한글화 등)와 정확히 일치하는지 확인합니다."""
     if not raw_name:
         return None
     name_lower = raw_name.lower()
     clean = re.sub(r"[^a-zA-Z0-9가-힣]", "", name_lower)
     rpo_mode = str(rpo_channel or "").strip().lower()
     ww_mode = str(ww_channel or "").strip().lower()
+
+    def _build_catalog_hit(item: Dict[str, Any]) -> Dict[str, Any]:
+        is_rpo_free = (
+            item.get("name") == "Relationship & Pregnancy Overhaul (RPO Collection)"
+            and rpo_mode == "free"
+        )
+        is_ww_paid = (
+            item.get("name") == "WickedWhims"
+            and ww_mode == "paid"
+        )
+        if is_rpo_free:
+            links = item.get("free_links") or item.get("links") or []
+            resolved_ver = item.get("free_version", item.get("version", ""))
+            resolved_paid = bool(item.get("is_paid", False))
+            resolved_ea = False
+            resolved_notes = "무료 공개 배포판 기준 버전 비교 및 자동 업데이트 활성화"
+        elif is_ww_paid:
+            links = item.get("paid_links") or item.get("links") or []
+            resolved_ver = item.get("paid_version", item.get("version", ""))
+            resolved_paid = True
+            resolved_ea = True
+            resolved_notes = "선배포(Patreon) 버전 · 수동 다운로드 안내 (WickedWhims v187.18)"
+        else:
+            links = item.get("links") or []
+            resolved_ver = item.get("version", "")
+            resolved_paid = bool(item.get("is_paid", False))
+            resolved_ea = bool(item.get("is_early_access", False))
+            resolved_notes = item.get("release_notes", "")
+        return {
+            "found": True,
+            "primary_url": links[0][2] if links else "",
+            "source_name": links[0][0] if links else "미출시 모드",
+            "candidate_links": links,
+            "matched_catalog": item["name"],
+            "creator": item.get("creator", ""),
+            "mod_title": item.get("mod_title", item["name"]),
+            "override_mod_title": bool(item.get("override_mod_title", False)),
+            "version": resolved_ver,
+            "is_paid": resolved_paid,
+            "is_early_access": resolved_ea,
+            "is_unreleased": bool(item.get("is_unreleased", False)),
+            "is_ww_animation": bool(item.get("is_ww_animation", False)),
+            "requires_option_modal": bool(item.get("requires_option_modal", False)),
+            "option_modal_mode": item.get("option_modal_mode", ""),
+            "option_modal_prompt": item.get("option_modal_prompt", ""),
+            "option_presets": list(item.get("option_presets") or []),
+            "optional_addons": list(item.get("optional_addons") or []),
+            "preferred_archive_name": item.get("preferred_archive_name", ""),
+            "post_install_overlays": list(item.get("post_install_overlays") or []),
+            "release_notes": resolved_notes,
+            "query": raw_name,
+        }
+
     for item, kw_pairs in _get_compiled_catalog():
         for kw_lower, clean_kw in kw_pairs:
             if kw_lower in name_lower or (len(clean_kw) >= 6 and clean_kw in clean):
-                is_rpo_free = (
-                    item.get("name") == "Relationship & Pregnancy Overhaul (RPO Collection)"
-                    and rpo_mode == "free"
-                )
-                is_ww_paid = (
-                    item.get("name") == "WickedWhims"
-                    and ww_mode == "paid"
-                )
-                if is_rpo_free:
-                    links = item.get("free_links") or item.get("links") or []
-                    resolved_ver = item.get("free_version", item.get("version", ""))
-                    resolved_paid = bool(item.get("is_paid", False))
-                    resolved_ea = False
-                    resolved_notes = "무료 공개 배포판 기준 버전 비교 및 자동 업데이트 활성화"
-                elif is_ww_paid:
-                    links = item.get("paid_links") or item.get("links") or []
-                    resolved_ver = item.get("paid_version", item.get("version", ""))
-                    resolved_paid = True
-                    resolved_ea = True
-                    resolved_notes = "선배포(Patreon) 버전 · 수동 다운로드 안내 (WickedWhims v187.18)"
-                else:
-                    links = item.get("links") or []
-                    resolved_ver = item.get("version", "")
-                    resolved_paid = bool(item.get("is_paid", False))
-                    resolved_ea = bool(item.get("is_early_access", False))
-                    resolved_notes = item.get("release_notes", "")
-                return {
-                    "found": True,
-                    "primary_url": links[0][2] if links else "",
-                    "source_name": links[0][0] if links else "미출시 모드",
-                    "candidate_links": links,
-                    "matched_catalog": item["name"],
-                    "creator": item.get("creator", ""),
-                    "mod_title": item.get("mod_title", item["name"]),
-                    "override_mod_title": bool(item.get("override_mod_title", False)),
-                    "version": resolved_ver,
-                    "is_paid": resolved_paid,
-                    "is_early_access": resolved_ea,
-                    "is_unreleased": bool(item.get("is_unreleased", False)),
-                    "requires_option_modal": bool(item.get("requires_option_modal", False)),
-                    "option_modal_mode": item.get("option_modal_mode", ""),
-                    "option_modal_prompt": item.get("option_modal_prompt", ""),
-                    "option_presets": list(item.get("option_presets") or []),
-                    "optional_addons": list(item.get("optional_addons") or []),
-                    "release_notes": resolved_notes,
-                    "query": raw_name,
-                }
+                return _build_catalog_hit(item)
+
+    if is_ww_animation_hint:
+        for item, _ in _get_compiled_catalog():
+            for alias in item.get("ww_creator_aliases") or ():
+                al_low = str(alias).strip().lower()
+                al_clean = re.sub(r"[^a-zA-Z0-9가-힣]", "", al_low)
+                if al_low and (
+                    re.search(rf"(?:^|[^a-z0-9]){re.escape(al_low)}(?:$|[^a-z0-9])", name_lower)
+                    or (len(al_clean) >= 4 and al_clean in clean)
+                ):
+                    return _build_catalog_hit(item)
     return None
 
 
@@ -4552,30 +5679,50 @@ def smart_tokenize(
         elif meta_creator.lower() != clean_creator.lower():
             extra_creators.append(meta_creator)
 
-    # 폴더 문맥에서 보조 제작자/모드 단서 추출 (예: 'MOD Cumshine', 'GSM [제작자] [모드] [버전]', 'GM [모드] [버전]', 'MOD\Lumpinou', '5 GSM 1', 'GSM-1', 'GSM_1')
+    # 폴더 문맥에서 보조 제작자/모드 단서 추출 (예: 'MOD Cumshine', 'GSM [제작자] [모드] [버전]', 'MOD WickedWhims\Animations\Anarcis')
+    _generic_folder_clues = {
+        "cas", "build", "pose", "poses", "포즈", "prio", "high priority mods", "3 high priority mods",
+        "4 high priority cc", "6 slider", "7 cc", "cc", "ww cc", "cc etc",
+        "overrides", "override", "오버라이드", "default", "defaults", "mod", "mods", "gsm", "gm",
+        "optional", "options", "addons", "add-ons", "addon", "extras", "merged", "modules",
+        "추가", "선택", "선택사항", "옵션", "통합",
+        "wickedwhims", "wonderfulwhims", "ww", "위키드윔즈", "위키드 윔즈", "위키드윔스", "위키드",
+        "animations", "animation", "anims", "anim", "ani", "motions", "motion", "nsfw", "woohoo", "19금",
+        "ww animations", "ww anim", "ww anims", "wickedwhims animations",
+        "애니메이션", "애니", "ww 애니", "위키드 애니", "모션", "동작", "체위", "야스모션", "야스",
+        "꾸금", "후방", "우후", "사랑나누기", "사랑 나누기",
+        "성인모드", "성인 모드", "성인애니", "성인 애니", "성인모션", "성인 모션",
+        "(mods 루트)",
+    }
+
     def _clean_folder_clue(f_ctx: str) -> str:
-        # 하위 폴더 경로(예: 'MOD\Lumpinou', '5 GSM-1\LittleMsSam')인 경우 마지막 하위 폴더명을 우선 사용
+        # 하위 폴더 경로(예: 'MOD WickedWhims\Animations\Anarcis', 'MOD\Lumpinou')에서 범용 카테고리명을 건너뛰고 실제 제작자/모드 폴더명을 추출
         parts = [p.strip() for p in re.split(r"[\\/]+", f_ctx) if p.strip()]
-        target_part = parts[-1] if parts else f_ctx
-        cleaned = re.sub(
-            r"^(?:[\d\-]+[\.\s_-]*)?(?:(?:MOD|GSM|GM)(?:[\s_-]*\[?\d+\]?)?[\s_-]*)+",
-            "",
-            target_part,
-            flags=re.IGNORECASE,
-        ).strip()
-        cleaned = re.sub(
-            r"\[\s*(?:v|ver|version)?\.?\s*[0-9]+(?:[\.\-_][0-9]+)*[a-z]?\s*\]\s*$",
-            "",
-            cleaned,
-            flags=re.IGNORECASE,
-        ).strip()
-        if not cleaned or cleaned.isdigit() or cleaned.lower() in (
-            "cas", "build", "pose", "prio", "high priority mods", "3 high priority mods",
-            "overrides", "override", "default", "mod", "mods", "gsm", "gm", "optional",
-            "(mods 루트)",
-        ):
-            return ""
-        return cleaned
+        candidates = list(reversed(parts)) if parts else [f_ctx]
+        for target_part in candidates:
+            cleaned = re.sub(
+                r"^(?:[\d\-]+[\.\s_-]*)?(?:(?:MOD|GSM|GM|AA|BB|CC|DD)(?:[\s_-]*\[?\d+\]?)?[\s_-]*)+",
+                "",
+                target_part,
+                flags=re.IGNORECASE,
+            ).strip()
+            cleaned = re.sub(
+                r"\[\s*(?:v|ver|version)?\.?\s*[0-9]+(?:[\.\-_][0-9]+)*[a-z]?\s*\]\s*$",
+                "",
+                cleaned,
+                flags=re.IGNORECASE,
+            ).strip()
+            cleaned = cleaned.strip("[]() _-")
+            c_low = cleaned.lower()
+            if (
+                not cleaned
+                or cleaned.isdigit()
+                or c_low in _generic_folder_clues
+                or re.match(r"^(?:ww|위키드|위키드윔즈)[\s_-]*(?:모드|폴더|애니|애니메이션|cc|addons?|extras?|anims?)$", c_low)
+            ):
+                continue
+            return cleaned
+        return ""
 
     if folder_context and not clean_creator:
         folder_clean = _clean_folder_clue(folder_context)
@@ -5061,6 +6208,34 @@ def search_and_rank_distribution_links(tokens: Dict[str, Any], timeout: int = 8)
     return [(dom_label, title, href) for _, dom_label, title, href in candidates]
 
 
+def _is_library_catalog_mismatch(matched_catalog: str, actual_file_name: str) -> bool:
+    """라이브러리/코어 유틸리티/상위 본체 카탈로그가 하위 폴더 내 무관한 모드·애니메이션에 의해 오매칭되었는지 판별합니다."""
+    fn_low = Path(str(actual_file_name or "").replace("\\", "/")).name.strip().lower()
+    if not matched_catalog or not fn_low:
+        return False
+    if matched_catalog == "XML Injector":
+        return not ("xml" in fn_low and "injector" in fn_low)
+    if matched_catalog == "Lot 51 Core Library":
+        return "lot51" not in fn_low and "lot 51" not in fn_low
+    if matched_catalog == "Lumpinou's Toolbox":
+        return "toolbox" not in fn_low
+    if matched_catalog == "WickedWhims":
+        return not (
+            "turbodriver_wickedwhims" in fn_low
+            or fn_low in ("wickedwhims.ts4script", "wickedwhims.package")
+            or fn_low.startswith(("wickedwhims_scripts", "wickedwhims_tuning"))
+        )
+    if matched_catalog == "WonderfulWhims":
+        return not (
+            "turbodriver_wonderfulwhims" in fn_low
+            or fn_low in ("wonderfulwhims.ts4script", "wonderfulwhims.package")
+            or fn_low.startswith(("wonderfulwhims_scripts", "wonderfulwhims_tuning"))
+        )
+    if matched_catalog == "MC Command Center (MCCC)":
+        return not (fn_low.startswith("mc_") or "mccc" in fn_low or "cmd_center" in fn_low)
+    return False
+
+
 def find_direct_mod_page(
     mod_or_file_name: str,
     file_path: Optional[str] = None,
@@ -5076,27 +6251,87 @@ def find_direct_mod_page(
     """
     # 1. 파일 내부 바이너리/아카이브 메타데이터 추출 (방법 1)
     file_meta = extract_mod_file_metadata(file_path)
+    is_ww_anim = bool(file_meta.get("is_ww_animation"))
 
     # 2. 핵심 코어 모드 카탈로그 확인 (파일명 우선, 매칭 없을 시 내부 식별명 및 폴더명 보조 확인)
-    catalog_res = check_known_catalog(mod_or_file_name, rpo_channel=rpo_channel, ww_channel=ww_channel)
-    if not catalog_res and file_meta.get("manifest_name"):
-        catalog_res = check_known_catalog(file_meta["manifest_name"], rpo_channel=rpo_channel, ww_channel=ww_channel)
-    if not catalog_res and file_meta.get("inferred_mod"):
-        creator_hint = file_meta.get("inferred_creator") or ""
-        catalog_res = check_known_catalog(
-            f"{creator_hint} {file_meta['inferred_mod']}".strip(),
+    actual_fn = Path(file_path).name if file_path else mod_or_file_name
+
+    def _validated_catalog(cand_res: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        if cand_res and _is_library_catalog_mismatch(cand_res.get("matched_catalog", ""), actual_fn):
+            return None
+        return cand_res
+
+    catalog_res = _validated_catalog(
+        check_known_catalog(
+            mod_or_file_name,
             rpo_channel=rpo_channel,
             ww_channel=ww_channel,
+            is_ww_animation_hint=is_ww_anim,
+        )
+    )
+    if not catalog_res and file_meta.get("manifest_name"):
+        catalog_res = _validated_catalog(
+            check_known_catalog(
+                file_meta["manifest_name"],
+                rpo_channel=rpo_channel,
+                ww_channel=ww_channel,
+                is_ww_animation_hint=is_ww_anim,
+            )
+        )
+    if not catalog_res and file_meta.get("inferred_mod"):
+        creator_hint = file_meta.get("inferred_creator") or ""
+        catalog_res = _validated_catalog(
+            check_known_catalog(
+                f"{creator_hint} {file_meta['inferred_mod']}".strip(),
+                rpo_channel=rpo_channel,
+                ww_channel=ww_channel,
+                is_ww_animation_hint=is_ww_anim,
+            )
+        )
+    if not catalog_res and is_ww_anim and file_meta.get("inferred_creator"):
+        catalog_res = _validated_catalog(
+            check_known_catalog(
+                file_meta["inferred_creator"],
+                rpo_channel=rpo_channel,
+                ww_channel=ww_channel,
+                is_ww_animation_hint=True,
+            )
         )
     if not catalog_res and folder_name:
-        catalog_res = check_known_catalog(folder_name, rpo_channel=rpo_channel, ww_channel=ww_channel)
+        catalog_res = _validated_catalog(
+            check_known_catalog(
+                folder_name,
+                rpo_channel=rpo_channel,
+                ww_channel=ww_channel,
+                is_ww_animation_hint=is_ww_anim,
+            )
+        )
     if catalog_res:
         if catalog_res.get("version") and not file_meta.get("version"):
             file_meta["version"] = catalog_res["version"]
-        if catalog_res.get("matched_catalog") == "Relationship & Pregnancy Overhaul (RPO Collection)" and (rpo_channel or "").strip().lower() == "free":
-            catalog_res["extracted_meta"] = file_meta
-        else:
-            catalog_res["extracted_meta"] = file_meta
+        if catalog_res.get("is_ww_animation") and file_meta.get("urls"):
+            display_mod_name = (
+                file_meta.get("manifest_name")
+                or (file_meta["display_names"][0] if file_meta.get("display_names") else "")
+                or catalog_res.get("mod_title")
+                or mod_or_file_name
+            )
+            creator_str = catalog_res.get("creator") or file_meta.get("inferred_creator") or ""
+            title_prefix = f"[{creator_str}] {display_mod_name}".strip() if creator_str else display_mod_name
+            cat_urls_only = [lk[2] for lk in (catalog_res.get("candidate_links") or [])]
+            embedded_only = [u for u in file_meta["urls"] if u not in cat_urls_only]
+            if embedded_only:
+                merged_links: List[Tuple[str, str, str]] = [
+                    (f"{label_for_url(u)} (파일 내장 공식 링크)", title_prefix, u)
+                    for u in embedded_only
+                ]
+                for lk in catalog_res.get("candidate_links") or []:
+                    if lk[2] not in embedded_only:
+                        merged_links.append(lk)
+                catalog_res["candidate_links"] = merged_links
+                catalog_res["primary_url"] = merged_links[0][2]
+                catalog_res["source_name"] = merged_links[0][0]
+        catalog_res["extracted_meta"] = file_meta
         catalog_res["is_verified_source"] = True
         catalog_res["diagnostics"] = {
             "match_stage": "known_catalog",
@@ -5956,7 +7191,9 @@ def _inspect_wickedcc_page(
     headers: Dict[str, str],
     timeout: int = 10,
 ) -> Optional[Dict[str, Any]]:
-    """Wicked.cc 모드 배포 페이지(wicked.cc/mods/...)에서 보안 HTTPS 세션 및 Referer를 유지하여 직접 다운로드 URL(files.wicked.cc)과 파일명을 추출합니다."""
+    """Wicked.cc 모드/애니메이션 배포 페이지(wicked.cc/mods/..., wicked.cc/animations/...)에서
+    보안 HTTPS 세션 및 Referer를 유지하여 모든 직접 다운로드 URL(files.wicked.cc)과 파일명을 추출합니다.
+    """
     validate_https_url(url, allow_fragment=True, purpose="Wicked.cc 페이지 조회")
     try:
         with SafeHttpsSession() as sess:
@@ -5966,41 +7203,448 @@ def _inspect_wickedcc_page(
                 return None
             soup = BeautifulSoup(r1.text, "html.parser")
             title_str = soup.title.get_text(" ", strip=True) if soup.title else ""
-            dl_href = ""
+
+            dl_hrefs: List[str] = []
             for a in soup.find_all("a", href=True):
                 href = urllib.parse.urljoin(url, a["href"].strip())
-                if "/download/" in href.lower() and is_valid_https_url(href):
-                    dl_href = href
-                    break
-            if not dl_href:
+                if "/download/" in href.lower() and is_valid_https_url(href) and href not in dl_hrefs:
+                    dl_hrefs.append(href)
+            if not dl_hrefs:
                 return None
 
-            r2 = sess.get(dl_href, headers={"Referer": url}, stream=True, timeout=timeout)
-            try:
-                final_dl = r2.url
-            finally:
-                r2.close()
-            if not final_dl or final_dl.rstrip("/") == "https://wicked.cc":
-                return None
-            validate_https_url(final_dl, allow_fragment=True, purpose="Wicked.cc 최종 다운로드 URL")
+            resolved_files: List[Tuple[str, str]] = []
+            seen_dls: set[str] = set()
+            for dl_href in dl_hrefs[:12]:
+                try:
+                    r2 = sess.get(dl_href, headers={"Referer": url}, stream=True, timeout=timeout)
+                    try:
+                        final_dl = r2.url
+                    finally:
+                        r2.close()
+                except NetworkSecurityError:
+                    raise
+                except Exception:
+                    continue
+                if not final_dl or final_dl.rstrip("/") == "https://wicked.cc" or final_dl in seen_dls:
+                    continue
+                validate_https_url(final_dl, allow_fragment=True, purpose="Wicked.cc 최종 다운로드 URL")
+                seen_dls.add(final_dl)
 
-            fname = urllib.parse.unquote_plus(urllib.parse.urlparse(final_dl).path.split("/")[-1])
-            fname = re.sub(r"\s+", " ", fname).strip()
-            if not fname or "." not in fname:
-                fname = f"{Path(target_mod_name).stem or 'wickedcc_mod'}.zip"
-            fn_ver = extract_version_from_filename(fname) or extract_version_from_filename(title_str)
+                fname = urllib.parse.unquote_plus(urllib.parse.urlparse(final_dl).path.split("/")[-1])
+                fname = re.sub(r"\s+", " ", fname).strip()
+                if not fname or "." not in fname:
+                    fname = f"{Path(target_mod_name).stem or 'wickedcc_mod'}.zip"
+                resolved_files.append((fname, final_dl))
+
+            if not resolved_files:
+                return None
+
+            cat_hit_ll = check_known_catalog(target_mod_name, is_ww_animation_hint=True)
+            pref_arch = str(cat_hit_ll.get("preferred_archive_name") or "").strip() if isinstance(cat_hit_ll, dict) else ""
+            if pref_arch:
+                pref_low = pref_arch.lower()
+                pref_clean = re.sub(r"[^a-z0-9]", "", pref_low)
+                matched_pref = next(
+                    (
+                        pair for pair in resolved_files
+                        if pair[0].strip().lower() == pref_low
+                        or (pref_clean and re.sub(r"[^a-z0-9]", "", pair[0].lower()) == pref_clean)
+                    ),
+                    None,
+                )
+                if matched_pref is not None:
+                    resolved_files = [matched_pref]
+
+            scored = sorted(
+                resolved_files,
+                key=lambda pair: (_match_score_mod_name(target_mod_name, pair[0]), -resolved_files.index(pair)),
+                reverse=True,
+            )
+            best_fn, best_dl = scored[0]
+            fn_ver = extract_version_from_filename(best_fn) or extract_version_from_filename(title_str)
             return {
                 "status": "free_direct",
-                "title": title_str or fname,
+                "title": title_str or best_fn,
                 "version": fn_ver.lstrip("vV") if fn_ver else "",
-                "file_name": fname,
-                "download_url": final_dl,
+                "file_name": best_fn,
+                "download_url": best_dl,
+                "all_files": resolved_files,
                 "page_url": url,
             }
     except NetworkSecurityError:
         raise
     except Exception:
         return None
+
+
+def _inspect_loverslab_page(
+    url: str,
+    target_mod_name: str,
+    headers: Dict[str, str],
+    timeout: int = 10,
+) -> Optional[Dict[str, Any]]:
+    """LoversLab 배포 페이지(loverslab.com/files/file/...)에서 IPS4 표준 do=download 흐름을 통해
+    직접 다운로드 URL과 파일명·버전을 추출합니다. (접속 차단 또는 로그인 요구 시 None 반환 → 수동 확인 폴백)
+    """
+    validate_https_url(url, allow_fragment=True, purpose="LoversLab 페이지 조회")
+    try:
+        with SafeHttpsSession() as sess:
+            sess.headers.update({"User-Agent": headers["User-Agent"]})
+            r1 = sess.get(url, timeout=timeout)
+            if r1.status_code != 200:
+                return None
+
+            soup = BeautifulSoup(r1.text, "html.parser")
+            title_str = soup.title.get_text(" ", strip=True) if soup.title else ""
+
+            dl_triggers: List[str] = []
+            for a in soup.find_all("a", href=True):
+                href = urllib.parse.urljoin(url, a["href"].strip())
+                h_low = href.lower()
+                a_txt_low = a.get_text(" ", strip=True).lower()
+                if (
+                    ("do=download" in h_low or "download this file" in a_txt_low)
+                    and is_valid_https_url(href)
+                    and href not in dl_triggers
+                ):
+                    dl_triggers.append(href)
+            if not dl_triggers:
+                return None
+
+            def _extract_cd_filename(cd_hdr: str, final_u: str) -> str:
+                m_cd = re.search(r'filename\*?=(?:UTF-8\'\')?["\']?([^"\';\r\n]+)', cd_hdr or "", flags=re.IGNORECASE)
+                if m_cd:
+                    cand = urllib.parse.unquote(m_cd.group(1).strip())
+                    if cand:
+                        return cand
+                tail = urllib.parse.unquote_plus(urllib.parse.urlparse(final_u).path.split("/")[-1])
+                return re.sub(r"\s+", " ", tail).strip()
+
+            def _is_direct_mod_response(resp_obj: Any) -> bool:
+                ctype_low = (resp_obj.headers.get("Content-Type") or "").lower()
+                cd_low = (resp_obj.headers.get("Content-Disposition") or "").lower()
+                fn_low = _extract_cd_filename(resp_obj.headers.get("Content-Disposition") or "", resp_obj.url or "").lower()
+                return bool(
+                    "attachment" in cd_low
+                    or fn_low.endswith((".package", ".ts4script", ".zip", ".rar", ".7z"))
+                    or ("text/html" not in ctype_low and ("application/" in ctype_low or "octet-stream" in ctype_low))
+                )
+
+            resolved_files: List[Tuple[str, str]] = []
+            r2 = sess.get(dl_triggers[0], headers={"Referer": url}, stream=True, timeout=timeout)
+            try:
+                if r2.status_code != 200:
+                    return None
+                final_u2 = r2.url or dl_triggers[0]
+                if _is_direct_mod_response(r2):
+                    validate_https_url(final_u2, allow_fragment=True, purpose="LoversLab 직접 다운로드 URL")
+                    fname = _extract_cd_filename(r2.headers.get("Content-Disposition") or "", final_u2)
+                    if not fname or "." not in fname:
+                        fname = f"{Path(target_mod_name).stem or 'loverslab_mod'}.zip"
+                    resolved_files.append((fname, final_u2))
+                else:
+                    html_chunks: List[bytes] = []
+                    read_b = 0
+                    for ch in r2.iter_content(chunk_size=16384):
+                        if ch:
+                            html_chunks.append(ch)
+                            read_b += len(ch)
+                            if read_b >= 1024 * 1024:
+                                break
+                    dl_html = b"".join(html_chunks).decode(r2.encoding or "utf-8", errors="ignore")
+                    soup_dl = BeautifulSoup(dl_html, "html.parser")
+                    for a_f in soup_dl.find_all("a", href=True):
+                        href_f = urllib.parse.urljoin(final_u2, a_f["href"].strip())
+                        hf_low = href_f.lower()
+                        if not is_valid_https_url(href_f):
+                            continue
+                        if ("do=download" in hf_low and ("confirm=1" in hf_low or "&r=" in hf_low)) or hf_low.endswith(
+                            (".package", ".ts4script", ".zip", ".rar", ".7z")
+                        ):
+                            cand_fn = ""
+                            cur_el = a_f
+                            for _ in range(5):
+                                if cur_el is None:
+                                    break
+                                tag_name = getattr(cur_el, "name", "") or ""
+                                if tag_name in ("ul", "ol", "table", "tbody", "section", "main", "body", "html", "[document]"):
+                                    break
+                                if cur_el is a_f or tag_name in ("li", "tr", "div"):
+                                    txt_cand = cur_el.get_text(" ", strip=True)
+                                    m_fn = re.search(
+                                        r"([A-Za-z0-9_\-\(\)\[\]!\.\s]+\.(?:package|ts4script|zip|rar|7z))",
+                                        txt_cand,
+                                        flags=re.IGNORECASE,
+                                    )
+                                    if m_fn:
+                                        cand_fn = m_fn.group(1).strip()
+                                        break
+                                if tag_name in ("li", "tr"):
+                                    break
+                                cur_el = cur_el.parent
+                            if not cand_fn:
+                                url_tail = urllib.parse.unquote_plus(urllib.parse.urlparse(href_f).path.split("/")[-1])
+                                if url_tail.lower().endswith((".package", ".ts4script", ".zip", ".rar", ".7z")):
+                                    cand_fn = url_tail
+                            if not cand_fn:
+                                cand_fn = f"{Path(target_mod_name).stem or 'loverslab_mod'}.package"
+                            if all(ex_dl != href_f for _, ex_dl in resolved_files):
+                                resolved_files.append((cand_fn, href_f))
+            finally:
+                r2.close()
+
+            if not resolved_files:
+                return None
+
+            cat_hit_ll = check_known_catalog(target_mod_name, is_ww_animation_hint=True)
+            pref_arch = str(cat_hit_ll.get("preferred_archive_name") or "").strip() if isinstance(cat_hit_ll, dict) else ""
+            if pref_arch:
+                pref_low = pref_arch.lower()
+                pref_clean = re.sub(r"[^a-z0-9]", "", pref_low)
+                matched_pref = next(
+                    (
+                        pair for pair in resolved_files
+                        if pair[0].strip().lower() == pref_low
+                        or (pref_clean and re.sub(r"[^a-z0-9]", "", pair[0].lower()) == pref_clean)
+                    ),
+                    None,
+                )
+                if matched_pref is not None:
+                    resolved_files = [matched_pref]
+
+            scored = sorted(
+                resolved_files,
+                key=lambda pair: (_match_score_mod_name(target_mod_name, pair[0]), -resolved_files.index(pair)),
+                reverse=True,
+            )
+            best_fn, best_dl = scored[0]
+            validate_https_url(best_dl, allow_fragment=True, purpose="LoversLab 최종 다운로드 URL")
+            fn_ver = extract_version_from_filename(best_fn) or extract_version_from_filename(title_str)
+            return {
+                "status": "free_direct",
+                "title": title_str or best_fn,
+                "version": fn_ver.lstrip("vV") if fn_ver else "",
+                "file_name": best_fn,
+                "download_url": best_dl,
+                "all_files": resolved_files,
+                "page_url": url,
+            }
+    except NetworkSecurityError:
+        raise
+    except Exception:
+        return None
+
+
+def _inspect_kemono_page(
+    url: str,
+    target_mod_name: str,
+    headers: Dict[str, str],
+    timeout: int = 10,
+) -> Optional[Dict[str, Any]]:
+    """Kemono 포스트 페이지(kemono.cr/<service>/user/.../post/...)에서
+    Downloads 섹션의 첨부 링크 또는 /api/v1 엔드포인트를 통해 모드/애니메이션 파일 다운로드 URL을 추출합니다.
+    """
+    validate_https_url(url, allow_fragment=True, purpose="Kemono 포스트 페이지 조회")
+    allowed_exts = (".package", ".ts4script", ".zip", ".rar", ".7z")
+    parsed_u = urllib.parse.urlparse(url)
+    base_origin = f"{parsed_u.scheme}://{parsed_u.netloc}"
+    try:
+        with SafeHttpsSession() as sess:
+            sess.headers.update({"User-Agent": headers["User-Agent"]})
+            r1 = sess.get(url, timeout=timeout)
+            if r1.status_code != 200:
+                return None
+
+            soup = BeautifulSoup(r1.text, "html.parser")
+            title_str = soup.title.get_text(" ", strip=True) if soup.title else ""
+
+            resolved_files: List[Tuple[str, str]] = []
+            seen_dls: set[str] = set()
+
+            for a in soup.find_all("a", href=True):
+                href_raw = a["href"].strip()
+                if not href_raw:
+                    continue
+                href_abs = urllib.parse.urljoin(url, href_raw)
+                if not is_valid_https_url(href_abs):
+                    continue
+                parsed_href = urllib.parse.urlparse(href_abs)
+                qs = urllib.parse.parse_qs(parsed_href.query)
+                q_fname = urllib.parse.unquote((qs.get("f") or [""])[0]).strip()
+                a_cls = " ".join(a.get("class") or []).lower()
+                a_txt = re.sub(r"^\s*download\s+", "", a.get_text(" ", strip=True), flags=re.IGNORECASE).strip()
+                url_tail = urllib.parse.unquote_plus(parsed_href.path.split("/")[-1]).strip()
+
+                cand_fn = ""
+                for fn_probe in (q_fname, a_txt, url_tail):
+                    if fn_probe and fn_probe.lower().endswith(allowed_exts):
+                        cand_fn = re.sub(r"\s+", " ", fn_probe).strip()
+                        break
+
+                if not cand_fn:
+                    continue
+                is_attach_link = (
+                    "post__attachment-link" in a_cls
+                    or "/data/" in parsed_href.path.lower()
+                    or url_tail.lower().endswith(allowed_exts)
+                )
+                if not is_attach_link:
+                    continue
+                if href_abs not in seen_dls:
+                    seen_dls.add(href_abs)
+                    resolved_files.append((cand_fn, href_abs))
+
+            if not resolved_files:
+                m_post = re.match(r"^/([^/]+)/user/([^/]+)/post/([^/?#]+)", parsed_u.path)
+                if m_post:
+                    service, user_id, post_id = m_post.groups()
+                    api_url = f"{base_origin}/api/v1/{service}/user/{user_id}/post/{post_id}"
+                    validate_https_url(api_url, purpose="Kemono 포스트 API 조회")
+                    r_api = sess.get(
+                        api_url,
+                        headers={"Referer": url, "Accept": "text/css"},
+                        timeout=timeout,
+                    )
+                    if r_api.status_code == 200:
+                        try:
+                            payload = r_api.json() if hasattr(r_api, "json") else json.loads(r_api.text)
+                        except Exception:
+                            payload = None
+                        post_obj = (
+                            payload.get("post")
+                            if isinstance(payload, dict) and isinstance(payload.get("post"), dict)
+                            else payload
+                        )
+                        if isinstance(post_obj, dict):
+                            title_str = str(post_obj.get("title") or title_str).strip()
+                            entries: List[Dict[str, Any]] = []
+                            if isinstance(post_obj.get("attachments"), list):
+                                entries.extend(x for x in post_obj["attachments"] if isinstance(x, dict))
+                            if isinstance(post_obj.get("file"), dict):
+                                entries.append(post_obj["file"])
+                            for ent in entries:
+                                raw_path = str(ent.get("path") or "").strip()
+                                if not raw_path:
+                                    continue
+                                raw_name = str(ent.get("name") or raw_path.split("/")[-1]).strip()
+                                if not raw_name.lower().endswith(allowed_exts):
+                                    continue
+                                norm_path = raw_path if raw_path.startswith("/") else f"/{raw_path}"
+                                if not norm_path.lower().startswith("/data/"):
+                                    norm_path = f"/data{norm_path}"
+                                dl_u = f"{base_origin}{norm_path}?f={urllib.parse.quote(raw_name)}"
+                                if is_valid_https_url(dl_u) and dl_u not in seen_dls:
+                                    seen_dls.add(dl_u)
+                                    resolved_files.append((raw_name, dl_u))
+
+            if not resolved_files:
+                return None
+
+            cat_hit_km = check_known_catalog(target_mod_name, is_ww_animation_hint=True)
+            pref_arch = str(cat_hit_km.get("preferred_archive_name") or "").strip() if isinstance(cat_hit_km, dict) else ""
+            if pref_arch:
+                pref_low = pref_arch.lower()
+                pref_clean = re.sub(r"[^a-z0-9]", "", pref_low)
+                matched_pref = next(
+                    (
+                        pair for pair in resolved_files
+                        if pair[0].strip().lower() == pref_low
+                        or (pref_clean and re.sub(r"[^a-z0-9]", "", pair[0].lower()) == pref_clean)
+                    ),
+                    None,
+                )
+                if matched_pref is not None:
+                    resolved_files = [matched_pref]
+
+            scored = sorted(
+                resolved_files,
+                key=lambda pair: (_match_score_mod_name(target_mod_name, pair[0]), -resolved_files.index(pair)),
+                reverse=True,
+            )
+            best_fn, best_dl = scored[0]
+            validate_https_url(best_dl, allow_fragment=True, purpose="Kemono 최종 다운로드 URL")
+            fn_ver = extract_version_from_filename(best_fn) or extract_version_from_filename(title_str)
+            return {
+                "status": "free_direct",
+                "title": title_str or best_fn,
+                "version": fn_ver.lstrip("vV") if fn_ver else "",
+                "file_name": best_fn,
+                "download_url": best_dl,
+                "all_files": resolved_files,
+                "page_url": url,
+            }
+    except NetworkSecurityError:
+        raise
+    except Exception:
+        return None
+
+
+def _inspect_modsfire_page(
+    url: str,
+    target_mod_name: str,
+    headers: Dict[str, str],
+    timeout: int = 10,
+) -> Optional[Dict[str, Any]]:
+    """ModsFire 페이지(modsfire.com/<id>)에서 다운로드 링크(/d/...) 및 리다이렉트 최종 파일명을 추출합니다."""
+    validate_https_url(url, allow_fragment=True, purpose="ModsFire 페이지 조회")
+    try:
+        with SafeHttpsSession() as sess:
+            sess.headers.update({"User-Agent": headers["User-Agent"]})
+            r1 = sess.get(url, timeout=timeout)
+            if r1.status_code != 200:
+                return None
+
+            soup = BeautifulSoup(r1.text, "html.parser")
+            title_str = soup.title.get_text(" ", strip=True) if soup.title else ""
+
+            dl_cands: List[str] = []
+            for a in soup.find_all("a", href=True):
+                href = urllib.parse.urljoin(url, a["href"].strip())
+                h_low = href.lower()
+                if "/d/" in h_low and is_valid_https_url(href) and href not in dl_cands:
+                    dl_cands.append(href)
+            if not dl_cands:
+                for m_dl in re.finditer(r'https?://(?:www\.)?modsfire\.com/d/[A-Za-z0-9_-]+|/d/[A-Za-z0-9_-]+', r1.text):
+                    cand_u = urllib.parse.urljoin(url, m_dl.group(0).strip())
+                    if is_valid_https_url(cand_u) and cand_u not in dl_cands:
+                        dl_cands.append(cand_u)
+            if not dl_cands:
+                return None
+
+            for dl_href in dl_cands[:4]:
+                r2 = sess.get(dl_href, headers={"Referer": url}, stream=True, timeout=timeout)
+                try:
+                    if r2.status_code != 200:
+                        continue
+                    final_dl = r2.url or dl_href
+                    validate_https_url(final_dl, allow_fragment=True, purpose="ModsFire 최종 다운로드 URL")
+                    cd_hdr = r2.headers.get("Content-Disposition") or "" if hasattr(r2, "headers") else ""
+                    m_cd = re.search(r'filename\*?=(?:UTF-8\'\')?["\']?([^"\';\r\n]+)', cd_hdr, flags=re.IGNORECASE)
+                    if m_cd:
+                        fname = urllib.parse.unquote(m_cd.group(1).strip())
+                    else:
+                        fname = urllib.parse.unquote_plus(urllib.parse.urlparse(final_dl).path.split("/")[-1]).strip()
+                    fname = re.sub(r"\s+", " ", fname).strip()
+                    if not fname or "." not in fname:
+                        stem = Path(target_mod_name).stem or "modsfire_mod"
+                        fname = f"{stem}.package" if "gold" in target_mod_name.lower() else f"{stem}.zip"
+                    fn_ver = extract_version_from_filename(fname) or extract_version_from_filename(title_str)
+                    return {
+                        "status": "free_direct",
+                        "title": title_str or fname,
+                        "version": fn_ver.lstrip("vV") if fn_ver else "",
+                        "file_name": fname,
+                        "download_url": final_dl,
+                        "all_files": [(fname, final_dl)],
+                        "page_url": url,
+                    }
+                finally:
+                    r2.close()
+    except NetworkSecurityError:
+        raise
+    except Exception:
+        return None
+    return None
 
 
 def _inspect_dcinside_page(
@@ -6644,6 +8288,24 @@ def inspect_remote_mod_page(
         wk_res = _inspect_wickedcc_page(url, target_mod_name, headers, timeout=timeout)
         if wk_res:
             return wk_res
+        return {"status": "browser_required", "page_url": url}
+
+    if "loverslab.com/files/file/" in u_lower:
+        ll_res = _inspect_loverslab_page(url, target_mod_name, headers, timeout=timeout)
+        if ll_res:
+            return ll_res
+        return {"status": "browser_required", "page_url": url}
+
+    if "kemono.cr/" in u_lower:
+        km_res = _inspect_kemono_page(url, target_mod_name, headers, timeout=timeout)
+        if km_res:
+            return km_res
+        return {"status": "browser_required", "page_url": url}
+
+    if "modsfire.com/" in u_lower:
+        mf_page_res = _inspect_modsfire_page(url, target_mod_name, headers, timeout=timeout)
+        if mf_page_res:
+            return mf_page_res
         return {"status": "browser_required", "page_url": url}
 
     if "dcinside.com/" in u_lower:
@@ -8404,6 +10066,13 @@ def is_safe_remote_file_match(
     rem_fn = str(remote_info.get("file_name") or "")
     rem_title = str(remote_info.get("title") or "")
     page_u = str(remote_info.get("page_url") or checked_url or "")
+
+    rem_fn_low = rem_fn.lower()
+    target_low = (target_name or "").lower()
+    if ("xmlinjector" in rem_fn_low or "xml_injector" in rem_fn_low) and not (
+        "xml" in target_low and "injector" in target_low
+    ):
+        return False, 0, "XML Injector 파일 오매칭 차단"
 
     # 1) 검증된 공식 카탈로그에 등록된 모드이거나 파일 내부 바이너리에 내장된 공식 URL인 경우 신뢰
     cat_match = check_known_catalog(target_name)

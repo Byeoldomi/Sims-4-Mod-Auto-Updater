@@ -25,13 +25,40 @@ TRANSLATION_FOLDER_KEYWORDS = (
     "PRIO", "한글", "번역", "한패", "KOR", "KOREAN", "TRANSLAT", "OVERRIDE", "오버라이드",
 )
 
+# WickedWhims 및 독립 애니메이션/우회 폴더 판별용 키워드 (단순 '성인' 연령대 의상 CC 오탐 방지를 위해 결합형만 허용)
+WW_ANIMATION_FOLDER_KEYWORDS = (
+    "ww anim", "wickedwhims anim", "wicked anim", "ww 애니", "위키드 애니", "위키드윔즈 애니",
+    "animations", "animation", "애니메이션", "애니", "야스모션", "야스", "체위",
+    "성인모드", "성인 모드", "성인애니", "성인 애니", "성인모션", "성인 모션",
+    "꾸금", "후방", "사랑나누기", "사랑 나누기",
+)
+WW_ANIMATION_TOKEN_PATTERN = re.compile(
+    r"(?:^|[\s_\-\[\(0-9\.])(ANIMS?|ANI|MOTIONS?|NSFW|WOOHOO|19금|우후)(?:$|[\s_\-\]\)]|[가-힣])",
+    flags=re.IGNORECASE,
+)
+WW_ANIMATION_KOREAN_KEYWORDS = (
+    "모션", "동작",
+)
+
+# 애니메이션 본체와 동일 팩 이름을 공유할 때 본체 카드에 자동 병합할 부속 파일 접미사 패턴
+WW_COMPANION_SUFFIX_PATTERN = re.compile(
+    r"(?:[_\-\s]+(?:props?|rigs?|objects?|furnitures?|sounds?|sfx|voices?|audio|mesh(?:es)?|"
+    r"tongues?|sliders?|acc(?:essories)?|addons?|add-ons?|optional|required))+$",
+    flags=re.IGNORECASE,
+)
+
+# 백업/구버전/비활성 전용 하위폴더 명칭 (모든 트리에서 항상 스킵)
+BACKUP_FOLDER_NAMES = {
+    "backup", "backups", "old", "disabled", "백업", "구버전", "비활성",
+}
+
 # 단일 모드 폴더 내부의 보조/옵션/CC 하위폴더 명칭 (별도 모드로 쪼개지 않고 본체에 귀속하거나 CC로 건너뜀)
 AUX_SUBFOLDER_NAMES = {
     "ww cc", "cc", "optional", "options", "addons", "add-ons", "addon",
     "extras", "extras & overrides", "cum layer sets", "presets",
     "core", "merged", "modules", "backup", "backups", "old",
     "vfx_and_soundeffect", "martial arts uniforms",
-    "옵션", "선택", "선택사항", "추가", "백업", "구버전",
+    "옵션", "선택", "선택사항", "추가", "통합", "백업", "구버전",
 }
 
 # 여러 모드를 담아두는 대표 통합/카테고리 폴더 명칭
@@ -41,6 +68,10 @@ CONTAINER_FOLDER_NAMES = {
     "스크립트", "스크립트 모드", "스크립트모드",
     "패키지", "패키지 모드", "패키지모드", "모드", "게임플레이", "게임플레이 모드",
     "일반 모드", "일반모드", "한글", "한글화", "한글패치", "번역", "한패", "오버라이드",
+    "animations", "animation", "anims", "anim", "ani", "motions", "motion", "nsfw", "woohoo", "19금",
+    "ww animations", "ww anim", "ww anims", "wickedwhims animations",
+    "애니메이션", "애니", "ww 애니", "위키드 애니", "모션", "동작", "체위", "야스모션", "야스",
+    "꾸금", "후방", "우후", "사랑나누기", "성인모드", "성인애니", "성인모션",
 }
 
 
@@ -93,6 +124,79 @@ class ModScanner:
         return False
 
     @staticmethod
+    def _is_pose_folder_name(folder_name: str) -> bool:
+        """포즈 전용 폴더('Pose', 'Poses', '포즈', 'WW Pose' 등)인지 판별합니다.
+        (명시적 CC/슬라이더/외형/건축 폴더는 제외 유지)
+        """
+        name_strip = folder_name.strip()
+        name_upper = name_strip.upper()
+        if re.match(r"^(?:AA|BB|CC|DD)(?:[\s_\-]|$)", name_upper):
+            return False
+        if name_upper in ("4 HIGH PRIORITY CC", "6 SLIDER", "7 CC"):
+            return False
+        if any(
+            kw in name_strip
+            for kw in (
+                "헤어", "의상", "메이크업", "스킨", "슬라이더", "건축", "가구",
+                "신발", "악세", "프리셋", "디폴트", "눈썹", "렌즈", "타투", "네일",
+                "속눈썹", "화장", "모자", "상의", "하의", "전신", "벽지", "바닥재",
+            )
+        ):
+            return False
+        if re.search(
+            r"(?:^|[\s_\-\[\(0-9\.])(CAS|BUILD|PRESETS?|SLIDERS?|DEFAULTS?|CC|WW\s*CC|HAIR|CLOTH(?:ES|ING)?|"
+            r"MAKEUP|SKIN(?:DETAILS?)?|SHOES|ACC(?:ESSORIES)?|FURNITURE|BUY|TATTOOS?|EYES?|"
+            r"EYEBROWS?|LASH(?:ES)?|NAILS?)(?:$|[\s_\-\]\)])",
+            name_upper,
+        ):
+            return False
+        return bool(
+            re.search(r"(?:^|[\s_\-\[\(0-9\.])POSES?(?:$|[\s_\-\]\)])", name_upper)
+            or "포즈" in name_strip
+        )
+
+    @staticmethod
+    def _is_backup_folder_name(folder_name: str) -> bool:
+        """백업/구버전/비활성 폴더인지 판별합니다."""
+        name_low = (folder_name or "").strip().lower()
+        if name_low in BACKUP_FOLDER_NAMES:
+            return True
+        return any(k in name_low for k in ("backup", "구버전", "백업", "비활성"))
+
+    @staticmethod
+    def _is_ww_parent_folder(folder_name: str) -> bool:
+        """WickedWhims 관련 상위 폴더('MOD WickedWhims', 'MOD WW', 'WickedWhims', '위키드윔즈', 'WW모드' 등)인지 판별합니다."""
+        name_low = re.sub(r"\s+", " ", (folder_name or "").strip().lower())
+        if not name_low or name_low in ("ww cc", "cc"):
+            return False
+        return bool(
+            "wicked" in name_low
+            or "위키드" in name_low
+            or re.search(r"(?:^|[\s_\-\[\(0-9\.])ww(?:$|[\s_\-\]\)]|[가-힣])", name_low)
+        )
+
+    @staticmethod
+    def _is_ww_animation_folder_name(folder_name: str, allow_cc_prefix: bool = False) -> bool:
+        """WickedWhims 애니메이션/모션 전용 폴더명인지 판별합니다."""
+        name_strip = (folder_name or "").strip()
+        if not name_strip:
+            return False
+        name_upper = name_strip.upper()
+        if not allow_cc_prefix:
+            if re.match(r"^(?:AA|BB|CC|DD)(?:[\s_\-]|$)", name_upper):
+                return False
+            if name_upper in ("4 HIGH PRIORITY CC", "6 SLIDER", "7 CC"):
+                return False
+        name_low = name_strip.lower()
+        if any(kw in name_low for kw in WW_ANIMATION_FOLDER_KEYWORDS):
+            return True
+        if WW_ANIMATION_TOKEN_PATTERN.search(name_strip):
+            return True
+        if any(kw in name_strip for kw in WW_ANIMATION_KOREAN_KEYWORDS):
+            return True
+        return False
+
+    @staticmethod
     def _is_cc_or_aux_subfolder(sub_dir: Path, parent_has_root_mods: bool = False) -> bool:
         """하위 폴더가 CC/옵션/백업 보조 폴더인지 판별합니다.
         (카테고리 1차 분류 -> 제작자별 2차 분류 -> 모드별 3차 분류 등 다단계 폴더 구조는 통과시킴)
@@ -122,6 +226,7 @@ class ModScanner:
         ):
             return "mccc:mc_cmd_center"
 
+        cat_is_ww_anim = False
         try:
             from src.finder import check_known_catalog
             cat = check_known_catalog(f.name)
@@ -131,13 +236,37 @@ class ModScanner:
                     return "mccc:mc_cmd_center"
                 if matched_cat == "MC Woohoo (MCCC Module)":
                     return "mccc:mc_woohoo"
-                return f"cat:{matched_cat}"
+                if cat.get("is_ww_animation"):
+                    if cat.get("option_modal_mode") == "multi_file_select":
+                        return f"cat:{matched_cat}"
+                    cat_is_ww_anim = True
+                else:
+                    return f"cat:{matched_cat}"
         except Exception:
             pass
+
+        if not cat_is_ww_anim and f.suffix.lower() == ".package":
+            try:
+                from src.finder import is_ww_animation_package
+                if is_ww_animation_package(f):
+                    cat_is_ww_anim = True
+            except Exception:
+                pass
 
         stem = re.sub(r"^[!_~\-\s]+", "", f.stem)
         clean_stem = re.sub(r"[\s_-]*\((?:required|optional|[^\)]*)\)", "", stem, flags=re.IGNORECASE)
         clean_stem = re.sub(r"[\s_-]+(?:v|ver|version)?[0-9]+(?:\.[0-9]+)*[a-z]?\b", "", clean_stem, flags=re.IGNORECASE)
+        if cat_is_ww_anim:
+            clean_stem = WW_COMPANION_SUFFIX_PATTERN.sub("", clean_stem)
+            clean_stem = re.sub(
+                r"[_\-\s]+(scripts?|tuning|package|core|main|base)$",
+                "",
+                clean_stem,
+                flags=re.IGNORECASE,
+            )
+            clean_low = clean_stem.lower().strip(" _-")
+            return f"ww_anim:{clean_low}"
+
         clean_stem = re.sub(
             r"[_\-\s]+(scripts?|tuning|package|core|main|base|required|optional|addon|add-on|test_users)$",
             "",
@@ -206,18 +335,29 @@ class ModScanner:
             if any(k in f_low for k in ("required", "core", "base")):
                 score += 80
 
-            # 3) Optional / Addon / 보조 파일 후순위
+            # 3) Optional / Addon / 소품·사운드·메쉬 보조 파일 후순위
             if any(
                 k in f_low
                 for k in (
                     "optional", "addon", "add-on", "updater", "ringer",
-                    "sounds", "test_users", "nocooking", "cannotdie",
+                    "sounds", "sound", "sfx", "voices", "voice", "audio",
+                    "props", "prop", "rigs", "rig", "tongue", "mesh", "meshes",
+                    "test_users", "nocooking", "cannotdie",
                     "costfix", "gotosleep", "hiremore", "lockedstats",
                     "noautocooking", "noautoputaway", "nogardening",
                     "secondnanny",
                 )
             ):
                 score -= 90
+
+            # 3-1) 패키지 전용 그룹에서 실제 WW 애니메이션 본체 파일 우선 선택 (동봉 소품/사운드보다 항상 우선)
+            if f.suffix.lower() == ".package":
+                try:
+                    from src.finder import is_ww_animation_package
+                    if is_ww_animation_package(f):
+                        score += 120
+                except Exception:
+                    pass
 
             # 4) 가장 짧은 기본 파일명(본체 파일, 예: LittleMsSam_BetterButler.package) 가산점
             if len(stem_clean) <= min_stem_len + 2:
@@ -236,6 +376,7 @@ class ModScanner:
         target_dir: Path,
         d_files: List[Path],
         is_standalone_root: bool = False,
+        filter_plain_cc: bool = False,
     ) -> List[Dict[str, Any]]:
         """단일 디렉터리 내의 모드 파일들을 개별 모드 단위(unit) 리스트로 그룹화합니다."""
         if not d_files:
@@ -260,23 +401,106 @@ class ModScanner:
             gk = self._get_file_group_key(f, base_stems)
             groups.setdefault(gk, []).append(f)
 
+        # 동일 폴더 내 WW 애니메이션 본체와 같은 팩 접두어를 공유하는 부속 파일(_Props, _Rig, _Sound, _Tongue, _Mesh 등)을 본체 카드에 자동 병합
+        ww_anim_stem_to_gk: Dict[str, str] = {}
+        for gk in list(groups.keys()):
+            if not gk.startswith("ww_anim:"):
+                continue
+            anim_base = gk.split(":", 1)[1].strip(" _-")
+            if len(anim_base) >= 4:
+                ww_anim_stem_to_gk.setdefault(anim_base, gk)
+                stripped_anim_word = re.sub(
+                    r"(?:[_\-\s]+(?:ww|wickedwhims|animations?|anims?))+$",
+                    "",
+                    anim_base,
+                    flags=re.IGNORECASE,
+                ).strip(" _-")
+                if len(stripped_anim_word) >= 4:
+                    ww_anim_stem_to_gk.setdefault(stripped_anim_word, gk)
+
+        if ww_anim_stem_to_gk:
+            for gk in list(groups.keys()):
+                if gk.startswith("ww_anim:"):
+                    continue
+                g_files_cand = groups[gk]
+                if any(x.suffix.lower() == ".ts4script" for x in g_files_cand):
+                    continue
+                matched_target_gk = ""
+                for cf in g_files_cand:
+                    cf_stem = re.sub(r"^[!_~\-\s]+", "", cf.stem)
+                    cf_stem = re.sub(r"[\s_-]*\([^\)]*\)", "", cf_stem)
+                    cf_stem = re.sub(
+                        r"[\s_-]+(?:v|ver|version)?[0-9]+(?:\.[0-9]+)*[a-z]?\b",
+                        "",
+                        cf_stem,
+                        flags=re.IGNORECASE,
+                    ).strip(" _-")
+                    if not WW_COMPANION_SUFFIX_PATTERN.search(cf_stem):
+                        matched_target_gk = ""
+                        break
+                    base_without_comp = WW_COMPANION_SUFFIX_PATTERN.sub("", cf_stem).lower().strip(" _-")
+                    cand_gk = ww_anim_stem_to_gk.get(base_without_comp, "")
+                    if not cand_gk:
+                        stripped_comp_anim = re.sub(
+                            r"(?:[_\-\s]+(?:ww|wickedwhims|animations?|anims?))+$",
+                            "",
+                            base_without_comp,
+                            flags=re.IGNORECASE,
+                        ).strip(" _-")
+                        cand_gk = ww_anim_stem_to_gk.get(stripped_comp_anim, "")
+                    if not cand_gk:
+                        matched_target_gk = ""
+                        break
+                    matched_target_gk = cand_gk
+                if matched_target_gk and matched_target_gk in groups:
+                    groups[matched_target_gk].extend(g_files_cand)
+                    del groups[gk]
+
         rel_dir_str = (
             ""
             if is_standalone_root or target_dir.resolve() == self.mods_folder.resolve()
             else str(target_dir.relative_to(self.mods_folder))
         )
         folder_display = "(Mods 루트)" if not rel_dir_str else rel_dir_str
+        should_check_root_cc = bool(is_standalone_root or filter_plain_cc)
 
         units: List[Dict[str, Any]] = []
-        multi_group_in_dir = len(groups) > 1 or is_standalone_root or ("\\" in rel_dir_str or "/" in rel_dir_str)
-
+        filtered_groups: List[tuple[str, List[Path]]] = []
         for gk, g_files in groups.items():
+            scrs_cand = [x for x in g_files if x.suffix.lower() == ".ts4script"]
+            if not scrs_cand:
+                try:
+                    from src.finder import is_plain_cc_or_pose_package
+                    if all(
+                        is_plain_cc_or_pose_package(x, check_root_cc=should_check_root_cc)
+                        for x in g_files
+                    ):
+                        continue
+                except Exception:
+                    pass
+            filtered_groups.append((gk, g_files))
+
+        multi_group_in_dir = len(filtered_groups) > 1 or is_standalone_root or ("\\" in rel_dir_str or "/" in rel_dir_str)
+
+        for gk, g_files in filtered_groups:
             pkgs = [x for x in g_files if x.suffix.lower() == ".package"]
             scrs = [x for x in g_files if x.suffix.lower() == ".ts4script"]
             primary = self._select_primary_file(g_files)
 
+            is_ww_anim = False
+            if not scrs and primary.suffix.lower() == ".package":
+                try:
+                    from src.finder import is_ww_animation_package
+                    is_ww_anim = is_ww_animation_package(primary) or any(
+                        is_ww_animation_package(px) for px in pkgs if px != primary
+                    )
+                except Exception:
+                    is_ww_anim = False
+
             if scrs:
                 u_type = "스크립트 모드"
+            elif is_ww_anim:
+                u_type = "WW 애니메이션"
             elif self._is_translation_folder_or_files(target_dir.name, pkgs):
                 u_type = "한글화 / 우선순위"
             else:
@@ -303,6 +527,7 @@ class ModScanner:
                 "script_count": len(scrs),
                 "subdir_count": 0,
                 "mod_type": u_type,
+                "is_ww_animation": is_ww_anim,
                 "is_standalone": is_standalone_root,
                 "group_key": gk,
             })
@@ -325,14 +550,144 @@ class ModScanner:
             prio = 3
         return (prio, p.name.lower())
 
+    def _collect_conditional_ww_animation_units(
+        self,
+        root_dir: Path,
+        allow_cc_subdirs: bool = False,
+        include_gameplay_mods: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """포즈 폴더, WW 보조/CC 폴더 또는 독립 애니메이션 폴더의 하위 폴더를 조건부 스캔합니다.
+        - include_gameplay_mods=False: 실제 WickedWhims 애니메이션(.package) 및 동일 팩 부속 파일만 선별 수집
+        - include_gameplay_mods=True: WW 애니메이션뿐만 아니라 실제 튜닝이 있는 일반 생활 애니메이션·기구 모드도 함께 수집하고 단순 포즈/외형 CC만 제외
+        """
+        if not root_dir.exists() or not root_dir.is_dir():
+            return []
+        try:
+            from src.finder import is_ww_animation_package
+        except Exception:
+            return []
+
+        collected_by_dir: Dict[Path, List[Path]] = {}
+        for dirpath_str, dirnames, filenames in os.walk(root_dir):
+            cur_dir = Path(dirpath_str)
+            if include_gameplay_mods:
+                cand_mod_files = [
+                    cur_dir / fn
+                    for fn in sorted(filenames, key=str.lower)
+                    if os.path.splitext(fn)[1].lower() in (".package", ".ts4script")
+                ]
+                if cand_mod_files:
+                    collected_by_dir[cur_dir] = cand_mod_files
+            else:
+                pkg_candidates = [
+                    cur_dir / fn
+                    for fn in sorted(filenames, key=str.lower)
+                    if os.path.splitext(fn)[1].lower() == ".package"
+                ]
+                ww_anim_files = [cp for cp in pkg_candidates if is_ww_animation_package(cp)]
+                if ww_anim_files:
+                    companion_extras = [
+                        cp
+                        for cp in pkg_candidates
+                        if cp not in ww_anim_files and WW_COMPANION_SUFFIX_PATTERN.search(cp.stem)
+                    ]
+                    collected_by_dir[cur_dir] = ww_anim_files + companion_extras
+
+            pruned_dirnames: List[str] = []
+            for dname in dirnames:
+                d_up = dname.strip().upper()
+                if self._is_backup_folder_name(dname):
+                    continue
+                if not allow_cc_subdirs:
+                    d_low = dname.lower().strip()
+                    if d_low in ("ww cc", "cc"):
+                        continue
+                    if re.match(r"^(?:AA|BB|CC|DD)(?:[\s_\-]|$)", d_up) or d_up in ("4 HIGH PRIORITY CC", "6 SLIDER", "7 CC"):
+                        continue
+                    if (
+                        self._is_cc_folder_name(dname)
+                        and not self._is_pose_folder_name(dname)
+                        and not self._is_ww_animation_folder_name(dname, allow_cc_prefix=True)
+                    ):
+                        continue
+                pruned_dirnames.append(dname)
+            dirnames[:] = pruned_dirnames
+
+        if not collected_by_dir:
+            return []
+
+        units: List[Dict[str, Any]] = []
+        for sub_dir, d_files in sorted(collected_by_dir.items(), key=lambda item: str(item[0]).lower()):
+            units.extend(
+                self._group_directory_into_units(
+                    sub_dir,
+                    d_files,
+                    is_standalone_root=False,
+                    filter_plain_cc=True,
+                )
+            )
+        return units
+
+    def _collect_cc_sub_animation_units(self, root_dir: Path) -> List[Dict[str, Any]]:
+        """대분류 CC 폴더(7 CC, CC ETC 등) 내부의 일반 의상·헤어 파일은 읽지 않고,
+        하위 폴더 이름만 빠르게 확인해 '포즈(Pose)' 또는 '애니/모션(Anim)' 하위 폴더가 있을 때만
+        그 안의 WW 애니메이션(.package)을 조건부 수집합니다.
+        """
+        if not root_dir.exists() or not root_dir.is_dir():
+            return []
+
+        target_anim_roots: List[Path] = []
+        for dirpath_str, dirnames, _ in os.walk(root_dir):
+            cur_dir = Path(dirpath_str)
+            keep_walking: List[str] = []
+            for dname in dirnames:
+                if self._is_backup_folder_name(dname):
+                    continue
+                if (
+                    self._is_pose_folder_name(dname)
+                    or self._is_ww_animation_folder_name(dname, allow_cc_prefix=True)
+                    or self._is_ww_parent_folder(dname)
+                ):
+                    target_anim_roots.append(cur_dir / dname)
+                    # 이미 조건부 스캔 대상으로 등록되었으므로 상위 이름 탐색에서는 하위 중복 진입 방지
+                    continue
+                keep_walking.append(dname)
+            dirnames[:] = keep_walking
+
+        units: List[Dict[str, Any]] = []
+        for anim_root in sorted(target_anim_roots, key=lambda p: str(p).lower()):
+            is_anim_named = self._is_ww_animation_folder_name(anim_root.name, allow_cc_prefix=True)
+            allow_cc_in_sub = self._is_ww_parent_folder(anim_root.name) or is_anim_named
+            units.extend(
+                self._collect_conditional_ww_animation_units(
+                    anim_root,
+                    allow_cc_subdirs=allow_cc_in_sub,
+                    include_gameplay_mods=is_anim_named,
+                )
+            )
+        return units
+
     def _collect_directory_tree_units(self, root_dir: Path, skip_root_if_cc: bool = True) -> List[Dict[str, Any]]:
         """지정된 디렉터리 트리를 순회하며 비-CC/비보조 폴더 내 모드 유닛 목록을 수집합니다."""
         if not root_dir.exists() or not root_dir.is_dir():
             return []
         if skip_root_if_cc and self._is_cc_folder_name(root_dir.name):
-            return []
+            root_low = re.sub(r"\s+", " ", root_dir.name.strip().lower())
+            is_root_anim = self._is_ww_animation_folder_name(root_dir.name, allow_cc_prefix=True)
+            if (
+                self._is_pose_folder_name(root_dir.name)
+                or is_root_anim
+                or root_low == "ww cc"
+            ):
+                return self._collect_conditional_ww_animation_units(
+                    root_dir,
+                    allow_cc_subdirs=(root_low == "ww cc" or is_root_anim),
+                    include_gameplay_mods=is_root_anim,
+                )
+            return self._collect_cc_sub_animation_units(root_dir)
 
         collected_by_dir: Dict[Path, List[Path]] = {}
+        conditional_anim_dirs: List[tuple[Path, bool, bool]] = []
         has_root_mods = False
         has_any_mod_files = False
 
@@ -354,32 +709,90 @@ class ModScanner:
                     has_root_mods = True
                 collected_by_dir[cur_dir] = mod_files
 
+            try:
+                rel_parts = (root_dir.name,) + cur_dir.relative_to(root_dir).parts if cur_dir != root_dir else (root_dir.name,)
+                if is_safe_subpath(root_dir, self.mods_folder, allow_equal=False):
+                    rel_parts = cur_dir.relative_to(self.mods_folder).parts
+            except ValueError:
+                rel_parts = cur_dir.parts
+            in_ww_tree = any(self._is_ww_parent_folder(pt) for pt in rel_parts)
+            in_anim_tree = any(self._is_ww_animation_folder_name(pt, allow_cc_prefix=True) for pt in rel_parts)
+            in_ww_or_anim_tree = in_ww_tree or in_anim_tree
+
             # 보조/옵션/CC 전용 하위폴더는 os.walk 순회 자체를 가지치기(prune)
+            # 단, WW 상위 폴더 및 독립 애니메이션 폴더 내부의 보조/CC 폴더(백업 제외)는 조건부 수집
             pruned_dirnames: List[str] = []
             for dname in dirnames:
                 d_low = dname.lower().strip()
-                if d_low in AUX_SUBFOLDER_NAMES or self._is_cc_folder_name(dname):
+                if self._is_backup_folder_name(dname):
                     continue
-                if self._is_cc_or_aux_subfolder(cur_dir / dname, has_root_mods):
+                is_anim_dir = self._is_ww_animation_folder_name(dname, allow_cc_prefix=True)
+                is_aux_or_cc_dir = (
+                    d_low in AUX_SUBFOLDER_NAMES
+                    or self._is_cc_folder_name(dname)
+                    or self._is_cc_or_aux_subfolder(cur_dir / dname, has_root_mods)
+                )
+                if is_anim_dir and not is_aux_or_cc_dir:
+                    pruned_dirnames.append(dname)
+                    continue
+                if is_anim_dir and is_aux_or_cc_dir:
+                    conditional_anim_dirs.append((cur_dir / dname, True, True))
+                    continue
+                if self._is_pose_folder_name(dname):
+                    conditional_anim_dirs.append((cur_dir / dname, in_ww_or_anim_tree, False))
+                    continue
+                if in_ww_or_anim_tree and is_aux_or_cc_dir:
+                    keep_gp = bool(in_anim_tree and d_low not in ("ww cc", "cc"))
+                    conditional_anim_dirs.append((cur_dir / dname, True, keep_gp))
+                    continue
+                if is_aux_or_cc_dir:
                     continue
                 pruned_dirnames.append(dname)
             dirnames[:] = pruned_dirnames
 
-        if not has_any_mod_files:
-            return []
-
         units: List[Dict[str, Any]] = []
-        if root_dir in collected_by_dir:
-            units.extend(
-                self._group_directory_into_units(root_dir, collected_by_dir[root_dir], is_standalone_root=False)
-            )
+        if has_any_mod_files:
+            if root_dir in collected_by_dir:
+                root_filter_cc = self._is_ww_parent_folder(root_dir.name) or self._is_ww_animation_folder_name(
+                    root_dir.name, allow_cc_prefix=True
+                )
+                units.extend(
+                    self._group_directory_into_units(
+                        root_dir,
+                        collected_by_dir[root_dir],
+                        is_standalone_root=False,
+                        filter_plain_cc=root_filter_cc,
+                    )
+                )
 
-        for sub_dir, d_files in sorted(
-            ((d, files) for d, files in collected_by_dir.items() if d != root_dir),
-            key=lambda item: str(item[0]).lower(),
-        ):
+            for sub_dir, d_files in sorted(
+                ((d, files) for d, files in collected_by_dir.items() if d != root_dir),
+                key=lambda item: str(item[0]).lower(),
+            ):
+                try:
+                    sub_rel_parts = sub_dir.relative_to(self.mods_folder).parts
+                except ValueError:
+                    sub_rel_parts = sub_dir.parts
+                sub_filter_cc = any(
+                    self._is_ww_parent_folder(pt) or self._is_ww_animation_folder_name(pt, allow_cc_prefix=True)
+                    for pt in sub_rel_parts
+                )
+                units.extend(
+                    self._group_directory_into_units(
+                        sub_dir,
+                        d_files,
+                        is_standalone_root=False,
+                        filter_plain_cc=sub_filter_cc,
+                    )
+                )
+
+        for cond_dir, allow_cc_sub, keep_gp_mods in sorted(conditional_anim_dirs, key=lambda item: str(item[0]).lower()):
             units.extend(
-                self._group_directory_into_units(sub_dir, d_files, is_standalone_root=False)
+                self._collect_conditional_ww_animation_units(
+                    cond_dir,
+                    allow_cc_subdirs=allow_cc_sub,
+                    include_gameplay_mods=keep_gp_mods,
+                )
             )
         return units
 
@@ -399,6 +812,16 @@ class ModScanner:
                 if not is_safe_subpath(sub_resolved, mods_resolved, allow_equal=False):
                     return []
                 return self._collect_directory_tree_units(sub_resolved, skip_root_if_cc=False)
+
+        # 사용자가 기본 'Mods' 루트가 아닌 특정 개별 폴더(예: WW 애니메이션 폴더, 포즈 폴더 등) 자체를 직접 경로로 지정한 경우
+        if self.mods_folder.name.strip().lower() != "mods":
+            if self._is_pose_folder_name(self.mods_folder.name) or (
+                self._is_cc_folder_name(self.mods_folder.name)
+                and not self._is_ww_animation_folder_name(self.mods_folder.name, allow_cc_prefix=True)
+                and not self._is_ww_parent_folder(self.mods_folder.name)
+            ):
+                return self._collect_conditional_ww_animation_units(self.mods_folder, allow_cc_subdirs=True)
+            return self._collect_directory_tree_units(self.mods_folder, skip_root_if_cc=False)
 
         all_units: List[Dict[str, Any]] = []
 
@@ -444,6 +867,15 @@ class ModScanner:
             suffix = item.suffix.lower()
             if suffix == ".package":
                 package_files.append(item)
+                try:
+                    rel_pkg = item.relative_to(self.mods_folder)
+                    if len(rel_pkg.parts) > 6:
+                        warnings.append(
+                            f"[주의] 패키지/애니메이션 폴더 깊이 초과: {rel_pkg} "
+                            "(심즈 4 기본 Resource.cfg는 최대 5단계 하위 폴더까지만 지원합니다)"
+                        )
+                except ValueError:
+                    pass
             elif suffix == ".ts4script":
                 script_files.append(item)
                 # 심즈 4 제한: .ts4script는 Mods 바로 아래 또는 1단계 서브폴더까지만 인식됨

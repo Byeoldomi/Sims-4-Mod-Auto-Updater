@@ -891,6 +891,50 @@
             "installed_asset_name": "sims4me_lessfacialoveraction.zip",
             "local_file_size": 634,
             "local_file_mtime": 1788175484
+        },
+        {
+            "name": "WW_0nizu_Animations.package",
+            "local_file": "WW_0nizu_Animations.package",
+            "source_type": "generic_web",
+            "install_folder": "MOD WickedWhims/Animations",
+            "pinned_page_url": "https://wicked.cc/animations/0nizu/0nizu-animations-for-wickedwhims/",
+            "current_version": "Wicked.cc (2026.11.27)",
+            "installed_asset_name": "WW_0nizu_Animations.package",
+            "local_file_size": 30002307,
+            "local_file_mtime": 1795862306
+        },
+        {
+            "name": "WW_0nizu_Group_Animations.package",
+            "local_file": "WW_0nizu_Group_Animations.package",
+            "source_type": "generic_web",
+            "install_folder": "MOD WickedWhims/Animations",
+            "pinned_page_url": "https://wicked.cc/animations/0nizu/0nizu-animations-for-wickedwhims/",
+            "current_version": "Wicked.cc (2026.11.27)",
+            "installed_asset_name": "WW_0nizu_Animations.package",
+            "local_file_size": 18203090,
+            "local_file_mtime": 1795861824
+        },
+        {
+            "name": "WW_0nizu_SpecialGift_Animations.package",
+            "local_file": "WW_0nizu_SpecialGift_Animations.package",
+            "source_type": "generic_web",
+            "install_folder": "MOD WickedWhims/Animations",
+            "pinned_page_url": "https://wicked.cc/animations/0nizu/0nizu-animations-for-wickedwhims/",
+            "current_version": "Wicked.cc (2026.11.27)",
+            "installed_asset_name": "WW_0nizu_Animations.package",
+            "local_file_size": 4454455,
+            "local_file_mtime": 1795861826
+        },
+        {
+            "name": "WW_Anarcis.package",
+            "local_file": "WW_Anarcis.package",
+            "source_type": "generic_web",
+            "install_folder": "POSE\\WW Animation\\Anarcis 261028",
+            "pinned_page_url": "https://wicked.cc/animations/anarcis/anarcis-animations-for-wickedwhims/",
+            "current_version": "Wicked.cc (2026.11.27)",
+            "installed_asset_name": "WW_Anarcis.zip",
+            "local_file_size": 309469007,
+            "local_file_mtime": 1785891726
         }
     ]
 }

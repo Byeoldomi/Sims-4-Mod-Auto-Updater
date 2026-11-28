@@ -1608,6 +1608,13 @@ def _is_variant_or_edition_protected_file(filename: str) -> bool:
         return True
     if "wamtik" in low:
         return True
+    try:
+        from src.finder import check_known_catalog
+        cat = check_known_catalog(filename)
+        if isinstance(cat, dict) and cat.get("option_modal_mode") == "multi_file_select":
+            return True
+    except Exception:
+        pass
     return False
 
 
@@ -1621,6 +1628,72 @@ def _lookup_catalog_id_safe(filename: str) -> str:
     except Exception:
         pass
     return ""
+
+
+_RENAME_NOISE_OR_CREATOR_TOKENS: FrozenSet[str] = frozenset({
+    "package", "ts4script", "zip", "mod", "mods", "sims", "sims4", "ts4",
+    "script", "scripts", "tuning", "core", "main", "base", "required",
+    "optional", "addon", "mts", "scumbumbo", "sacrificial", "littlemssam",
+    "lumpinou", "simkatu", "turbodriver", "weerbesu", "twistedmexi",
+})
+
+
+def _extract_distinctive_mod_tokens(filename: str) -> set[str]:
+    """파일명에서 버전·확장자·공용 제작자 접두어를 제외한 모드 고유 식별 토큰 집합을 추출합니다."""
+    raw_leaf = _normalize_leaf_filename(filename)
+    if not raw_leaf:
+        return set()
+    stem = Path(raw_leaf).stem
+    stem = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", stem)
+    stem = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", stem)
+    stem_low = stem.lower()
+    stem_low = re.sub(
+        r"(?:^|[\s_.\-\[\(])(?:v|ver|version|alpha|beta|rc|hotfix|hf)\.?\s*[0-9]+(?:\.[0-9]+)*[a-z]?(?=$|[^a-z0-9])",
+        " ",
+        stem_low,
+    )
+    stem_low = re.sub(r"(?:^|[\s_.\-\[\(])[0-9]+(?:\.[0-9]+)+[a-z]?(?=$|[^a-z0-9])", " ", stem_low)
+
+    tokens: set[str] = set()
+    for tok in re.split(r"[^a-z0-9가-힣]+", stem_low):
+        if not tok or tok in _RENAME_NOISE_OR_CREATOR_TOKENS:
+            continue
+        if tok.isdigit() or re.fullmatch(r"[vab]\d+[a-z]?", tok):
+            continue
+        has_ko = bool(re.search(r"[가-힣]", tok))
+        has_en = bool(re.search(r"[a-z]", tok))
+        if (has_ko and len(tok) >= 2) or (has_en and len(tok) >= 3):
+            tokens.add(tok)
+    return tokens
+
+
+def _can_supersede_renamed_mod_file(
+    old_name: str,
+    new_name: str,
+    old_cat: str = "",
+    new_cat: str = "",
+) -> bool:
+    """파일명이 다른 기존 모드 파일을 개명된 구버전으로 간주해 교체해도 안전한지 검증합니다."""
+    old_nk = normalize_mod_filename_key(old_name)
+    new_nk = normalize_mod_filename_key(new_name)
+    if old_nk and new_nk and old_nk == new_nk:
+        return True
+
+    old_low = (old_name or "").lower()
+    new_low = (new_name or "").lower()
+    old_is_xml = "xml" in old_low and "injector" in old_low
+    new_is_xml = "xml" in new_low and "injector" in new_low
+    if ("xmlinjector" in new_low or "xml_injector" in new_low) and not old_is_xml:
+        return False
+    if ("xmlinjector" in old_low or "xml_injector" in old_low) and not new_is_xml:
+        return False
+
+    if old_cat and new_cat:
+        return old_cat == new_cat
+
+    old_tokens = _extract_distinctive_mod_tokens(old_name)
+    new_tokens = _extract_distinctive_mod_tokens(new_name)
+    return bool(old_tokens & new_tokens)
 
 
 def find_superseded_mod_files(
@@ -1778,6 +1851,13 @@ def find_superseded_mod_files(
 
             # 3) 카탈로그 고유 식별자 또는 업데이트 대상 단일 코어 유닛 개명 교체
             if not c_info["special"] and not inc_m["special"]:
+                if not _can_supersede_renamed_mod_file(
+                    c_info["path"].name,
+                    inc_m["name"],
+                    c_info["cat"],
+                    inc_m["cat"],
+                ):
+                    continue
                 inc_cat = inc_m["cat"]
                 cand_cat = c_info["cat"] or (exp_cat if c_info["in_unit"] else "")
                 if (
@@ -1956,6 +2036,7 @@ def extract_zip(
     known_existing_files: Optional[List[Path]] = None,
     include_subdirs: bool = False,
     force_include_names: Optional[set[str]] = None,
+    only_include_names: Optional[set[str]] = None,
     pre_remove_callback: Optional[Callable[[Path], None]] = None,
     selected_file_path: Optional[Path] = None,
     mods_root_resolved: Optional[Path] = None,
@@ -2065,6 +2146,12 @@ def extract_zip(
                 f for f in extracted_in_stage
                 if is_whitelisted_mod_file(f, ALLOWED_MOD_WHITELIST_EXTENSIONS)
             ]
+            if only_include_names:
+                _only_low = {str(x).strip().lower() for x in only_include_names if str(x).strip()}
+                whitelisted_candidates = [
+                    f for f in whitelisted_candidates
+                    if f.name.lower() in _only_low or f.stem.lower() in _only_low
+                ]
             selected_to_move = _select_mods_for_installation(
                 whitelisted_files=whitelisted_candidates,
                 existing_names_lower=existing_names_lower,
@@ -2162,6 +2249,12 @@ def extract_zip(
                 if is_whitelisted_mod_file(f, ALLOWED_MOD_WHITELIST_EXTENSIONS):
                     whitelisted_candidates.append(f)
 
+        if only_include_names:
+            _only_low = {str(x).strip().lower() for x in only_include_names if str(x).strip()}
+            whitelisted_candidates = [
+                f for f in whitelisted_candidates
+                if f.name.lower() in _only_low or f.stem.lower() in _only_low
+            ]
         selected_to_move = _select_mods_for_installation(
             whitelisted_files=whitelisted_candidates,
             existing_names_lower=existing_names_lower,

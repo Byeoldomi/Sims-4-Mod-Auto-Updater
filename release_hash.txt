@@ -1,8 +1,8 @@
-파일명: Sims4ModUpdater_v0.1.5.exe
-파일 크기: 17.81 MB (18,679,996 bytes)
-빌드(수정) 일시: 2026-11-23 18:25:44
-해시 생성 일시: 2026-11-23 18:25:43
-SHA-256: 6b03f1a28cf993c1fbdf850303c60fbfa66b5cfebb8c9bfa6f27e4b0606b5caf
+파일명: Sims4ModUpdater_v0.1.6.exe
+파일 크기: 17.88 MB (18,746,032 bytes)
+빌드(수정) 일시: 2026-11-27 01:44:30
+해시 생성 일시: 2026-11-27 01:44:31
+SHA-256: 02f64fb3789db84e41b92c3361e2990c0cc72397958b5c1bb62dc50d78c2e1e9
 
 # sha256sum / PowerShell 검증 호환 형식
-6b03f1a28cf993c1fbdf850303c60fbfa66b5cfebb8c9bfa6f27e4b0606b5caf *Sims4ModUpdater_v0.1.5.exe
+02f64fb3789db84e41b92c3361e2990c0cc72397958b5c1bb62dc50d78c2e1e9 *Sims4ModUpdater_v0.1.6.exe

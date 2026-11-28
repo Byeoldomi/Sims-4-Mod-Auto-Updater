@@ -1024,8 +1024,24 @@ button,
 .mod-card-title-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 7px;
   min-width: 0;
+}
+
+.mod-ww-anim-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(217, 70, 143, 0.28);
+  background: rgba(217, 70, 143, 0.11);
+  color: #B4236C;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 16px;
+  letter-spacing: -0.01em;
 }
 
 .mod-name {
